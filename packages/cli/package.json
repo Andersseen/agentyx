@@ -1,0 +1,35 @@
+{
+  "name": "@agnox/cli",
+  "version": "0.0.0",
+  "description": "Command-line interface for Agnox.",
+  "type": "module",
+  "license": "MIT",
+  "bin": {
+    "agnox": "./dist/index.mjs"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.mts",
+      "default": "./dist/index.mjs"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "agnox": "node dist/index.mjs",
+    "build": "tsdown src/index.ts --dts --clean",
+    "clean": "rm -rf dist",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@agnox/adapters": "workspace:*",
+    "@agnox/core": "workspace:*",
+    "@clack/prompts": "^0.11.0",
+    "commander": "^14.0.0",
+    "zod": "^4.0.17"
+  }
+}

@@ -1,0 +1,29 @@
+{
+  "name": "agnox",
+  "version": "0.0.0",
+  "description": "Provider-agnostic tooling for coding agents.",
+  "type": "module",
+  "private": true,
+  "license": "MIT",
+  "packageManager": "pnpm@10.30.1",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "agnox": "pnpm --filter @agnox/cli run agnox",
+    "build": "pnpm -r --sort run build",
+    "check": "biome check . && pnpm typecheck && pnpm test && pnpm build",
+    "clean": "pnpm -r --parallel run clean",
+    "format": "biome check --write .",
+    "lint": "biome lint .",
+    "test": "vitest run",
+    "typecheck": "pnpm -r --parallel run typecheck"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.2.0",
+    "@types/node": "^22.20.1",
+    "tsdown": "^0.22.14",
+    "typescript": "^5.9.2",
+    "vitest": "^3.2.4"
+  }
+}

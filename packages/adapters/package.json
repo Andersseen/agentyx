@@ -1,0 +1,27 @@
+{
+  "name": "@agnox/adapters",
+  "version": "0.0.0",
+  "description": "Future provider adapter foundations for Agnox.",
+  "type": "module",
+  "license": "MIT",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.mts",
+      "default": "./dist/index.mjs"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "tsdown src/index.ts --dts --clean",
+    "clean": "rm -rf dist",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@agnox/core": "workspace:*"
+  }
+}
