@@ -29,6 +29,20 @@ pnpm --silent agnox resolve --json    # --silent keeps pnpm's banner out of stdo
 Tests import from source via the `@agnox/core` alias in `vitest.config.ts`, so `pnpm test` does
 **not** need a build. The `agnox` script does — it runs `packages/cli/dist/index.mjs`.
 
+## Workflow skills
+
+Two recurring jobs have written-down procedures in [.agents/skills](.agents/skills). They are plain
+Markdown and provider-neutral — read the file and follow it, whichever agent you are.
+
+- [verify-agnox](.agents/skills/verify-agnox/SKILL.md) — read before handing back any change; it
+  covers the CLI and schema checks `pnpm check` does not.
+- [add-builtin-stack](.agents/skills/add-builtin-stack/SKILL.md) — read when adding, renaming or
+  re-parenting a built-in stack.
+
+Agents with a native skill mechanism reach the same files through a thin bridge in their own
+directory; [.agents/README.md](.agents/README.md) explains how to add one for a provider that is
+not wired up yet.
+
 ## Layering
 
 ```

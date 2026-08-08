@@ -24,6 +24,7 @@ packages/core        domain layer: config model, stack model, resolution
 packages/cli         Commander CLI, terminal output
 packages/adapters    provider adapter foundations (not implemented yet)
 examples/angular     .agnox.json fixture used by tests and docs
+.agents/skills       provider-neutral workflow skills for agents working on this repo
 ```
 
 ## Architecture rules
