@@ -5,9 +5,11 @@ import {
   summarizeInstallPlans,
 } from "@agnox/adapters";
 import {
+  builtInMcpServerRegistry,
   builtInSkillRegistry,
   loadAgnoxConfig,
   resolveAgnoxConfig,
+  resolveStackMcpServers,
   resolveStackSkills,
   resolveStacks,
 } from "@agnox/core";
@@ -25,6 +27,8 @@ export interface InstallCommandInput {
   readonly targets: readonly string[];
   readonly dryRun: boolean;
   readonly json: boolean;
+  readonly skillsOnly?: boolean;
+  readonly mcpOnly?: boolean;
   readonly cwd: string;
 }
 
@@ -42,11 +46,17 @@ export interface InstallCommandInput {
  */
 export async function runInstallCommand(input: InstallCommandInput): Promise<string> {
   const environment = await resolveEnvironment(input);
-  const skills = environment.skills.map((name) => builtInSkillRegistry.get(name));
+  const skills = input.mcpOnly
+    ? []
+    : environment.skills.map((name) => builtInSkillRegistry.get(name));
+  const mcpServers = input.skillsOnly
+    ? []
+    : environment.mcpServers.map((name) => builtInMcpServerRegistry.get(name));
   const plans = await planInstall({
     targets: environment.targets,
     projectDir: input.cwd,
     skills,
+    mcpServers,
   });
 
   if (!input.dryRun) {
@@ -59,6 +69,7 @@ export async function runInstallCommand(input: InstallCommandInput): Promise<str
 interface ResolvedEnvironment {
   readonly stacks: readonly string[];
   readonly skills: readonly string[];
+  readonly mcpServers: readonly string[];
   readonly targets: readonly string[];
 }
 
@@ -67,6 +78,7 @@ async function resolveEnvironment(input: InstallCommandInput): Promise<ResolvedE
     return {
       stacks: resolveStacks([...input.stacks]),
       skills: resolveStackSkills([...input.stacks]),
+      mcpServers: resolveStackMcpServers([...input.stacks]),
       targets: input.targets,
     };
   }
@@ -76,6 +88,7 @@ async function resolveEnvironment(input: InstallCommandInput): Promise<ResolvedE
   return {
     stacks: resolved.resolvedStacks,
     skills: resolved.skills,
+    mcpServers: resolved.mcpServers,
     targets: input.targets.length > 0 ? input.targets : resolved.targets,
   };
 }
@@ -84,10 +97,22 @@ async function resolveEnvironment(input: InstallCommandInput): Promise<ResolvedE
 function renderText(input: InstallCommandInput, plans: readonly InstallPlan[]): string {
   const summary = summarizeInstallPlans(plans);
   const blocks = plans.map((plan) =>
-    section(
+    [
       `${plan.target} -> ${plan.relativeSkillsPath}`,
-      plan.operations.map((operation) => `${operation.status.padEnd(9)} ${operation.relativePath}`),
-    ),
+      section(
+        "Skills",
+        plan.operations.map(
+          (operation) => `${operation.status.padEnd(9)} ${operation.relativePath}`,
+        ),
+      ),
+      section("MCP", [
+        ...plan.mcpOperations.map(
+          (operation) =>
+            `${operation.status.padEnd(9)} ${operation.relativePath} (${operation.servers.join(", ")})`,
+        ),
+        ...plan.unsupportedMcp.map((name) => `unsupported project scope ${name}`),
+      ]),
+    ].join("\n"),
   );
   const footer = input.dryRun
     ? `Dry run: ${summary.create} to create, ${summary.update} to update, ${summary.unchanged} unchanged. Nothing was written.`
@@ -112,6 +137,7 @@ function renderJson(
     dryRun: input.dryRun,
     stacks: environment.stacks,
     skills: environment.skills,
+    mcpServers: environment.mcpServers,
     targets: plans.map((plan) => plan.target),
     plans: plans.map((plan) => ({
       target: plan.target,
@@ -123,6 +149,13 @@ function renderJson(
         skill: operation.skill,
         path: operation.relativePath,
       })),
+      mcpOperations: plan.mcpOperations.map((operation) => ({
+        type: operation.type,
+        status: operation.status,
+        servers: operation.servers,
+        path: operation.relativePath,
+      })),
+      unsupportedMcp: plan.unsupportedMcp,
     })),
     summary: summarizeInstallPlans(plans),
   });
@@ -144,14 +177,27 @@ export function createInstallCommand(): Command {
     )
     .option("--dry-run", "report the planned changes without writing anything", false)
     .option("--json", "print machine-readable JSON only", false)
+    .option("--skills-only", "install skills without MCP configuration", false)
+    .option("--mcp-only", "install MCP configuration without skills", false)
     .action(
-      async (stacks: string[], options: { target: string[]; dryRun: boolean; json: boolean }) => {
+      async (
+        stacks: string[],
+        options: {
+          target: string[];
+          dryRun: boolean;
+          json: boolean;
+          skillsOnly: boolean;
+          mcpOnly: boolean;
+        },
+      ) => {
         await emit(() =>
           runInstallCommand({
             stacks,
             targets: options.target,
             dryRun: options.dryRun,
             json: options.json,
+            skillsOnly: options.skillsOnly,
+            mcpOnly: options.mcpOnly,
             cwd: process.cwd(),
           }),
         );

@@ -14,33 +14,46 @@ Agnox lets a project describe its development environment once, in a way that is
 single coding agent, and installs it into the agents you actually use:
 
 ```
-.agnox.json  ->  stacks  ->  skills  ->  provider adapter  ->  project-local files
+.agnox.json
+    ↓
+  stacks
+    ↓
+capabilities
+ /        \
+skills    MCP
+ \        /
+ adapters
+ /      \
+Codex   Claude
 ```
 
-Today that runs end to end for two targets — Codex and Claude Code — from one set of skill sources.
+Today that runs end to end for two targets — Codex and Claude Code — from one set of skill and MCP
+sources.
 
 > **Status: early development.** APIs will change. Nothing is published to npm yet.
 
 ## Concept
 
 A **stack** is a composable definition of a development environment. Stacks extend other stacks and
-contribute **skills**, and Agnox resolves the full inheritance chain in dependency-first order.
+contribute **capabilities** such as skills and MCP servers, and Agnox resolves the full inheritance
+chain in dependency-first order.
 
-| Stack        | Extends      | Skills                                              |
-| ------------ | ------------ | --------------------------------------------------- |
-| `core`       | —            | `planning`, `systematic-debugging`, `verification`   |
-| `typescript` | `core`       | `typescript-modern`                                 |
-| `angular`    | `typescript` | `angular-modern`                                     |
+| Stack        | Extends      | Skills                                             | MCP        |
+| ------------ | ------------ | -------------------------------------------------- | ---------- |
+| `core`       | —            | `planning`, `systematic-debugging`, `verification` | —          |
+| `typescript` | `core`       | `typescript-modern`                                | —          |
+| `angular`    | `typescript` | `angular-modern`                                   | `context7` |
 
 ```
 resolveStacks(["angular"])       ->  core → typescript → angular
 resolveStackSkills(["angular"])  ->  planning, systematic-debugging, verification,
                                      typescript-modern, angular-modern
+resolveStackMcpServers(["angular"]) -> context7
 ```
 
 Stacks describe **development environments, not providers**. There is no `CodexStack` or
 `ClaudeStack`; which agents you target is a separate axis (`targets`), and provider-specific
-behaviour will live in adapters later.
+behaviour lives in adapters.
 
 ## Skills
 
@@ -75,6 +88,31 @@ build failure, not a silently skipped file.
 Resolution works on **identifiers only** — skill bodies are read when something asks for them, so
 `agnox resolve` never pays for the instruction text. Skills are resolved in stack order, then
 declaration order, de-duplicated by first occurrence.
+
+## MCP Servers
+
+An **MCP server** is also authored once, without Codex or Claude fields attached. The initial model
+is deliberately small: `stdio` servers have `command`, `args`, and environment variable references;
+`http` servers have a `url` and optional header environment variable references. Agnox carries
+environment variable names, never committed secret values.
+
+Built-ins are intentionally limited to two examples:
+
+- `context7` — remote HTTP at `https://mcp.context7.com/mcp`
+- `playwright` — stdio via `npx @playwright/mcp@latest`
+
+List them:
+
+```sh
+pnpm --silent agnox mcp list
+```
+
+Show provider-independent data:
+
+```sh
+pnpm --silent agnox mcp show context7
+pnpm --silent agnox mcp show context7 --json
+```
 
 ## Requirements
 
@@ -134,6 +172,9 @@ Skills
   verification
   typescript-modern
   angular-modern
+
+MCP
+  context7
 ```
 
 Resolve the current project's `.agnox.json`:
@@ -164,6 +205,9 @@ Skills
   verification
   typescript-modern
   angular-modern
+
+MCP
+  context7
 ```
 
 Add `--json` for machine-readable output. Use `pnpm --silent` so pnpm's own banner stays out of
@@ -183,12 +227,13 @@ pnpm --silent agnox resolve angular --json
     "verification",
     "typescript-modern",
     "angular-modern"
-  ]
+  ],
+  "mcpServers": ["context7"]
 }
 ```
 
-`resolve` prints skill identifiers, never skill contents, so its output stays cheap to hand to an
-agent.
+`resolve` prints skill and MCP identifiers, never skill contents or provider config, so its output
+stays cheap to hand to an agent.
 
 An explicit stack argument takes precedence over `.agnox.json` for stack selection. Unknown stacks,
 unknown skills, circular inheritance, a missing file, malformed JSON, and schema violations all
@@ -258,15 +303,21 @@ Codex
 .agents/skills (not present)
 ```
 
-| Target   | Agent       | Project skill destination |
-| -------- | ----------- | ------------------------- |
-| `codex`  | Codex       | `.agents/skills`          |
-| `claude` | Claude Code | `.claude/skills`          |
+| Target   | Agent       | Project skill destination | Project MCP config     |
+| -------- | ----------- | ------------------------- | ---------------------- |
+| `codex`  | Codex       | `.agents/skills`          | `.codex/config.toml`   |
+| `claude` | Claude Code | `.claude/skills`          | `.mcp.json`            |
 
 Both are the providers' own documented project-local conventions — Codex reads repository skills
 from the vendor-neutral [`.agents/skills`](https://developers.openai.com/codex/skills), Claude Code
-from [`.claude/skills`](https://code.claude.com/docs/en/skills). Installation is project-local only:
-Agnox never writes to `$HOME`.
+from [`.claude/skills`](https://code.claude.com/docs/en/skills). For MCP, Codex reads trusted
+project `.codex/config.toml` layers and uses `[mcp_servers.<id>]`; Claude Code uses project
+`.mcp.json` with an `mcpServers` object. Installation is project-local only: Agnox never writes to
+`$HOME`.
+
+Codex MCP is TOML, so Agnox parses and rewrites the file with a TOML library. Unrelated values and
+MCP servers are preserved semantically, but comments and exact formatting may be normalized. Claude
+MCP is JSON, so Agnox parses, merges, and serializes deterministically.
 
 ## `agnox install`
 
@@ -282,20 +333,26 @@ node ../../packages/cli/dist/index.mjs install --dry-run
 Agnox install (dry run)
 
 codex -> .agents/skills
+Skills
   create    .agents/skills/planning/SKILL.md
   create    .agents/skills/systematic-debugging/SKILL.md
   create    .agents/skills/verification/SKILL.md
   create    .agents/skills/typescript-modern/SKILL.md
   create    .agents/skills/angular-modern/SKILL.md
+MCP
+  create    .codex/config.toml (context7)
 
 claude -> .claude/skills
+Skills
   create    .claude/skills/planning/SKILL.md
   create    .claude/skills/systematic-debugging/SKILL.md
   create    .claude/skills/verification/SKILL.md
   create    .claude/skills/typescript-modern/SKILL.md
   create    .claude/skills/angular-modern/SKILL.md
+MCP
+  create    .mcp.json (context7)
 
-Dry run: 10 to create, 0 to update, 0 unchanged. Nothing was written.
+Dry run: 12 to create, 0 to update, 0 unchanged. Nothing was written.
 ```
 
 `--dry-run` runs the full resolution and produces the real plan; it just never touches the disk.
@@ -306,13 +363,13 @@ agnox install
 ```
 
 ```
-Installed: 10 written, 0 unchanged.
+Installed: 12 written, 0 unchanged.
 ```
 
-Every skill is installed from one source: `@agnox/core` renders the canonical `SKILL.md` once, and
-the adapters only decide where it goes, so the file under `.agents/skills` and the one under
-`.claude/skills` are byte-identical. Re-running reports `unchanged` and writes nothing; editing an
-installed file makes the next run report `update` and restore it.
+Every skill and MCP server is installed from one source. `@agnox/core` renders the canonical
+`SKILL.md` once and exposes one provider-independent MCP definition; adapters only decide where and
+how each provider expects it. Re-running reports `unchanged` and writes nothing; editing a managed
+entry makes the next run report `update` and restore it.
 
 Install into a specific agent, whatever `.agnox.json` says — `--target` is repeatable, applies to
 that run only, and never edits the configuration:
@@ -329,6 +386,9 @@ all. The configuration is then not read, so the target has to be explicit:
 agnox install angular --target codex --dry-run
 ```
 
+For inspection or focused rollout, `--skills-only` skips MCP configuration and `--mcp-only` skips
+skill files.
+
 `--json` prints the plan and nothing else — identifiers, statuses and project-relative paths, never
 skill bodies:
 
@@ -341,6 +401,7 @@ pnpm --silent agnox install core --target codex --json --dry-run
   "dryRun": true,
   "stacks": ["core"],
   "skills": ["planning", "systematic-debugging", "verification"],
+  "mcpServers": [],
   "targets": ["codex"],
   "plans": [
     {
@@ -366,28 +427,32 @@ pnpm --silent agnox install core --target codex --json --dry-run
           "skill": "verification",
           "path": ".agents/skills/verification/SKILL.md"
         }
-      ]
+      ],
+      "mcpOperations": [],
+      "unsupportedMcp": []
     }
   ],
   "summary": { "create": 3, "update": 0, "unchanged": 0 }
 }
 ```
 
-Agnox only manages `<destination>/<skill>/SKILL.md` for skills it resolved. Other skills, provider
-settings and anything else in those directories are never read or written, a plan that would write
-outside the destination is refused, and nothing is ever deleted. A target with no adapter, or an
-installation with no target at all, prints a readable message on stderr and exits with code 1.
+Agnox only manages `<destination>/<skill>/SKILL.md` for skills it resolved and MCP entries it
+resolved. Other skills, provider settings, and unrelated MCP servers are preserved; a plan that
+would write outside the project is refused, and nothing is ever deleted. A target with no adapter,
+or an installation with no target at all, prints a readable message on stderr and exits with code 1.
 
 ## Library use
 
 ```ts
 import {
   builtInSkillRegistry,
+  builtInMcpServerRegistry,
   builtInStacks,
   loadAgnoxConfig,
   resolveAgnoxConfig,
   resolveStacks,
   resolveStackSkills,
+  resolveStackMcpServers,
 } from "@agnox/core";
 
 resolveStacks(["angular"]);
@@ -396,11 +461,15 @@ resolveStacks(["angular"]);
 resolveStackSkills(["angular"]);
 // ["planning", "systematic-debugging", "verification", "typescript-modern", "angular-modern"]
 
+resolveStackMcpServers(["angular"]);
+// ["context7"]
+
 resolveAgnoxConfig(await loadAgnoxConfig(process.cwd()));
-// { requestedStacks, resolvedStacks, skills, profile, targets }
+// { requestedStacks, resolvedStacks, skills, mcpServers, profile, targets }
 
 builtInSkillRegistry.names; // identifiers, no file is read
 builtInSkillRegistry.get("planning"); // { name, description, content }
+builtInMcpServerRegistry.get("context7"); // { name, description, transport, url }
 ```
 
 `createSkillRegistry(sources)` builds an independent registry from `{ name, load }` sources, which
@@ -410,10 +479,11 @@ Installation lives in `@agnox/adapters`, and planning is always separate from wr
 
 ```ts
 import { applyInstallPlans, builtInAdapterRegistry, planInstall } from "@agnox/adapters";
-import { builtInSkillRegistry } from "@agnox/core";
+import { builtInMcpServerRegistry, builtInSkillRegistry } from "@agnox/core";
 
 const skills = ["planning", "angular-modern"].map((name) => builtInSkillRegistry.get(name));
-const plans = await planInstall({ targets: ["codex", "claude"], projectDir, skills });
+const mcpServers = ["context7"].map((name) => builtInMcpServerRegistry.get(name));
+const plans = await planInstall({ targets: ["codex", "claude"], projectDir, skills, mcpServers });
 // one plan per target; no file has been touched
 
 await applyInstallPlans(plans); // the only code that writes
@@ -427,25 +497,26 @@ turns `{ id, name, skillsDir }` into an adapter for any agent that reads
 
 Resolution and installation failures throw domain errors — `UnknownStackError`,
 `CircularStackDependencyError`, `UnknownSkillError`, `DuplicateSkillError`, `InvalidSkillError`,
+`UnknownMcpServerError`, `DuplicateMcpServerError`, `InvalidMcpServerError`,
 `AgnoxConfigNotFoundError`, `AgnoxConfigParseError`, `AgnoxConfigValidationError`,
-`UnknownAdapterError`, `DuplicateAdapterError`, `MissingInstallTargetsError`, `InstallPathError` —
-all extending `AgnoxError` with a stable `code`.
+`UnknownAdapterError`, `DuplicateAdapterError`, `MissingInstallTargetsError`, `InstallPathError`,
+`ProviderConfigParseError` — all extending `AgnoxError` with a stable `code`.
 
 ## Packages
 
 | Package                                     | Description                                             |
 | ------------------------------------------- | ------------------------------------------------------- |
-| [`@agnox/core`](packages/core)               | Configuration model, stacks, skills, resolution, JSON Schema |
-| [`@agnox/cli`](packages/cli)                 | The `agnox` command-line interface                       |
+| [`@agnox/core`](packages/core)               | Configuration model, stacks, skills, MCP, resolution, JSON Schema |
+| [`@agnox/cli`](packages/cli)                 | The `agnox` command-line interface                         |
 | [`@agnox/adapters`](packages/adapters)       | Adapter contract, Codex and Claude Code adapters, install planning |
 
 ## Not implemented yet
 
-Agnox installs skills into Codex and Claude Code, project-locally, and nothing more. Still to come:
-MCP integration, further providers (Kimi, OpenCode, Cursor), global installation into `$HOME`,
-remote and community registries, token optimization, uninstall and sync cleanup, a plugin system,
-project auto-detection, codebase memory, npm registry integration, an update system, and an init
-wizard. `profile` is carried through resolution but does not change what is installed yet.
+Agnox installs skills and MCP configuration into Codex and Claude Code, project-locally, and
+nothing more. Still to come: further providers (Kimi, OpenCode, Cursor), global installation into
+`$HOME`, remote and community registries, token optimization, uninstall and sync cleanup, a plugin
+system, project auto-detection, codebase memory, npm registry integration, an update system, and an
+init wizard. `profile` is carried through resolution but does not change what is installed yet.
 
 ## Contributing
 

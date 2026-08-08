@@ -2,6 +2,14 @@ import { stat } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { formatSkillMarkdown } from "@agnox/core";
 import type { AdapterContext, AgentAdapter, PlannedFile } from "./adapter.js";
+import {
+  CLAUDE_MCP_CONFIG_SEGMENTS,
+  CODEX_MCP_CONFIG_SEGMENTS,
+  claudeMcpConfigPath,
+  codexMcpConfigPath,
+  renderClaudeMcpConfig,
+  renderCodexMcpConfig,
+} from "./mcp-rendering.js";
 
 /** The file name every provider in this family expects inside a skill directory. */
 export const SKILL_FILENAME = "SKILL.md";
@@ -18,6 +26,14 @@ export interface SkillDirectoryAdapterDefinition {
   readonly skillsDir: readonly string[];
   /** Why this location — kept next to the value so the choice stays auditable. */
   readonly reference: string;
+  readonly mcp?:
+    | {
+        readonly project: true;
+        readonly config: "codex-toml" | "claude-json";
+      }
+    | {
+        readonly project: false;
+      };
 }
 
 /**
@@ -42,10 +58,16 @@ export function createSkillDirectoryAdapter(
 ): AgentAdapter {
   const skillsPath = (projectDir: string): string =>
     resolve(projectDir, join(...definition.skillsDir));
-
-  return {
+  const adapter: AgentAdapter = {
     id: definition.id,
     name: definition.name,
+    capabilities: {
+      skills: true,
+      mcp: {
+        project: definition.mcp?.project ?? false,
+        global: false,
+      },
+    },
     skillsPath,
     detect: async (projectDir) => {
       const path = skillsPath(projectDir);
@@ -58,6 +80,25 @@ export function createSkillDirectoryAdapter(
         content: formatSkillMarkdown(skill),
         skill: skill.name,
       })),
+  };
+
+  if (definition.mcp?.project !== true) {
+    return adapter;
+  }
+
+  const config = definition.mcp.config;
+
+  return {
+    ...adapter,
+    mcpConfigPath: config === "codex-toml" ? codexMcpConfigPath : claudeMcpConfigPath,
+    planMcpConfig: (context: AdapterContext, existingContent: string | undefined) => ({
+      segments: config === "codex-toml" ? CODEX_MCP_CONFIG_SEGMENTS : CLAUDE_MCP_CONFIG_SEGMENTS,
+      content:
+        config === "codex-toml"
+          ? renderCodexMcpConfig(context.mcpServers ?? [], existingContent)
+          : renderClaudeMcpConfig(context.mcpServers ?? [], existingContent),
+      servers: (context.mcpServers ?? []).map((server) => server.name),
+    }),
   };
 }
 

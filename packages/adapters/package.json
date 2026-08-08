@@ -41,6 +41,7 @@
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
-    "@agnox/core": "workspace:*"
+    "@agnox/core": "workspace:*",
+    "@iarna/toml": "^2.2.5"
   }
 }

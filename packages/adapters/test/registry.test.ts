@@ -8,6 +8,7 @@ import { createAdapterRegistry } from "../src/registry.js";
 const fakeAdapter = (id: string): AgentAdapter => ({
   id,
   name: id,
+  capabilities: { skills: true, mcp: { project: false, global: false } },
   skillsPath: (projectDir) => projectDir,
   detect: async (projectDir) => ({ target: id, skillsPath: projectDir, present: false }),
   planFiles: () => [],
@@ -55,10 +56,13 @@ describe("builtInAdapterRegistry", () => {
     // The adapters carry an id, a name and a directory — never instructions.
     for (const adapter of builtInAdapters) {
       expect(Object.keys(adapter).sort()).toEqual([
+        "capabilities",
         "detect",
         "id",
+        "mcpConfigPath",
         "name",
         "planFiles",
+        "planMcpConfig",
         "skillsPath",
       ]);
     }
