@@ -1,9 +1,27 @@
 {
   "name": "@agnox/core",
   "version": "0.0.0",
-  "description": "Shared domain foundations for Agnox.",
+  "description": "Shared domain foundations for Agnox: configuration model and stack resolution.",
   "type": "module",
   "license": "MIT",
+  "author": "Andersseen",
+  "homepage": "https://github.com/Andersseen/agnox/tree/main/packages/core#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Andersseen/agnox.git",
+    "directory": "packages/core"
+  },
+  "bugs": {
+    "url": "https://github.com/Andersseen/agnox/issues"
+  },
+  "keywords": [
+    "agnox",
+    "coding-agents",
+    "configuration",
+    "developer-tools",
+    "stacks"
+  ],
+  "sideEffects": false,
   "exports": {
     ".": {
       "types": "./dist/index.d.mts",
@@ -17,6 +35,9 @@
   ],
   "engines": {
     "node": ">=22"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "scripts": {
     "build": "tsdown src/index.ts --dts --clean",

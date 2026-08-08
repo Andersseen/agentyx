@@ -1,0 +1,9 @@
+blank_issues_enabled: false
+
+contact_links:
+  - name: Question or idea
+    url: https://github.com/Andersseen/agnox/discussions
+    about: Ask questions and discuss direction before opening an issue.
+  - name: Security vulnerability
+    url: https://github.com/Andersseen/agnox/security/advisories/new
+    about: Report security issues privately, never as a public issue.

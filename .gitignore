@@ -6,3 +6,6 @@ coverage/
 .env
 .env.*
 !.env.example
+
+# Personal agent overrides; the shared config in .claude/settings.json is committed.
+.claude/settings.local.json

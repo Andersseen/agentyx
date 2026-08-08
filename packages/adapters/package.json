@@ -4,6 +4,22 @@
   "description": "Future provider adapter foundations for Agnox.",
   "type": "module",
   "license": "MIT",
+  "author": "Andersseen",
+  "homepage": "https://github.com/Andersseen/agnox/tree/main/packages/adapters#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Andersseen/agnox.git",
+    "directory": "packages/adapters"
+  },
+  "bugs": {
+    "url": "https://github.com/Andersseen/agnox/issues"
+  },
+  "keywords": [
+    "agnox",
+    "adapters",
+    "coding-agents"
+  ],
+  "sideEffects": false,
   "exports": {
     ".": {
       "types": "./dist/index.d.mts",
@@ -15,6 +31,9 @@
   ],
   "engines": {
     "node": ">=22"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "scripts": {
     "build": "tsdown src/index.ts --dts --clean",
