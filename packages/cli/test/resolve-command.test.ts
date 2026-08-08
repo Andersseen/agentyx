@@ -1,0 +1,166 @@
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { fileURLToPath } from "node:url";
+import { AgnoxConfigNotFoundError, UnknownStackError } from "@agnox/core";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { createResolveCommand, runResolveCommand } from "../src/commands/resolve.js";
+import { createAgnoxProgram } from "../src/index.js";
+
+const exampleProjectPath = fileURLToPath(new URL("../../../examples/angular", import.meta.url));
+
+describe("agnox resolve <stack>", () => {
+  it("resolves an explicit stack without a project configuration", async () => {
+    const output = await runResolveCommand({
+      stacks: ["angular"],
+      json: false,
+      cwd: tmpdir(),
+    });
+
+    expect(output).toBe("core\ntypescript\nangular");
+  });
+
+  it("resolves core and typescript", async () => {
+    const base = { json: false, cwd: tmpdir() };
+
+    expect(await runResolveCommand({ ...base, stacks: ["core"] })).toBe("core");
+    expect(await runResolveCommand({ ...base, stacks: ["typescript"] })).toBe("core\ntypescript");
+  });
+
+  it("resolves several explicit stacks", async () => {
+    const output = await runResolveCommand({
+      stacks: ["typescript", "angular"],
+      json: false,
+      cwd: tmpdir(),
+    });
+
+    expect(output).toBe("core\ntypescript\nangular");
+  });
+
+  it("prints JSON only in --json mode", async () => {
+    const output = await runResolveCommand({
+      stacks: ["angular"],
+      json: true,
+      cwd: tmpdir(),
+    });
+
+    expect(JSON.parse(output)).toEqual({
+      requestedStacks: ["angular"],
+      resolvedStacks: ["core", "typescript", "angular"],
+    });
+  });
+
+  it("fails on an unknown stack", async () => {
+    await expect(
+      runResolveCommand({ stacks: ["svelte"], json: false, cwd: tmpdir() }),
+    ).rejects.toThrow(UnknownStackError);
+  });
+});
+
+describe("agnox resolve", () => {
+  let projectPath: string;
+
+  beforeEach(async () => {
+    projectPath = await mkdtemp(join(tmpdir(), "agnox-cli-"));
+  });
+
+  afterEach(async () => {
+    await rm(projectPath, { recursive: true, force: true });
+  });
+
+  it("renders the project configuration", async () => {
+    await writeFile(
+      join(projectPath, ".agnox.json"),
+      JSON.stringify({ extends: ["angular"], profile: "balanced", targets: ["codex", "kimi"] }),
+      "utf8",
+    );
+
+    const output = await runResolveCommand({ stacks: [], json: false, cwd: projectPath });
+
+    expect(output).toBe(
+      [
+        "Agnox configuration",
+        "",
+        "Profile",
+        "  balanced",
+        "",
+        "Targets",
+        "  codex",
+        "  kimi",
+        "",
+        "Stacks",
+        "  core",
+        "  typescript",
+        "  angular",
+      ].join("\n"),
+    );
+  });
+
+  it("marks empty target lists", async () => {
+    await writeFile(
+      join(projectPath, ".agnox.json"),
+      JSON.stringify({ extends: ["core"] }),
+      "utf8",
+    );
+
+    const output = await runResolveCommand({ stacks: [], json: false, cwd: projectPath });
+
+    expect(output).toContain("Targets\n  (none)");
+  });
+
+  it("emits the resolved configuration as JSON", async () => {
+    const output = await runResolveCommand({ stacks: [], json: true, cwd: exampleProjectPath });
+
+    expect(JSON.parse(output)).toEqual({
+      requestedStacks: ["angular"],
+      resolvedStacks: ["core", "typescript", "angular"],
+      profile: "balanced",
+      targets: ["codex", "kimi"],
+    });
+  });
+
+  it("resolves the example project for humans", async () => {
+    const output = await runResolveCommand({ stacks: [], json: false, cwd: exampleProjectPath });
+
+    expect(output).toContain("Stacks\n  core\n  typescript\n  angular");
+  });
+
+  it("fails when the project has no configuration", async () => {
+    await expect(runResolveCommand({ stacks: [], json: false, cwd: projectPath })).rejects.toThrow(
+      AgnoxConfigNotFoundError,
+    );
+  });
+
+  it("prefers an explicit stack over the project configuration", async () => {
+    await writeFile(
+      join(projectPath, ".agnox.json"),
+      JSON.stringify({ extends: ["angular"] }),
+      "utf8",
+    );
+
+    const output = await runResolveCommand({
+      stacks: ["typescript"],
+      json: false,
+      cwd: projectPath,
+    });
+
+    expect(output).toBe("core\ntypescript");
+  });
+});
+
+describe("resolve command wiring", () => {
+  it("declares the stacks argument and the --json flag", () => {
+    const command = createResolveCommand();
+
+    expect(command.name()).toBe("resolve");
+    expect(command.options.map((option) => option.long)).toContain("--json");
+    expect(command.registeredArguments.map((argument) => argument.name())).toEqual(["stacks"]);
+    expect(command.registeredArguments[0]?.variadic).toBe(true);
+  });
+
+  it("is registered on the agnox program", () => {
+    const names = createAgnoxProgram().commands.map((command) => command.name());
+
+    expect(names).toContain("resolve");
+  });
+});

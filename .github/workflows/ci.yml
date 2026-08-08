@@ -1,0 +1,59 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: check (node ${{ matrix.node }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [22, 24]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint and format
+        run: pnpm exec biome ci .
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Test
+        run: pnpm test
+
+      - name: Build
+        run: pnpm build
+
+      - name: CLI smoke test
+        shell: bash
+        run: |
+          node packages/cli/dist/index.mjs resolve core
+          node packages/cli/dist/index.mjs resolve typescript
+          diff <(node packages/cli/dist/index.mjs resolve angular) <(printf 'core\ntypescript\nangular\n')
+          node packages/cli/dist/index.mjs resolve angular --json
+
+      - name: CLI project resolution
+        run: node ../../packages/cli/dist/index.mjs resolve --json
+        working-directory: examples/angular

@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "permissions": {
+    "allow": [
+      "Bash(pnpm install)",
+      "Bash(pnpm test:*)",
+      "Bash(pnpm test)",
+      "Bash(pnpm typecheck)",
+      "Bash(pnpm lint)",
+      "Bash(pnpm format)",
+      "Bash(pnpm build)",
+      "Bash(pnpm check)",
+      "Bash(pnpm clean)",
+      "Bash(pnpm agnox:*)",
+      "Bash(pnpm --silent agnox:*)",
+      "Bash(pnpm --filter:*)",
+      "Bash(pnpm exec biome:*)",
+      "Bash(pnpm exec tsc:*)",
+      "Bash(pnpm vitest:*)",
+      "Bash(pnpm changeset:*)",
+      "Bash(node packages/cli/dist/index.mjs:*)",
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(git show:*)",
+      "Bash(git branch:*)"
+    ],
+    "deny": [
+      "Bash(pnpm publish:*)",
+      "Bash(npm publish:*)",
+      "Bash(changeset publish:*)",
+      "Bash(git push --force:*)",
+      "Bash(git reset --hard:*)",
+      "Read(./.env)",
+      "Read(./.env.*)"
+    ]
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "jq -r '.tool_input.file_path // .tool_response.filePath // empty' | { read -r f; [ -n \"$f\" ] && pnpm exec biome check --write --files-ignore-unknown=true --no-errors-on-unmatched \"$f\"; } >/dev/null 2>&1 || true",
+            "statusMessage": "Formatting with Biome"
+          }
+        ]
+      }
+    ]
+  }
+}

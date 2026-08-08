@@ -4,6 +4,22 @@
   "description": "Command-line interface for Agnox.",
   "type": "module",
   "license": "MIT",
+  "author": "Andersseen",
+  "homepage": "https://github.com/Andersseen/agnox/tree/main/packages/cli#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Andersseen/agnox.git",
+    "directory": "packages/cli"
+  },
+  "bugs": {
+    "url": "https://github.com/Andersseen/agnox/issues"
+  },
+  "keywords": [
+    "agnox",
+    "cli",
+    "coding-agents",
+    "developer-tools"
+  ],
   "bin": {
     "agnox": "./dist/index.mjs"
   },
@@ -18,6 +34,9 @@
   ],
   "engines": {
     "node": ">=22"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "scripts": {
     "agnox": "node dist/index.mjs",

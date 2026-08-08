@@ -1,0 +1,5 @@
+{
+  "extends": ["angular"],
+  "profile": "balanced",
+  "targets": ["codex", "kimi"]
+}

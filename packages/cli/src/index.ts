@@ -5,6 +5,7 @@ import { agnoxAdaptersName } from "@agnox/adapters";
 import { agnoxCoreName } from "@agnox/core";
 import { Command } from "commander";
 import { z } from "zod";
+import { createResolveCommand } from "./commands/resolve.js";
 
 export const cliVersion = "0.0.0";
 
@@ -22,7 +23,8 @@ export function createAgnoxProgram(): Command {
   return new Command()
     .name("agnox")
     .description("Agnox — provider-agnostic tooling for coding agents.")
-    .version(cliVersion);
+    .version(cliVersion)
+    .addCommand(createResolveCommand());
 }
 
 function isMainModule(): boolean {
@@ -36,5 +38,5 @@ function isMainModule(): boolean {
 }
 
 if (isMainModule()) {
-  createAgnoxProgram().parse(process.argv);
+  await createAgnoxProgram().parseAsync(process.argv);
 }

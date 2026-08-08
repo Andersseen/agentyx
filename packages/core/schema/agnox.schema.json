@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agnox.dev/schema/agnox.schema.json",
+  "title": "Agnox project configuration",
+  "description": "Configuration for an Agnox project (.agnox.json).",
+  "type": "object",
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Optional path or URL to the Agnox JSON Schema."
+    },
+    "extends": {
+      "default": [],
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "description": "Stacks this project builds on."
+    },
+    "profile": {
+      "default": "balanced",
+      "type": "string",
+      "enum": ["lean", "balanced", "autonomous"],
+      "description": "How much autonomy the generated environment grants."
+    },
+    "targets": {
+      "default": [],
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "description": "Coding-agent providers this project targets."
+    }
+  },
+  "additionalProperties": false
+}
