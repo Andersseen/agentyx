@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
+import { builtInSkillRegistry } from "../src/skill/built-in.js";
 import { InvalidSkillError } from "../src/skill/errors.js";
-import { parseSkillMarkdown } from "../src/skill/markdown.js";
+import { formatSkillMarkdown, parseSkillMarkdown } from "../src/skill/markdown.js";
 
 const validMarkdown = [
   "---",
@@ -126,5 +127,74 @@ describe("parseSkillMarkdown", () => {
       expect((error as InvalidSkillError).origin).toBe("skills/x/SKILL.md");
       expect((error as InvalidSkillError).code).toBe("invalid_skill");
     }
+  });
+});
+
+describe("formatSkillMarkdown", () => {
+  it("renders canonical SKILL.md", () => {
+    expect(
+      formatSkillMarkdown({
+        name: "planning",
+        description: "Plan non-trivial work before editing.",
+        content: "# Planning\n\nRead before you edit.",
+      }),
+    ).toBe(validMarkdown);
+  });
+
+  it("is deterministic", () => {
+    const skill = { name: "a", description: "A", content: "Body." };
+
+    expect(formatSkillMarkdown(skill)).toBe(formatSkillMarkdown(skill));
+  });
+
+  it("ignores property order and surrounding whitespace", () => {
+    expect(formatSkillMarkdown({ content: "  Body.  ", name: "a", description: "  A  " })).toBe(
+      formatSkillMarkdown({ name: "a", description: "A", content: "Body." }),
+    );
+  });
+
+  it("ends with exactly one newline", () => {
+    const markdown = formatSkillMarkdown({ name: "a", description: "A", content: "Body.\n\n\n" });
+
+    expect(markdown.endsWith("Body.\n")).toBe(true);
+  });
+
+  it("preserves the Markdown body", () => {
+    const body = "## Heading\n\n- one\n- two\n\n```ts\nconst a = 1;\n```";
+
+    expect(formatSkillMarkdown({ name: "a", description: "A", content: body })).toContain(body);
+  });
+
+  it("round-trips through the parser", () => {
+    const skill = {
+      name: "angular-modern",
+      description: "Modern Angular: standalone, signals, inject().",
+      content: "# Modern Angular\n\n- one\n\n---\n\nStill the body.",
+    };
+
+    expect(parseSkillMarkdown(formatSkillMarkdown(skill), "SKILL.md")).toEqual(skill);
+  });
+
+  it("round-trips every built-in skill", () => {
+    for (const name of builtInSkillRegistry.names) {
+      const skill = builtInSkillRegistry.get(name);
+
+      expect(parseSkillMarkdown(formatSkillMarkdown(skill), name)).toEqual(skill);
+    }
+  });
+
+  it("rejects an invalid definition", () => {
+    expect(() =>
+      formatSkillMarkdown({ name: "Not A Slug", description: "A", content: "B" }),
+    ).toThrow(InvalidSkillError);
+    expect(() => formatSkillMarkdown({ name: "a", description: "", content: "B" })).toThrow(
+      InvalidSkillError,
+    );
+  });
+
+  it("rejects a description that cannot be written as frontmatter", () => {
+    expect(() => formatSkillMarkdown({ name: "a", description: "One\nTwo", content: "B" })).toThrow(
+      /line break/,
+    );
   });
 });

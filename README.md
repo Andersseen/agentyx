@@ -11,8 +11,13 @@
 </div>
 
 Agnox lets a project describe its development environment once, in a way that is not tied to any
-single coding agent. Today it implements the configuration model, stack resolution, and skills.
-Installing what a stack resolves to into a specific agent is **not implemented yet**.
+single coding agent, and installs it into the agents you actually use:
+
+```
+.agnox.json  ->  stacks  ->  skills  ->  provider adapter  ->  project-local files
+```
+
+Today that runs end to end for two targets — Codex and Claude Code — from one set of skill sources.
 
 > **Status: early development.** APIs will change. Nothing is published to npm yet.
 
@@ -92,7 +97,7 @@ A project describes itself with `.agnox.json` in its root directory:
   "$schema": "./node_modules/@agnox/core/schema/agnox.schema.json",
   "extends": ["angular"],
   "profile": "balanced",
-  "targets": ["codex", "claude", "kimi"]
+  "targets": ["codex", "claude"]
 }
 ```
 
@@ -146,7 +151,7 @@ Profile
 
 Targets
   codex
-  kimi
+  claude
 
 Stacks
   core
@@ -227,6 +232,152 @@ pnpm --silent agnox skill show angular-modern --json
 
 An unknown skill prints a readable message on stderr and exits with code 1.
 
+## `agnox target`
+
+A **target** is a coding agent Agnox can install into. List them:
+
+```sh
+pnpm --silent agnox target list
+```
+
+```
+codex
+claude
+```
+
+`agnox target show <target>` adds the provider name and where it installs skills in the current
+project:
+
+```sh
+pnpm --silent agnox target show codex
+```
+
+```
+codex
+Codex
+.agents/skills (not present)
+```
+
+| Target   | Agent       | Project skill destination |
+| -------- | ----------- | ------------------------- |
+| `codex`  | Codex       | `.agents/skills`          |
+| `claude` | Claude Code | `.claude/skills`          |
+
+Both are the providers' own documented project-local conventions — Codex reads repository skills
+from the vendor-neutral [`.agents/skills`](https://developers.openai.com/codex/skills), Claude Code
+from [`.claude/skills`](https://code.claude.com/docs/en/skills). Installation is project-local only:
+Agnox never writes to `$HOME`.
+
+## `agnox install`
+
+`install` resolves the project, turns the resolved skills into a plan per target, and writes it.
+Always look first:
+
+```sh
+cd examples/angular
+node ../../packages/cli/dist/index.mjs install --dry-run
+```
+
+```
+Agnox install (dry run)
+
+codex -> .agents/skills
+  create    .agents/skills/planning/SKILL.md
+  create    .agents/skills/systematic-debugging/SKILL.md
+  create    .agents/skills/verification/SKILL.md
+  create    .agents/skills/typescript-modern/SKILL.md
+  create    .agents/skills/angular-modern/SKILL.md
+
+claude -> .claude/skills
+  create    .claude/skills/planning/SKILL.md
+  create    .claude/skills/systematic-debugging/SKILL.md
+  create    .claude/skills/verification/SKILL.md
+  create    .claude/skills/typescript-modern/SKILL.md
+  create    .claude/skills/angular-modern/SKILL.md
+
+Dry run: 10 to create, 0 to update, 0 unchanged. Nothing was written.
+```
+
+`--dry-run` runs the full resolution and produces the real plan; it just never touches the disk.
+Drop it to install:
+
+```sh
+agnox install
+```
+
+```
+Installed: 10 written, 0 unchanged.
+```
+
+Every skill is installed from one source: `@agnox/core` renders the canonical `SKILL.md` once, and
+the adapters only decide where it goes, so the file under `.agents/skills` and the one under
+`.claude/skills` are byte-identical. Re-running reports `unchanged` and writes nothing; editing an
+installed file makes the next run report `update` and restore it.
+
+Install into a specific agent, whatever `.agnox.json` says — `--target` is repeatable, applies to
+that run only, and never edits the configuration:
+
+```sh
+agnox install --target codex
+agnox install --target codex --target claude
+```
+
+A stack can be named directly, exactly as with `resolve`, which installs without a `.agnox.json` at
+all. The configuration is then not read, so the target has to be explicit:
+
+```sh
+agnox install angular --target codex --dry-run
+```
+
+`--json` prints the plan and nothing else — identifiers, statuses and project-relative paths, never
+skill bodies:
+
+```sh
+pnpm --silent agnox install core --target codex --json --dry-run
+```
+
+```json
+{
+  "dryRun": true,
+  "stacks": ["core"],
+  "skills": ["planning", "systematic-debugging", "verification"],
+  "targets": ["codex"],
+  "plans": [
+    {
+      "target": "codex",
+      "name": "Codex",
+      "skillsPath": ".agents/skills",
+      "operations": [
+        {
+          "type": "write-file",
+          "status": "create",
+          "skill": "planning",
+          "path": ".agents/skills/planning/SKILL.md"
+        },
+        {
+          "type": "write-file",
+          "status": "create",
+          "skill": "systematic-debugging",
+          "path": ".agents/skills/systematic-debugging/SKILL.md"
+        },
+        {
+          "type": "write-file",
+          "status": "create",
+          "skill": "verification",
+          "path": ".agents/skills/verification/SKILL.md"
+        }
+      ]
+    }
+  ],
+  "summary": { "create": 3, "update": 0, "unchanged": 0 }
+}
+```
+
+Agnox only manages `<destination>/<skill>/SKILL.md` for skills it resolved. Other skills, provider
+settings and anything else in those directories are never read or written, a plan that would write
+outside the destination is refused, and nothing is ever deleted. A target with no adapter, or an
+installation with no target at all, prints a readable message on stderr and exits with code 1.
+
 ## Library use
 
 ```ts
@@ -255,10 +406,30 @@ builtInSkillRegistry.get("planning"); // { name, description, content }
 `createSkillRegistry(sources)` builds an independent registry from `{ name, load }` sources, which
 is the seam an external registry would use later.
 
-Resolution failures throw domain errors — `UnknownStackError`, `CircularStackDependencyError`,
-`UnknownSkillError`, `DuplicateSkillError`, `InvalidSkillError`, `AgnoxConfigNotFoundError`,
-`AgnoxConfigParseError`, `AgnoxConfigValidationError` — all extending `AgnoxError` with a stable
-`code`.
+Installation lives in `@agnox/adapters`, and planning is always separate from writing:
+
+```ts
+import { applyInstallPlans, builtInAdapterRegistry, planInstall } from "@agnox/adapters";
+import { builtInSkillRegistry } from "@agnox/core";
+
+const skills = ["planning", "angular-modern"].map((name) => builtInSkillRegistry.get(name));
+const plans = await planInstall({ targets: ["codex", "claude"], projectDir, skills });
+// one plan per target; no file has been touched
+
+await applyInstallPlans(plans); // the only code that writes
+
+builtInAdapterRegistry.ids; // ["codex", "claude"]
+```
+
+`createAdapterRegistry(adapters)` builds an independent registry, and `createSkillDirectoryAdapter`
+turns `{ id, name, skillsDir }` into an adapter for any agent that reads
+`<directory>/<skill>/SKILL.md` — the seam a third-party adapter would use.
+
+Resolution and installation failures throw domain errors — `UnknownStackError`,
+`CircularStackDependencyError`, `UnknownSkillError`, `DuplicateSkillError`, `InvalidSkillError`,
+`AgnoxConfigNotFoundError`, `AgnoxConfigParseError`, `AgnoxConfigValidationError`,
+`UnknownAdapterError`, `DuplicateAdapterError`, `MissingInstallTargetsError`, `InstallPathError` —
+all extending `AgnoxError` with a stable `code`.
 
 ## Packages
 
@@ -266,14 +437,15 @@ Resolution failures throw domain errors — `UnknownStackError`, `CircularStackD
 | ------------------------------------------- | ------------------------------------------------------- |
 | [`@agnox/core`](packages/core)               | Configuration model, stacks, skills, resolution, JSON Schema |
 | [`@agnox/cli`](packages/cli)                 | The `agnox` command-line interface                       |
-| [`@agnox/adapters`](packages/adapters)       | Provider adapter foundations (placeholder)               |
+| [`@agnox/adapters`](packages/adapters)       | Adapter contract, Codex and Claude Code adapters, install planning |
 
 ## Not implemented yet
 
-Agnox understands skills; it does not yet install them anywhere. Copying skills into an agent's
-directory, provider adapters (Codex, Claude, Kimi, OpenCode), MCP integration, project
-auto-detection, codebase memory, token budgets, remote and community registries, plugins, npm
-registry integration, an update system, and an init wizard are all still to come.
+Agnox installs skills into Codex and Claude Code, project-locally, and nothing more. Still to come:
+MCP integration, further providers (Kimi, OpenCode, Cursor), global installation into `$HOME`,
+remote and community registries, token optimization, uninstall and sync cleanup, a plugin system,
+project auto-detection, codebase memory, npm registry integration, an update system, and an init
+wizard. `profile` is carried through resolution but does not change what is installed yet.
 
 ## Contributing
 

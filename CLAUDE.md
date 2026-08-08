@@ -7,7 +7,9 @@
 - `.claude/settings.json` allowlists the read-only and build commands used here, and auto-runs
   `biome check --write` on files you edit. Personal overrides go in `.claude/settings.local.json`,
   which is gitignored.
-- Two project skills are available and are the fastest way to do the corresponding job correctly:
+- The project's workflow skills live in [.agents/skills](.agents/skills), shared with every other
+  agent. `.claude/skills/<name>/SKILL.md` is only a bridge that exposes them as slash commands, so
+  edit the file under `.agents/skills` and leave the bridge alone:
   - `/verify-agnox` — the full verification pipeline, including the CLI checks `pnpm check` does not
     cover.
   - `/add-builtin-stack` — add a stack to the built-in registry with the tests it needs.

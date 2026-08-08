@@ -1,5 +1,38 @@
 import { agnoxCoreName } from "@agnox/core";
 
+export type {
+  AdapterContext,
+  AdapterDetection,
+  AgentAdapter,
+  PlannedFile,
+} from "./adapter.js";
+export {
+  builtInAdapterDefinitions,
+  builtInAdapterRegistry,
+  builtInAdapters,
+} from "./built-in.js";
+export {
+  DuplicateAdapterError,
+  InstallPathError,
+  MissingInstallTargetsError,
+  UnknownAdapterError,
+} from "./errors.js";
+export type { InstallResult } from "./executor.js";
+export { applyInstallPlan, applyInstallPlans } from "./executor.js";
+export type {
+  InstallOperation,
+  InstallOperationStatus,
+  InstallPlan,
+  InstallPlanSummary,
+} from "./plan.js";
+export { summarizeInstallPlans } from "./plan.js";
+export type { PlanInstallInput, PlanTargetInstallInput } from "./planner.js";
+export { planInstall, planTargetInstall } from "./planner.js";
+export type { AdapterRegistry } from "./registry.js";
+export { createAdapterRegistry } from "./registry.js";
+export type { SkillDirectoryAdapterDefinition } from "./skill-directory.js";
+export { createSkillDirectoryAdapter, SKILL_FILENAME } from "./skill-directory.js";
+
 export const agnoxAdaptersName = "agnox-adapters";
 
 export function getAdaptersStatus(): string {

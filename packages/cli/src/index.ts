@@ -5,8 +5,10 @@ import { agnoxAdaptersName } from "@agnox/adapters";
 import { agnoxCoreName } from "@agnox/core";
 import { Command } from "commander";
 import { z } from "zod";
+import { createInstallCommand } from "./commands/install.js";
 import { createResolveCommand } from "./commands/resolve.js";
 import { createSkillCommand } from "./commands/skill.js";
+import { createTargetCommand } from "./commands/target.js";
 
 export const cliVersion = "0.0.0";
 
@@ -26,7 +28,9 @@ export function createAgnoxProgram(): Command {
     .description("Agnox — provider-agnostic tooling for coding agents.")
     .version(cliVersion)
     .addCommand(createResolveCommand())
-    .addCommand(createSkillCommand());
+    .addCommand(createSkillCommand())
+    .addCommand(createTargetCommand())
+    .addCommand(createInstallCommand());
 }
 
 function isMainModule(): boolean {
