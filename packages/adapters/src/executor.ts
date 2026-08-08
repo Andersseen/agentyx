@@ -46,6 +46,19 @@ export async function applyInstallPlan(plan: InstallPlan): Promise<InstallResult
     written.push(operation.relativePath);
   }
 
+  for (const operation of plan.mcpOperations) {
+    assertInside(operation.path, plan.projectDir);
+
+    if (operation.status === "unchanged") {
+      unchanged.push(operation.relativePath);
+      continue;
+    }
+
+    await mkdir(dirname(operation.path), { recursive: true });
+    await writeFile(operation.path, operation.content, "utf8");
+    written.push(operation.relativePath);
+  }
+
   return { target: plan.target, written, unchanged };
 }
 

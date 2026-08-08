@@ -61,3 +61,17 @@ export class InstallPathError extends AgnoxError {
     this.root = root;
   }
 }
+
+export class ProviderConfigParseError extends AgnoxError {
+  readonly path: string;
+
+  constructor(path: string, cause: unknown) {
+    const detail = cause instanceof Error ? cause.message : String(cause);
+
+    super("provider_config_parse_error", `Could not parse ${path}: ${detail}`, {
+      cause,
+    });
+    this.name = "ProviderConfigParseError";
+    this.path = path;
+  }
+}

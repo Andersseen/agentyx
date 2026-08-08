@@ -21,6 +21,25 @@ export {
   DEFAULT_AGNOX_PROFILE,
 } from "./config/schema.js";
 export { AgnoxError } from "./errors.js";
+export { builtInMcpServerNames, builtInMcpServerRegistry } from "./mcp/built-in.js";
+export {
+  DuplicateMcpServerError,
+  InvalidMcpServerError,
+  UnknownMcpServerError,
+} from "./mcp/errors.js";
+export type {
+  McpServerMetadata,
+  McpServerRegistry,
+  McpServerSource,
+} from "./mcp/registry.js";
+export { createMcpServerRegistry } from "./mcp/registry.js";
+export { resolveStackMcpServers } from "./mcp/resolver.js";
+export type {
+  McpEnvReference,
+  McpServerDefinition,
+  McpServerDefinitionInput,
+} from "./mcp/schema.js";
+export { mcpEnvReferenceSchema, mcpServerDefinitionSchema } from "./mcp/schema.js";
 export { agnoxCoreName, getCoreStatus } from "./meta.js";
 export { builtInSkillNames, builtInSkillRegistry } from "./skill/built-in.js";
 export {

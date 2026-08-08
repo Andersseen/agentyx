@@ -1,7 +1,7 @@
 import { mkdir, mkdtemp, readdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { builtInSkillRegistry, formatSkillMarkdown } from "@agnox/core";
+import { builtInMcpServerRegistry, builtInSkillRegistry, formatSkillMarkdown } from "@agnox/core";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { AgentAdapter } from "../src/adapter.js";
 import {
@@ -42,10 +42,124 @@ describe("planTargetInstall", () => {
   });
 
   it("writes nothing while planning", async () => {
-    await planTargetInstall({ target: "codex", projectDir, skills });
-    await planTargetInstall({ target: "claude", projectDir, skills });
+    await planTargetInstall({
+      target: "codex",
+      projectDir,
+      skills,
+      mcpServers: [builtInMcpServerRegistry.get("context7")],
+    });
+    await planTargetInstall({
+      target: "claude",
+      projectDir,
+      skills,
+      mcpServers: [builtInMcpServerRegistry.get("context7")],
+    });
 
     expect(await readdir(projectDir)).toEqual([]);
+  });
+
+  it("plans MCP configuration beside skill files", async () => {
+    const plan = await planTargetInstall({
+      target: "claude",
+      projectDir,
+      skills,
+      mcpServers: [builtInMcpServerRegistry.get("context7")],
+    });
+
+    expect(plan.operations).toHaveLength(2);
+    expect(plan.mcpOperations).toMatchObject([
+      {
+        type: "configure-mcp",
+        status: "create",
+        relativePath: ".mcp.json",
+        servers: ["context7"],
+      },
+    ]);
+  });
+
+  it("represents unsupported project MCP scope without failing skill planning", async () => {
+    const registry = createAdapterRegistry([
+      {
+        id: "acme",
+        name: "Acme",
+        capabilities: { skills: true, mcp: { project: false, global: false } },
+        skillsPath: (dir) => join(dir, ".acme"),
+        detect: async (dir) => ({ target: "acme", skillsPath: join(dir, ".acme"), present: false }),
+        planFiles: ({ skills: resolved }) =>
+          resolved.map((skill) => ({
+            segments: [".acme", `${skill.name}.md`],
+            content: formatSkillMarkdown(skill),
+            skill: skill.name,
+          })),
+      },
+    ]);
+
+    const plan = await planTargetInstall({
+      target: "acme",
+      projectDir,
+      skills,
+      mcpServers: [builtInMcpServerRegistry.get("context7")],
+      registry,
+    });
+
+    expect(plan.operations).toHaveLength(2);
+    expect(plan.mcpOperations).toEqual([]);
+    expect(plan.unsupportedMcp).toEqual(["context7"]);
+  });
+
+  it("preserves unrelated provider MCP configuration on real writes", async () => {
+    await mkdir(join(projectDir, ".codex"), { recursive: true });
+    await writeFile(
+      join(projectDir, ".codex", "config.toml"),
+      'model = "gpt-5"\n\n[mcp_servers.other]\ncommand = "other"\nargs = []\nenabled = true\n',
+    );
+    await writeFile(
+      join(projectDir, ".mcp.json"),
+      JSON.stringify({
+        custom: true,
+        mcpServers: { other: { type: "stdio", command: "other", args: [] } },
+      }),
+    );
+
+    const plans = await planInstall({
+      targets: ["codex", "claude"],
+      projectDir,
+      skills: [],
+      mcpServers: [builtInMcpServerRegistry.get("context7")],
+    });
+
+    expect(plans[0]?.mcpOperations[0]?.content).toContain('model = "gpt-5"');
+    expect(plans[0]?.mcpOperations[0]?.content).toContain("[mcp_servers.other]");
+    expect(JSON.parse(plans[1]?.mcpOperations[0]?.content ?? "{}")).toMatchObject({
+      custom: true,
+      mcpServers: {
+        other: { type: "stdio", command: "other", args: [] },
+        context7: { type: "http", url: "https://mcp.context7.com/mcp" },
+      },
+    });
+  });
+
+  it("marks an existing MCP config as unchanged when reinstalling", async () => {
+    const first = await planTargetInstall({
+      target: "codex",
+      projectDir,
+      skills: [],
+      mcpServers: [builtInMcpServerRegistry.get("context7")],
+    });
+    await mkdir(join(projectDir, ".codex"), { recursive: true });
+    await writeFile(
+      join(projectDir, ".codex", "config.toml"),
+      first.mcpOperations[0]?.content ?? "",
+    );
+
+    const second = await planTargetInstall({
+      target: "codex",
+      projectDir,
+      skills: [],
+      mcpServers: [builtInMcpServerRegistry.get("context7")],
+    });
+
+    expect(second.mcpOperations[0]?.status).toBe("unchanged");
   });
 
   it("marks a missing file as create", async () => {
@@ -108,6 +222,7 @@ describe("planTargetInstall", () => {
       {
         id: "acme",
         name: "Acme",
+        capabilities: { skills: true, mcp: { project: false, global: false } },
         skillsPath: (dir) => join(dir, ".acme"),
         detect: async (dir) => ({ target: "acme", skillsPath: join(dir, ".acme"), present: false }),
         planFiles: ({ skills: resolved }) =>
@@ -150,6 +265,7 @@ describe("planTargetInstall containment", () => {
   const escaping = (segments: readonly string[]): AgentAdapter => ({
     id: "escaping",
     name: "Escaping",
+    capabilities: { skills: true, mcp: { project: false, global: false } },
     skillsPath: (dir) => join(dir, ".escaping"),
     detect: async (dir) => ({
       target: "escaping",
@@ -181,6 +297,7 @@ describe("planTargetInstall containment", () => {
       withAdapter({
         id: "escaping",
         name: "Escaping",
+        capabilities: { skills: true, mcp: { project: false, global: false } },
         skillsPath: () => tmpdir(),
         detect: async () => ({ target: "escaping", skillsPath: tmpdir(), present: false }),
         planFiles: () => [],
@@ -193,6 +310,7 @@ describe("planTargetInstall containment", () => {
       withAdapter({
         id: "escaping",
         name: "Escaping",
+        capabilities: { skills: true, mcp: { project: false, global: false } },
         skillsPath: (dir) => dir,
         detect: async (dir) => ({ target: "escaping", skillsPath: dir, present: false }),
         planFiles: () => [],

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { mcpServerNameSchema } from "../mcp/schema.js";
 import { skillNameSchema } from "../skill/schema.js";
 
 /**
@@ -9,8 +10,7 @@ export const stackNameSchema = z.string().min(1, "Stack names must be non-empty 
 
 /**
  * A stack describes a development environment that can build on other stacks
- * and contribute skills to them. It stays provider agnostic — MCP tools,
- * agents and adapters are not part of the model yet.
+ * and contribute provider-agnostic capabilities to them.
  */
 export const stackDefinitionSchema = z.strictObject({
   name: stackNameSchema.describe("Unique stack identifier."),
@@ -27,9 +27,13 @@ export const stackDefinitionSchema = z.strictObject({
     .array(skillNameSchema)
     .describe("Skills this stack contributes, in declaration order.")
     .default([]),
+  mcpServers: z
+    .array(mcpServerNameSchema)
+    .describe("MCP servers this stack contributes, in declaration order.")
+    .default([]),
 });
 
-/** A validated stack definition, with `extends` and `skills` always present. */
+/** A validated stack definition, with defaults always present. */
 export type StackDefinition = z.infer<typeof stackDefinitionSchema>;
 
 /** The shape accepted when authoring a stack definition. */

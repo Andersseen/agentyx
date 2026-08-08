@@ -24,6 +24,7 @@ describe("resolveAgnoxConfig", () => {
         "typescript-modern",
         "angular-modern",
       ],
+      mcpServers: ["context7"],
       profile: "balanced",
       targets: ["codex"],
     });
@@ -36,6 +37,7 @@ describe("resolveAgnoxConfig", () => {
       "requestedStacks",
       "resolvedStacks",
       "skills",
+      "mcpServers",
       "profile",
       "targets",
     ]);
@@ -65,6 +67,7 @@ describe("resolveAgnoxConfig", () => {
       requestedStacks: [],
       resolvedStacks: [],
       skills: [],
+      mcpServers: [],
       profile: "balanced",
       targets: [],
     });

@@ -19,6 +19,11 @@ import {
  *   location shared with other agents, which is also why the Codex adapter does
  *   not use a `.codex` directory.
  * - **Claude Code** reads project skills from `.claude/skills`.
+ * - **Codex MCP** uses project `.codex/config.toml` under `mcp_servers`. Codex only loads project
+ *   `.codex/` layers for trusted projects, so Agnox writes the project file and never falls back to
+ *   `$HOME`.
+ * - **Claude Code MCP** supports project scope in `.mcp.json` with an `mcpServers` object. Local
+ *   and user MCP scopes live in `~/.claude.json`, which Agnox deliberately does not mutate.
  *
  * Neither definition carries skill content: they are three fields and a
  * directory, and the instructions come from the Agnox skill registry.
@@ -29,12 +34,14 @@ export const builtInAdapterDefinitions: readonly SkillDirectoryAdapterDefinition
     name: "Codex",
     skillsDir: [".agents", "skills"],
     reference: "https://developers.openai.com/codex/skills",
+    mcp: { project: true, config: "codex-toml" },
   },
   {
     id: "claude",
     name: "Claude Code",
     skillsDir: [".claude", "skills"],
     reference: "https://code.claude.com/docs/en/skills",
+    mcp: { project: true, config: "claude-json" },
   },
 ];
 

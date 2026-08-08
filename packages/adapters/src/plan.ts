@@ -30,6 +30,15 @@ export interface InstallOperation {
   readonly content: string;
 }
 
+export interface McpInstallOperation {
+  readonly type: "configure-mcp";
+  readonly status: InstallOperationStatus;
+  readonly path: string;
+  readonly relativePath: string;
+  readonly servers: readonly string[];
+  readonly content: string;
+}
+
 /** Everything Agnox would change for one target, computed without writing anything. */
 export interface InstallPlan {
   /** The target id, matching the adapter that produced the plan. */
@@ -44,6 +53,10 @@ export interface InstallPlan {
   readonly relativeSkillsPath: string;
   /** Operations in skill resolution order. */
   readonly operations: readonly InstallOperation[];
+  /** Project-local MCP configuration operation, when the target supports it. */
+  readonly mcpOperations: readonly McpInstallOperation[];
+  /** MCP servers that could not be installed into the requested project scope. */
+  readonly unsupportedMcp: readonly string[];
 }
 
 /** How many operations of each status a set of plans holds. */
@@ -59,6 +72,10 @@ export function summarizeInstallPlans(plans: readonly InstallPlan[]): InstallPla
 
   for (const plan of plans) {
     for (const operation of plan.operations) {
+      summary[operation.status] += 1;
+    }
+
+    for (const operation of plan.mcpOperations) {
       summary[operation.status] += 1;
     }
   }

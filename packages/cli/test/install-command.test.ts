@@ -41,9 +41,12 @@ describe("agnox install --dry-run", () => {
         "Agnox install (dry run)",
         "",
         "codex -> .agents/skills",
+        "Skills",
         "  create    .agents/skills/planning/SKILL.md",
         "  create    .agents/skills/systematic-debugging/SKILL.md",
         "  create    .agents/skills/verification/SKILL.md",
+        "MCP",
+        "  (none)",
         "",
         "Dry run: 3 to create, 0 to update, 0 unchanged. Nothing was written.",
       ].join("\n"),
@@ -85,6 +88,7 @@ describe("agnox install --dry-run --json", () => {
       dryRun: true,
       stacks: ["core"],
       skills: ["planning", "systematic-debugging", "verification"],
+      mcpServers: [],
       targets: ["codex", "claude"],
       plans: [
         {
@@ -111,6 +115,8 @@ describe("agnox install --dry-run --json", () => {
               path: ".agents/skills/verification/SKILL.md",
             },
           ],
+          mcpOperations: [],
+          unsupportedMcp: [],
         },
         {
           target: "claude",
@@ -136,6 +142,8 @@ describe("agnox install --dry-run --json", () => {
               path: ".claude/skills/verification/SKILL.md",
             },
           ],
+          mcpOperations: [],
+          unsupportedMcp: [],
         },
       ],
       summary: { create: 6, update: 0, unchanged: 0 },
@@ -247,7 +255,7 @@ describe("agnox install", () => {
 
     const output = await runInstallCommand({ ...baseInput, cwd: projectDir });
 
-    expect(output).toContain("Installed: 10 written, 0 unchanged.");
+    expect(output).toContain("Installed: 12 written, 0 unchanged.");
     expect((await readdir(join(projectDir, ".agents", "skills"))).sort()).toEqual([
       "angular-modern",
       "planning",
@@ -285,7 +293,7 @@ describe("agnox install", () => {
     await runInstallCommand({ ...baseInput, cwd: projectDir });
     const output = await runInstallCommand({ ...baseInput, cwd: projectDir });
 
-    expect(output).toContain("Installed: 0 written, 10 unchanged.");
+    expect(output).toContain("Installed: 0 written, 12 unchanged.");
     expect(output).toContain("unchanged .agents/skills/planning/SKILL.md");
   });
 
@@ -301,7 +309,7 @@ describe("agnox install", () => {
 
     const output = await runInstallCommand({ ...baseInput, cwd: projectDir });
 
-    expect(output).toContain("Installed: 1 written, 9 unchanged.");
+    expect(output).toContain("Installed: 1 written, 11 unchanged.");
     expect(await readFile(path, "utf8")).toBe(
       formatSkillMarkdown(builtInSkillRegistry.get("planning")),
     );
@@ -321,6 +329,8 @@ describe("agnox install", () => {
       ".agents",
       ".agnox.json",
       ".claude",
+      ".codex",
+      ".mcp.json",
       "README.md",
     ]);
   });
@@ -344,6 +354,8 @@ describe("install command wiring", () => {
     expect(command.options.map((option) => option.long).sort()).toEqual([
       "--dry-run",
       "--json",
+      "--mcp-only",
+      "--skills-only",
       "--target",
     ]);
     expect(command.registeredArguments.map((argument) => argument.name())).toEqual(["stacks"]);

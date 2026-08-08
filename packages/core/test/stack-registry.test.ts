@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { builtInMcpServerRegistry } from "../src/mcp/built-in.js";
 import { builtInSkillRegistry } from "../src/skill/built-in.js";
 import { DuplicateStackError } from "../src/stack/errors.js";
 import { builtInStackRegistry, builtInStacks, createStackRegistry } from "../src/stack/registry.js";
@@ -37,13 +38,28 @@ describe("built-in stack registry", () => {
       }
     }
   });
+
+  it("only references MCP servers the built-in MCP registry provides", () => {
+    for (const stack of builtInStackRegistry.values()) {
+      for (const server of stack.mcpServers) {
+        expect(builtInMcpServerRegistry.has(server), `${stack.name} references ${server}`).toBe(
+          true,
+        );
+      }
+    }
+  });
 });
 
 describe("createStackRegistry", () => {
   it("applies the empty extends and skills defaults", () => {
     const registry = createStackRegistry([{ name: "solo" }]);
 
-    expect(registry.get("solo")).toEqual({ name: "solo", extends: [], skills: [] });
+    expect(registry.get("solo")).toEqual({
+      name: "solo",
+      extends: [],
+      skills: [],
+      mcpServers: [],
+    });
   });
 
   it("keeps declared skills in order", () => {

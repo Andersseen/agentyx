@@ -1,4 +1,12 @@
-import type { SkillDefinition } from "@agnox/core";
+import type { McpServerDefinition, SkillDefinition } from "@agnox/core";
+
+export interface AdapterCapabilities {
+  readonly skills: boolean;
+  readonly mcp: {
+    readonly project: boolean;
+    readonly global: boolean;
+  };
+}
 
 /**
  * Everything an adapter needs to describe an installation.
@@ -12,6 +20,8 @@ export interface AdapterContext {
   readonly projectDir: string;
   /** Resolved skills, in resolution order. */
   readonly skills: readonly SkillDefinition[];
+  /** Resolved MCP servers, in resolution order. */
+  readonly mcpServers?: readonly McpServerDefinition[];
 }
 
 /** A file an adapter wants to exist, described without touching the filesystem. */
@@ -25,6 +35,12 @@ export interface PlannedFile {
   readonly content: string;
   /** The skill this file was generated from. */
   readonly skill: string;
+}
+
+export interface PlannedMcpConfig {
+  readonly segments: readonly string[];
+  readonly content: string;
+  readonly servers: readonly string[];
 }
 
 /** What Agnox can say about a provider in a project without changing anything. */
@@ -57,10 +73,15 @@ export interface AgentAdapter {
   readonly id: string;
   /** Human-readable provider name, for CLI output. */
   readonly name: string;
+  readonly capabilities: AdapterCapabilities;
   /** The absolute directory Agnox owns for this provider in `projectDir`. */
   skillsPath(projectDir: string): string;
   /** Reads the filesystem to report where and whether the provider is set up. Never writes. */
   detect(projectDir: string): Promise<AdapterDetection>;
   /** Maps resolved skills to the files this provider expects. No filesystem access. */
   planFiles(context: AdapterContext): readonly PlannedFile[];
+  /** Path to the project-local MCP config, when supported. */
+  mcpConfigPath?(projectDir: string): string;
+  /** Merges resolved MCP servers into existing provider config content. */
+  planMcpConfig?(context: AdapterContext, existingContent: string | undefined): PlannedMcpConfig;
 }

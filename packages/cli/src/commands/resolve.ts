@@ -1,6 +1,7 @@
 import {
   loadAgnoxConfig,
   resolveAgnoxConfig,
+  resolveStackMcpServers,
   resolveStackSkills,
   resolveStacks,
 } from "@agnox/core";
@@ -29,10 +30,15 @@ export async function runResolveCommand(input: ResolveCommandInput): Promise<str
     const requestedStacks = [...input.stacks];
     const resolvedStacks = resolveStacks(requestedStacks);
     const skills = resolveStackSkills(requestedStacks);
+    const mcpServers = resolveStackMcpServers(requestedStacks);
 
     return input.json
-      ? toJson({ requestedStacks, resolvedStacks, skills })
-      : [section("Stacks", resolvedStacks), section("Skills", skills)].join("\n\n");
+      ? toJson({ requestedStacks, resolvedStacks, skills, mcpServers })
+      : [
+          section("Stacks", resolvedStacks),
+          section("Skills", skills),
+          section("MCP", mcpServers),
+        ].join("\n\n");
   }
 
   const resolved = resolveAgnoxConfig(await loadAgnoxConfig(input.cwd));
@@ -47,6 +53,7 @@ export async function runResolveCommand(input: ResolveCommandInput): Promise<str
     section("Targets", resolved.targets),
     section("Stacks", resolved.resolvedStacks),
     section("Skills", resolved.skills),
+    section("MCP", resolved.mcpServers),
   ].join("\n\n");
 }
 

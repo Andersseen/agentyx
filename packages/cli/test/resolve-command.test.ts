@@ -30,6 +30,9 @@ describe("agnox resolve <stack>", () => {
         "  verification",
         "  typescript-modern",
         "  angular-modern",
+        "",
+        "MCP",
+        "  context7",
       ].join("\n"),
     );
   });
@@ -46,6 +49,9 @@ describe("agnox resolve <stack>", () => {
         "  planning",
         "  systematic-debugging",
         "  verification",
+        "",
+        "MCP",
+        "  (none)",
       ].join("\n"),
     );
     expect(await runResolveCommand({ ...base, stacks: ["typescript"] })).toContain(
@@ -83,6 +89,7 @@ describe("agnox resolve <stack>", () => {
         "typescript-modern",
         "angular-modern",
       ],
+      mcpServers: ["context7"],
     });
   });
 
@@ -90,7 +97,7 @@ describe("agnox resolve <stack>", () => {
     const output = await runResolveCommand({ stacks: ["angular"], json: false, cwd: tmpdir() });
 
     expect(output).not.toContain("# Modern Angular");
-    expect(output.split("\n")).toHaveLength(11);
+    expect(output.split("\n")).toHaveLength(14);
   });
 
   it("fails on an unknown stack", async () => {
@@ -142,6 +149,9 @@ describe("agnox resolve", () => {
         "  verification",
         "  typescript-modern",
         "  angular-modern",
+        "",
+        "MCP",
+        "  context7",
       ].join("\n"),
     );
   });
@@ -171,6 +181,7 @@ describe("agnox resolve", () => {
         "typescript-modern",
         "angular-modern",
       ],
+      mcpServers: ["context7"],
       profile: "balanced",
       targets: ["codex", "claude"],
     });

@@ -1,10 +1,12 @@
 import { agnoxCoreName } from "@agnox/core";
 
 export type {
+  AdapterCapabilities,
   AdapterContext,
   AdapterDetection,
   AgentAdapter,
   PlannedFile,
+  PlannedMcpConfig,
 } from "./adapter.js";
 export {
   builtInAdapterDefinitions,
@@ -24,6 +26,7 @@ export type {
   InstallOperationStatus,
   InstallPlan,
   InstallPlanSummary,
+  McpInstallOperation,
 } from "./plan.js";
 export { summarizeInstallPlans } from "./plan.js";
 export type { PlanInstallInput, PlanTargetInstallInput } from "./planner.js";
