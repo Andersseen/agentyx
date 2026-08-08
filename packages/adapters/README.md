@@ -14,10 +14,13 @@ on core; core never depends on it.
 | -------- | ----------- | ------------------------- |
 | `codex`  | Codex       | `.agents/skills`          |
 | `claude` | Claude Code | `.claude/skills`          |
+| `kimi`   | Kimi Code   | `.agents/skills`          |
 
 Both destinations are the providers' documented project-local conventions:
 [Codex](https://developers.openai.com/codex/skills) reads repository skills from the vendor-neutral
-`.agents/skills`, [Claude Code](https://code.claude.com/docs/en/skills) from `.claude/skills`.
+`.agents/skills`, [Claude Code](https://code.claude.com/docs/en/skills) from `.claude/skills`, and
+[Kimi Code](https://www.kimi.com/code/docs/en/kimi-code-cli/customization/skills.html) also scans
+project `.agents/skills`.
 Installation is project-local — nothing is written to `$HOME`.
 
 ## Plan first, then write
@@ -29,7 +32,7 @@ import { builtInSkillRegistry } from "@agnox/core";
 const skills = ["planning", "angular-modern"].map((name) => builtInSkillRegistry.get(name));
 
 // Reads the destinations to classify each file, and writes nothing.
-const plans = await planInstall({ targets: ["codex", "claude"], projectDir, skills });
+const plans = await planInstall({ targets: ["codex", "claude", "kimi"], projectDir, skills });
 
 // The only code in Agnox that mutates a project. Skipping it is a dry run.
 await applyInstallPlans(plans);
@@ -40,8 +43,9 @@ absolute path and the project-relative path used for output. Parent directories 
 executor, so there is no directory operation; there is no operation that runs a command.
 
 Every target is handed the same `SkillDefinition` objects and the canonical `SKILL.md` that
-`@agnox/core` renders, so two providers can only ever receive identical instructions — the plans
-differ in destination and nothing else.
+`@agnox/core` renders, so providers can only ever receive identical instructions. Providers that
+share the same destination and content, such as Codex and Kimi Code, collapse to one physical write
+with shared `usedBy` metadata.
 
 ## Writing an adapter
 
@@ -72,6 +76,7 @@ Agnox only manages `<destination>/<skill>/SKILL.md` for skills it resolved. A pl
 outside the directory a target owns is refused with `InstallPathError`, unchanged files are not
 rewritten, writes are UTF-8, and nothing is deleted, executed or fetched.
 
-MCP servers, hooks and permissions are **not** part of the contract yet.
+Project MCP configuration is planned and written through the same plan-first machinery. Hooks,
+permissions and user-global configuration are not part of the contract yet.
 
 MIT © Andersseen

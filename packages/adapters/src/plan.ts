@@ -28,6 +28,8 @@ export interface InstallOperation {
   /** The skill this file was generated from — the attribution a future manifest would record. */
   readonly skill: string;
   readonly content: string;
+  /** Targets that are satisfied by this exact physical write. */
+  readonly usedBy: readonly string[];
 }
 
 export interface McpInstallOperation {
@@ -37,6 +39,8 @@ export interface McpInstallOperation {
   readonly relativePath: string;
   readonly servers: readonly string[];
   readonly content: string;
+  /** Targets that are satisfied by this exact physical write. */
+  readonly usedBy: readonly string[];
 }
 
 /** Everything Agnox would change for one target, computed without writing anything. */
@@ -69,16 +73,31 @@ export interface InstallPlanSummary {
 /** Counts operations by status, across one or more plans. */
 export function summarizeInstallPlans(plans: readonly InstallPlan[]): InstallPlanSummary {
   const summary = { create: 0, update: 0, unchanged: 0 };
+  const seen = new Set<string>();
 
   for (const plan of plans) {
     for (const operation of plan.operations) {
+      const key = operationKey(operation.path, operation.content);
+      if (seen.has(key)) {
+        continue;
+      }
+      seen.add(key);
       summary[operation.status] += 1;
     }
 
     for (const operation of plan.mcpOperations) {
+      const key = operationKey(operation.path, operation.content);
+      if (seen.has(key)) {
+        continue;
+      }
+      seen.add(key);
       summary[operation.status] += 1;
     }
   }
 
   return summary;
+}
+
+function operationKey(path: string, content: string): string {
+  return `${path}\u0000${content}`;
 }

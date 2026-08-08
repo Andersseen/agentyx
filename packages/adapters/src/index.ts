@@ -17,6 +17,8 @@ export {
   DuplicateAdapterError,
   InstallPathError,
   MissingInstallTargetsError,
+  ProviderConfigParseError,
+  SharedInstallConflictError,
   UnknownAdapterError,
 } from "./errors.js";
 export type { InstallResult } from "./executor.js";

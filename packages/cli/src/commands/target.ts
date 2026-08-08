@@ -24,6 +24,10 @@ export async function runTargetShowCommand(input: TargetShowCommandInput): Promi
   const adapter = builtInAdapterRegistry.get(input.target);
   const detection = await adapter.detect(input.cwd);
   const skillsPath = relative(input.cwd, detection.skillsPath).split(sep).join("/");
+  const mcpPath =
+    adapter.mcpConfigPath === undefined
+      ? undefined
+      : relative(input.cwd, adapter.mcpConfigPath(input.cwd)).split(sep).join("/");
 
   if (input.json) {
     return toJson({
@@ -31,13 +35,22 @@ export async function runTargetShowCommand(input: TargetShowCommandInput): Promi
       name: adapter.name,
       skillsPath,
       present: detection.present,
+      mcp: {
+        project: adapter.capabilities.mcp.project,
+        path: mcpPath,
+        transports: adapter.capabilities.mcp.transports ?? [],
+      },
+      references: adapter.references ?? [],
     });
   }
 
   return [
     adapter.id,
     adapter.name,
-    `${skillsPath}${detection.present ? "" : " (not present)"}`,
+    `Skills: ${skillsPath}${detection.present ? "" : " (not present)"}`,
+    `MCP: ${mcpPath ?? "not supported"}${adapter.capabilities.mcp.project ? "" : " (not supported)"}`,
+    `MCP transports: ${(adapter.capabilities.mcp.transports ?? []).join(", ") || "none"}`,
+    ...(adapter.references ?? []).map((reference) => `Reference: ${reference}`),
   ].join("\n");
 }
 

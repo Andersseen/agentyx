@@ -8,6 +8,7 @@ import { createSkillDirectoryAdapter } from "../src/skill-directory.js";
 
 const codex = builtInAdapterRegistry.get("codex");
 const claude = builtInAdapterRegistry.get("claude");
+const kimi = builtInAdapterRegistry.get("kimi");
 const skills = ["planning", "verification", "angular-modern"].map((name) =>
   builtInSkillRegistry.get(name),
 );
@@ -26,6 +27,10 @@ describe("skill destinations", () => {
 
   it("installs Claude Code skills into .claude/skills", () => {
     expect(claude.skillsPath(projectDir)).toBe(join(projectDir, ".claude", "skills"));
+  });
+
+  it("installs Kimi Code skills into the shared .agents/skills directory", () => {
+    expect(kimi.skillsPath(projectDir)).toBe(join(projectDir, ".agents", "skills"));
   });
 
   it("stays inside the project — nothing is installed globally", () => {
@@ -55,21 +60,32 @@ describe("planFiles", () => {
     ]);
   });
 
+  it("uses the shared skill directory for Kimi Code", () => {
+    expect(kimi.planFiles({ projectDir, skills }).map((f) => f.segments)).toEqual([
+      [".agents", "skills", "planning", "SKILL.md"],
+      [".agents", "skills", "verification", "SKILL.md"],
+      [".agents", "skills", "angular-modern", "SKILL.md"],
+    ]);
+  });
+
   it("writes the canonical serialization, not a provider-specific one", () => {
     const [file] = codex.planFiles({ projectDir, skills });
 
     expect(file?.content).toBe(formatSkillMarkdown(builtInSkillRegistry.get("planning")));
   });
 
-  it("gives both providers byte-identical content from the same skill object", () => {
+  it("gives every provider byte-identical content from the same skill object", () => {
     const skill = builtInSkillRegistry.get("angular-modern");
     const context = { projectDir, skills: [skill] };
 
     const [forCodex] = codex.planFiles(context);
     const [forClaude] = claude.planFiles(context);
+    const [forKimi] = kimi.planFiles(context);
 
     expect(forCodex?.content).toBe(forClaude?.content);
+    expect(forCodex?.content).toBe(forKimi?.content);
     expect(forCodex?.segments).not.toEqual(forClaude?.segments);
+    expect(forCodex?.segments).toEqual(forKimi?.segments);
   });
 
   it("plans nothing when no skill resolves", () => {

@@ -5,6 +5,7 @@ import { ProviderConfigParseError } from "./errors.js";
 
 export const CODEX_MCP_CONFIG_SEGMENTS = [".codex", "config.toml"] as const;
 export const CLAUDE_MCP_CONFIG_SEGMENTS = [".mcp.json"] as const;
+export const KIMI_MCP_CONFIG_SEGMENTS = [".kimi-code", "mcp.json"] as const;
 
 type JsonRecord = Record<string, unknown>;
 
@@ -14,6 +15,10 @@ export function codexMcpConfigPath(projectDir: string): string {
 
 export function claudeMcpConfigPath(projectDir: string): string {
   return resolve(projectDir, ...CLAUDE_MCP_CONFIG_SEGMENTS);
+}
+
+export function kimiMcpConfigPath(projectDir: string): string {
+  return resolve(projectDir, ...KIMI_MCP_CONFIG_SEGMENTS);
 }
 
 export function renderCodexMcpConfig(
@@ -49,6 +54,26 @@ export function renderClaudeMcpConfig(
 
   for (const server of servers) {
     mcpServers[server.name] = renderClaudeMcpServer(server);
+  }
+
+  config.mcpServers = sortRecord(mcpServers);
+
+  return `${JSON.stringify(sortRecord(config), null, 2)}\n`;
+}
+
+export function renderKimiMcpConfig(
+  servers: readonly McpServerDefinition[],
+  existingContent: string | undefined,
+): string {
+  const config = parseJsonObject(existingContent, KIMI_MCP_CONFIG_SEGMENTS.join("/"));
+  const mcpServers = optionalRecord(
+    config.mcpServers,
+    KIMI_MCP_CONFIG_SEGMENTS.join("/"),
+    "mcpServers",
+  );
+
+  for (const server of servers) {
+    mcpServers[server.name] = renderKimiMcpServer(server);
   }
 
   config.mcpServers = sortRecord(mcpServers);
@@ -94,6 +119,27 @@ export function renderClaudeMcpServer(server: McpServerDefinition): JsonRecord {
     url: server.url,
   };
   const headers = renderExpandedEnv(server.headers);
+
+  if (Object.keys(headers).length > 0) {
+    rendered.headers = headers;
+  }
+
+  return rendered;
+}
+
+export function renderKimiMcpServer(server: McpServerDefinition): JsonRecord {
+  if (server.transport === "stdio") {
+    return {
+      command: server.command,
+      args: server.args,
+      env: renderPlainEnv(server.env),
+    };
+  }
+
+  const rendered: JsonRecord = {
+    url: server.url,
+  };
+  const headers = renderPlainEnv(server.headers);
 
   if (Object.keys(headers).length > 0) {
     rendered.headers = headers;

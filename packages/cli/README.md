@@ -39,14 +39,15 @@ agnox skill show angular-modern
 agnox skill show angular-modern --json
 ```
 
-`agnox install` writes the resolved skills into each target agent — `codex` installs into
-`.agents/skills`, `claude` into `.claude/skills`, both project-local. Plan first:
+`agnox install` writes the resolved skills into each target agent — `codex` and `kimi` install into
+`.agents/skills`, `claude` into `.claude/skills`, all project-local. Plan first:
 
 ```sh
 agnox install --dry-run
 agnox install --dry-run --json
 agnox install
 agnox install --target codex
+agnox install --target kimi
 agnox install angular --target codex
 ```
 

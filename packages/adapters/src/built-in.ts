@@ -19,11 +19,15 @@ import {
  *   location shared with other agents, which is also why the Codex adapter does
  *   not use a `.codex` directory.
  * - **Claude Code** reads project skills from `.claude/skills`.
+ * - **Kimi Code** reads project skills from `.agents/skills`, the shared directory that Kimi
+ *   documents alongside its `.kimi-code/skills` directory.
  * - **Codex MCP** uses project `.codex/config.toml` under `mcp_servers`. Codex only loads project
  *   `.codex/` layers for trusted projects, so Agnox writes the project file and never falls back to
  *   `$HOME`.
  * - **Claude Code MCP** supports project scope in `.mcp.json` with an `mcpServers` object. Local
  *   and user MCP scopes live in `~/.claude.json`, which Agnox deliberately does not mutate.
+ * - **Kimi Code MCP** supports project scope in `.kimi-code/mcp.json` with an `mcpServers` object.
+ *   Kimi also supports SSE, but Agnox's provider-neutral MCP model currently covers stdio and HTTP.
  *
  * Neither definition carries skill content: they are three fields and a
  * directory, and the instructions come from the Agnox skill registry.
@@ -34,14 +38,36 @@ export const builtInAdapterDefinitions: readonly SkillDirectoryAdapterDefinition
     name: "Codex",
     skillsDir: [".agents", "skills"],
     reference: "https://developers.openai.com/codex/skills",
-    mcp: { project: true, config: "codex-toml" },
+    mcp: {
+      project: true,
+      config: "codex-toml",
+      transports: ["stdio", "http"],
+      reference: "https://developers.openai.com/codex/mcp",
+    },
   },
   {
     id: "claude",
     name: "Claude Code",
     skillsDir: [".claude", "skills"],
     reference: "https://code.claude.com/docs/en/skills",
-    mcp: { project: true, config: "claude-json" },
+    mcp: {
+      project: true,
+      config: "claude-json",
+      transports: ["stdio", "http"],
+      reference: "https://docs.anthropic.com/en/docs/claude-code/mcp",
+    },
+  },
+  {
+    id: "kimi",
+    name: "Kimi Code",
+    skillsDir: [".agents", "skills"],
+    reference: "https://www.kimi.com/code/docs/en/kimi-code-cli/customization/skills.html",
+    mcp: {
+      project: true,
+      config: "kimi-json",
+      transports: ["stdio", "http"],
+      reference: "https://www.kimi.com/code/docs/en/kimi-code-cli/customization/mcp.html",
+    },
   },
 ];
 

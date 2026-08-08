@@ -10,7 +10,7 @@ The current scope is deliberately narrow: a configuration model (`.agnox.json`),
 model, a built-in stack registry, stack resolution, skills — provider-agnostic instruction files
 that stacks contribute and Agnox resolves — and provider adapters that install those skills into a
 project for Codex (`.agents/skills`) and Claude Code (`.claude/skills`). Installation is
-project-local, plan-first, and limited to skill files.
+project-local, plan-first, and covers Skill files plus project MCP configuration.
 
 ## Commands
 
@@ -32,13 +32,17 @@ Tests import from source via the `@agnox/core` alias in `vitest.config.ts`, so `
 
 ## Workflow skills
 
-Two recurring jobs have written-down procedures in [.agents/skills](.agents/skills). They are plain
+Recurring jobs have written-down procedures in [.agents/skills](.agents/skills). They are plain
 Markdown and provider-neutral — read the file and follow it, whichever agent you are.
 
 - [verify-agnox](.agents/skills/verify-agnox/SKILL.md) — read before handing back any change; it
   covers the CLI and schema checks `pnpm check` does not.
 - [add-builtin-stack](.agents/skills/add-builtin-stack/SKILL.md) — read when adding, renaming or
   re-parenting a built-in stack.
+- [context-efficient-development](.agents/skills/context-efficient-development/SKILL.md) — read for
+  non-trivial Agnox work to keep exploration, commands and output focused.
+- [navigate-agnox](.agents/skills/navigate-agnox/SKILL.md) — read when you need the repository map
+  before deciding where a change belongs.
 
 Agents with a native skill mechanism reach the same files through a thin bridge in their own
 directory; [.agents/README.md](.agents/README.md) explains how to add one for a provider that is
@@ -51,7 +55,7 @@ packages/core        domain: config schema/loader/resolver, stack and skill
                      schema/registry/resolver/errors, SKILL.md parsing and serialization
 packages/core/skills built-in SKILL.md files, published as package assets
 packages/cli         Commander program and terminal output only
-packages/adapters    adapter contract, adapter registry, Codex and Claude Code adapters,
+packages/adapters    adapter contract, adapter registry, provider adapters,
                      install planning, filesystem executor
 examples/angular     .agnox.json fixture, referenced by core, cli and adapter tests
 ```
@@ -78,10 +82,10 @@ Dependencies point one way: `cli → core`, `adapters → core`. Core depends on
    systems. Plain functions and plain objects.
 7. **Never silently repair invalid configuration.** Throw a descriptive error.
 8. **Installation plans and writes stay separate.** Planning reads; only `applyInstallPlan` writes.
-   Agnox writes UTF-8 files inside the directory a target owns and nothing else — no deletes, no
-   shell commands, no network, no `$HOME`, and no provider config file it did not generate.
-9. **Do not implement the future roadmap.** MCP integration, further providers (Kimi, OpenCode,
-   Cursor), global installs, project auto-detection, codebase memory, token budgets, remote
+   Agnox writes UTF-8 files inside the directory or project config file a target owns and nothing
+   else — no deletes, no shell commands, no network and no `$HOME`.
+9. **Do not implement the future roadmap.** OpenCode, Cursor, global installs, project
+   auto-detection, codebase memory, token budgets, remote
    registries, plugins, npm registry integration, uninstall and sync cleanup, an update system, and
    an init wizard are all out of scope until asked for.
 
