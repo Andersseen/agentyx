@@ -10,7 +10,7 @@
     "node": ">=22"
   },
   "scripts": {
-    "agnox": "pnpm --filter @agnox/cli run agnox",
+    "agnox": "node packages/cli/dist/index.mjs",
     "build": "pnpm -r --sort run build",
     "check": "biome check . && pnpm typecheck && pnpm test && pnpm build",
     "clean": "pnpm -r --parallel run clean",
