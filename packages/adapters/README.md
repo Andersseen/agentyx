@@ -1,12 +1,77 @@
 # @agnox/adapters
 
-Provider adapter foundations for [Agnox](https://github.com/Andersseen/agnox).
+Provider adapters for [Agnox](https://github.com/Andersseen/agnox): the layer that turns an
+already-resolved Agnox environment into the files a specific coding agent expects.
 
-**Nothing is implemented yet.** This package is a placeholder for the layer that will translate a
-resolved Agnox configuration into provider-specific output. Agnox stacks describe development
-environments, never providers, so all provider-specific behaviour will land here rather than in
-[`@agnox/core`](https://github.com/Andersseen/agnox/tree/main/packages/core).
+Agnox stacks and skills describe development environments, never providers, so everything a provider
+knows lives here rather than in
+[`@agnox/core`](https://github.com/Andersseen/agnox/tree/main/packages/core). This package depends
+on core; core never depends on it.
 
-Do not build on this package yet — its API will change entirely.
+## Targets
+
+| Id       | Agent       | Project skill destination |
+| -------- | ----------- | ------------------------- |
+| `codex`  | Codex       | `.agents/skills`          |
+| `claude` | Claude Code | `.claude/skills`          |
+
+Both destinations are the providers' documented project-local conventions:
+[Codex](https://developers.openai.com/codex/skills) reads repository skills from the vendor-neutral
+`.agents/skills`, [Claude Code](https://code.claude.com/docs/en/skills) from `.claude/skills`.
+Installation is project-local — nothing is written to `$HOME`.
+
+## Plan first, then write
+
+```ts
+import { applyInstallPlans, planInstall } from "@agnox/adapters";
+import { builtInSkillRegistry } from "@agnox/core";
+
+const skills = ["planning", "angular-modern"].map((name) => builtInSkillRegistry.get(name));
+
+// Reads the destinations to classify each file, and writes nothing.
+const plans = await planInstall({ targets: ["codex", "claude"], projectDir, skills });
+
+// The only code in Agnox that mutates a project. Skipping it is a dry run.
+await applyInstallPlans(plans);
+```
+
+A plan is a list of `write-file` operations, each with a `create` / `update` / `unchanged` status, an
+absolute path and the project-relative path used for output. Parent directories are created by the
+executor, so there is no directory operation; there is no operation that runs a command.
+
+Every target is handed the same `SkillDefinition` objects and the canonical `SKILL.md` that
+`@agnox/core` renders, so two providers can only ever receive identical instructions — the plans
+differ in destination and nothing else.
+
+## Writing an adapter
+
+An adapter is a plain object satisfying `AgentAdapter`: an `id`, a `name`, the directory it owns,
+`detect`, and a **pure** `planFiles` that maps resolved skills to desired files. Comparing them with
+what is installed and writing them is shared machinery.
+
+```ts
+import { createAdapterRegistry, createSkillDirectoryAdapter } from "@agnox/adapters";
+
+const acme = createSkillDirectoryAdapter({
+  id: "acme",
+  name: "Acme Agent",
+  skillsDir: [".acme", "skills"],
+  reference: "https://example.invalid/skills",
+});
+
+const registry = createAdapterRegistry([acme]);
+```
+
+`createSkillDirectoryAdapter` covers any agent that reads `<directory>/<skill>/SKILL.md`; a genuinely
+different layout implements `AgentAdapter` directly. There is no dynamic package loading and no
+remote registry — an adapter is a value you pass in.
+
+## Safety
+
+Agnox only manages `<destination>/<skill>/SKILL.md` for skills it resolved. A plan that would write
+outside the directory a target owns is refused with `InstallPathError`, unchanged files are not
+rewritten, writes are UTF-8, and nothing is deleted, executed or fetched.
+
+MCP servers, hooks and permissions are **not** part of the contract yet.
 
 MIT © Andersseen

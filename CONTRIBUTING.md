@@ -20,9 +20,9 @@ pnpm test
 ## Repository layout
 
 ```
-packages/core        domain layer: config model, stack model, resolution
+packages/core        domain layer: config model, stack model, skills, resolution
 packages/cli         Commander CLI, terminal output
-packages/adapters    provider adapter foundations (not implemented yet)
+packages/adapters    adapter contract, Codex and Claude Code adapters, install planning
 examples/angular     .agnox.json fixture used by tests and docs
 .agents/skills       provider-neutral workflow skills for agents working on this repo
 ```
@@ -36,7 +36,8 @@ change.
    CLI concerns live in `@agnox/cli`.
 2. **Agnox is provider agnostic.** There is no `CodexStack` or `ClaudeStack`. Stacks describe
    development environments; provider-specific behaviour belongs in adapters. The stack inheritance
-   model must not know that providers exist.
+   model must not know that providers exist, and an adapter owns a destination, never skill content
+   — every provider installs the canonical `SKILL.md` that `formatSkillMarkdown` renders.
 3. **Zod schemas are the source of truth.** TypeScript types are inferred with `z.infer` /
    `z.input`, never hand-written alongside a schema.
 4. **Stack definitions are data.** New stacks go into the registry array, not into resolver logic.
@@ -45,6 +46,8 @@ change.
 6. **Simple functions and plain objects.** No service containers, dependency injection, factories,
    or plugin abstractions until a concrete need forces one.
 7. **Never silently recover from invalid configuration.** Report it.
+8. **Installation is plan-first.** Planning reads and returns an `InstallPlan`; only the executor
+   writes, only inside the directory a target owns, and only files Agnox generated.
 
 ## Development workflow
 
@@ -80,7 +83,7 @@ pnpm --silent agnox resolve angular --json
 
 1. Add the definition to `builtInStacks` in
    [packages/core/src/stack/registry.ts](packages/core/src/stack/registry.ts). Keep the description
-   to one line, and remember stacks carry metadata only — no skills, MCP tools, or agents yet.
+   to one line. A stack may contribute `skills`; MCP tools and agents are not part of the model.
 2. Extend the registry assertions in
    [packages/core/test/stack-registry.test.ts](packages/core/test/stack-registry.test.ts).
 3. Add a resolution test in
@@ -124,9 +127,10 @@ A test fails if the committed schema drifts from the Zod model, so this is not o
 ## Scope
 
 Agnox is early. The following are deliberately **not implemented yet**, and PRs adding them will be
-declined until the groundwork lands: Skills, MCP integration, provider adapters, project
-auto-detection, codebase memory, token budgets, remote registries, plugins, npm registry
-integration, an update system, and an init wizard.
+declined until the groundwork lands: MCP integration, providers beyond Codex and Claude Code, global
+installation into `$HOME`, project auto-detection, codebase memory, token budgets, remote
+registries, plugins, npm registry integration, uninstall and sync cleanup, an update system, and an
+init wizard.
 
 Open an issue to discuss anything substantial before writing code.
 

@@ -1,8 +1,14 @@
 import { InvalidSkillError } from "./errors.js";
-import { type SkillDefinition, skillDefinitionSchema, skillMetadataSchema } from "./schema.js";
+import {
+  type SkillDefinition,
+  type SkillDefinitionInput,
+  skillDefinitionSchema,
+  skillMetadataSchema,
+} from "./schema.js";
 
 const DELIMITER = "---";
 const BYTE_ORDER_MARK = /^\uFEFF/;
+const LINE_BREAK = /[\r\n]/;
 
 /**
  * A `SKILL.md` file is a frontmatter block followed by the Markdown body:
@@ -60,6 +66,39 @@ export function parseSkillMarkdown(markdown: string, origin: string): SkillDefin
   }
 
   return skill.data;
+}
+
+/**
+ * Renders a skill as canonical `SKILL.md` text — the inverse of
+ * `parseSkillMarkdown`, and the single representation every consumer installs.
+ *
+ * Keeping this in core is what stops a provider from owning a copy of a skill
+ * body: an adapter decides *where* a skill goes, never what it says.
+ *
+ * The output is deterministic. Frontmatter is always `name` then `description`,
+ * the body is the trimmed content, and the file ends with exactly one newline,
+ * so re-rendering an unchanged skill produces a byte-identical file and an
+ * installer can compare content instead of guessing.
+ *
+ * @throws {InvalidSkillError} when the definition is invalid, or when the
+ * description cannot be represented in the flat frontmatter subset the parser
+ * accepts.
+ */
+export function formatSkillMarkdown(skill: SkillDefinitionInput): string {
+  const origin = typeof skill.name === "string" ? `skill "${skill.name}"` : "skill definition";
+  const parsed = skillDefinitionSchema.safeParse(skill);
+
+  if (!parsed.success) {
+    throw new InvalidSkillError(origin, parsed.error);
+  }
+
+  const { name, description, content } = parsed.data;
+
+  if (LINE_BREAK.test(description)) {
+    throw new InvalidSkillError(origin, "the description must not contain a line break");
+  }
+
+  return `${DELIMITER}\nname: ${name}\ndescription: ${description}\n${DELIMITER}\n\n${content}\n`;
 }
 
 function parseFrontmatter(lines: readonly string[], origin: string): Record<string, string> {

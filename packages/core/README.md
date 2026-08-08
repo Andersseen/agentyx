@@ -42,7 +42,9 @@ builtInSkillRegistry.get("planning"); // reads, validates and caches SKILL.md
 
 `createSkillRegistry(sources)` builds an independent registry from `{ name, load }` sources — the
 seam an external registry would use later. `parseSkillMarkdown(markdown, origin)` parses one
-`SKILL.md`.
+`SKILL.md`, and `formatSkillMarkdown(skill)` renders one deterministically. That serializer is the
+canonical form every provider installs, which is why it lives here: an adapter decides where a skill
+goes, never what it says.
 
 The JSON Schema for `.agnox.json` ships with the package:
 
@@ -57,8 +59,9 @@ Resolution failures throw domain errors — `UnknownStackError`, `CircularStackD
 `AgnoxConfigParseError`, `AgnoxConfigValidationError` — all extending `AgnoxError` with a stable
 `code`.
 
-Installing skills into an agent's directory, MCP tools, agents and provider adapters are **not
-implemented yet**. See the [main README](https://github.com/Andersseen/agnox#readme) for the full
-picture.
+Installing skills into an agent is
+[`@agnox/adapters`](https://github.com/Andersseen/agnox/tree/main/packages/adapters); core knows
+nothing about providers. MCP tools and agents are **not implemented yet**. See the
+[main README](https://github.com/Andersseen/agnox#readme) for the full picture.
 
 MIT © Andersseen

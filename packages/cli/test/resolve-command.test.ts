@@ -172,7 +172,7 @@ describe("agnox resolve", () => {
         "angular-modern",
       ],
       profile: "balanced",
-      targets: ["codex", "kimi"],
+      targets: ["codex", "claude"],
     });
   });
 

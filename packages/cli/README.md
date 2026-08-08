@@ -39,6 +39,21 @@ agnox skill show angular-modern
 agnox skill show angular-modern --json
 ```
 
+`agnox install` writes the resolved skills into each target agent — `codex` installs into
+`.agents/skills`, `claude` into `.claude/skills`, both project-local. Plan first:
+
+```sh
+agnox install --dry-run
+agnox install --dry-run --json
+agnox install
+agnox install --target codex
+agnox install angular --target codex
+```
+
+`--target` is repeatable and overrides `.agnox.json` for that run without editing it. Re-running an
+up-to-date project reports `unchanged` and writes nothing. `agnox target list` and
+`agnox target show <target>` show what can be installed into and where.
+
 Errors print a readable message on stderr and exit with code 1.
 
 All resolution logic lives in

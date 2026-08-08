@@ -88,7 +88,7 @@ describe("loadAgnoxConfig", () => {
     await expect(loadAgnoxConfig(exampleProjectPath)).resolves.toEqual({
       extends: ["angular"],
       profile: "balanced",
-      targets: ["codex", "kimi"],
+      targets: ["codex", "claude"],
     });
   });
 });

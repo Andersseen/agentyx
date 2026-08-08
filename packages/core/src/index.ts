@@ -28,7 +28,7 @@ export {
   InvalidSkillError,
   UnknownSkillError,
 } from "./skill/errors.js";
-export { parseSkillMarkdown } from "./skill/markdown.js";
+export { formatSkillMarkdown, parseSkillMarkdown } from "./skill/markdown.js";
 export type { SkillRegistry, SkillSource } from "./skill/registry.js";
 export { createSkillRegistry } from "./skill/registry.js";
 export { resolveStackSkills } from "./skill/resolver.js";

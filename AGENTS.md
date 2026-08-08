@@ -7,9 +7,10 @@ configuration — Agnox does not generate or read this file.
 
 Agnox is a provider-agnostic CLI for defining reusable development environments for coding agents.
 The current scope is deliberately narrow: a configuration model (`.agnox.json`), a stack definition
-model, a built-in stack registry, stack resolution, and skills — provider-agnostic instruction files
-that stacks contribute and Agnox resolves. Agnox understands skills; it does not install them into
-any agent yet.
+model, a built-in stack registry, stack resolution, skills — provider-agnostic instruction files
+that stacks contribute and Agnox resolves — and provider adapters that install those skills into a
+project for Codex (`.agents/skills`) and Claude Code (`.claude/skills`). Installation is
+project-local, plan-first, and limited to skill files.
 
 ## Commands
 
@@ -47,11 +48,12 @@ not wired up yet.
 
 ```
 packages/core        domain: config schema/loader/resolver, stack and skill
-                     schema/registry/resolver/errors, SKILL.md parsing
+                     schema/registry/resolver/errors, SKILL.md parsing and serialization
 packages/core/skills built-in SKILL.md files, published as package assets
 packages/cli         Commander program and terminal output only
-packages/adapters    provider adapters — placeholder, do not build on it yet
-examples/angular     .agnox.json fixture, referenced by core and cli tests
+packages/adapters    adapter contract, adapter registry, Codex and Claude Code adapters,
+                     install planning, filesystem executor
+examples/angular     .agnox.json fixture, referenced by core, cli and adapter tests
 ```
 
 Dependencies point one way: `cli → core`, `adapters → core`. Core depends on `zod` and nothing else.
@@ -60,9 +62,11 @@ Dependencies point one way: `cli → core`, `adapters → core`. Core depends on
 
 1. **`@agnox/core` must not import Commander, `@clack/prompts`, `chalk`, or any terminal code.** If
    a change needs terminal output in core, the design is wrong.
-2. **Agnox is provider agnostic.** Never introduce `CodexStack`, `ClaudeStack`, or any concept that
-   couples a stack to a provider. `targets` stays an open list of strings — do not turn it into a
-   closed enum. Provider-specific behaviour goes to adapters, later.
+2. **Agnox is provider agnostic.** Never introduce `CodexStack`, `ClaudeStack`, `CodexSkill` or any
+   concept that couples a stack or a skill to a provider. `targets` stays an open list of strings —
+   do not turn it into a closed enum. Provider-specific behaviour lives in `@agnox/adapters`, and an
+   adapter owns a *destination*, never skill content: the canonical `SKILL.md` comes from
+   `formatSkillMarkdown` in core, so a provider-specific copy of a skill body is always a bug.
 3. **Zod is the source of truth for types.** Infer with `z.infer` / `z.input`; never maintain a
    hand-written interface next to a schema.
 4. **Stacks and skills are data.** New stacks are entries in `builtInStacks`; new skills are a
@@ -73,9 +77,13 @@ Dependencies point one way: `cli → core`, `adapters → core`. Core depends on
 6. **No premature abstraction.** No repositories, service containers, DI, factories, or plugin
    systems. Plain functions and plain objects.
 7. **Never silently repair invalid configuration.** Throw a descriptive error.
-8. **Do not implement the future roadmap.** Skills, MCP integration, provider adapters, project
-   auto-detection, codebase memory, token budgets, remote registries, plugins, npm registry
-   integration, an update system, and an init wizard are all out of scope until asked for.
+8. **Installation plans and writes stay separate.** Planning reads; only `applyInstallPlan` writes.
+   Agnox writes UTF-8 files inside the directory a target owns and nothing else — no deletes, no
+   shell commands, no network, no `$HOME`, and no provider config file it did not generate.
+9. **Do not implement the future roadmap.** MCP integration, further providers (Kimi, OpenCode,
+   Cursor), global installs, project auto-detection, codebase memory, token budgets, remote
+   registries, plugins, npm registry integration, uninstall and sync cleanup, an update system, and
+   an init wizard are all out of scope until asked for.
 
 ## Code conventions
 
