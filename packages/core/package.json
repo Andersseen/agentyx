@@ -1,7 +1,7 @@
 {
   "name": "@agnox/core",
   "version": "0.0.0",
-  "description": "Shared domain foundations for Agnox: configuration model and stack resolution.",
+  "description": "Shared domain foundations for Agnox: configuration model, stack resolution and skills.",
   "type": "module",
   "license": "MIT",
   "author": "Andersseen",
@@ -19,6 +19,7 @@
     "coding-agents",
     "configuration",
     "developer-tools",
+    "skills",
     "stacks"
   ],
   "sideEffects": false,
@@ -31,7 +32,8 @@
   },
   "files": [
     "dist",
-    "schema"
+    "schema",
+    "skills"
   ],
   "engines": {
     "node": ">=22"

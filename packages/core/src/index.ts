@@ -22,6 +22,18 @@ export {
 } from "./config/schema.js";
 export { AgnoxError } from "./errors.js";
 export { agnoxCoreName, getCoreStatus } from "./meta.js";
+export { builtInSkillNames, builtInSkillRegistry } from "./skill/built-in.js";
+export {
+  DuplicateSkillError,
+  InvalidSkillError,
+  UnknownSkillError,
+} from "./skill/errors.js";
+export { parseSkillMarkdown } from "./skill/markdown.js";
+export type { SkillRegistry, SkillSource } from "./skill/registry.js";
+export { createSkillRegistry } from "./skill/registry.js";
+export { resolveStackSkills } from "./skill/resolver.js";
+export type { SkillDefinition, SkillDefinitionInput } from "./skill/schema.js";
+export { skillDefinitionSchema } from "./skill/schema.js";
 export {
   CircularStackDependencyError,
   DuplicateStackError,

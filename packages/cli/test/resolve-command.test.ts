@@ -17,14 +17,43 @@ describe("agnox resolve <stack>", () => {
       cwd: tmpdir(),
     });
 
-    expect(output).toBe("core\ntypescript\nangular");
+    expect(output).toBe(
+      [
+        "Stacks",
+        "  core",
+        "  typescript",
+        "  angular",
+        "",
+        "Skills",
+        "  planning",
+        "  systematic-debugging",
+        "  verification",
+        "  typescript-modern",
+        "  angular-modern",
+      ].join("\n"),
+    );
   });
 
   it("resolves core and typescript", async () => {
     const base = { json: false, cwd: tmpdir() };
 
-    expect(await runResolveCommand({ ...base, stacks: ["core"] })).toBe("core");
-    expect(await runResolveCommand({ ...base, stacks: ["typescript"] })).toBe("core\ntypescript");
+    expect(await runResolveCommand({ ...base, stacks: ["core"] })).toBe(
+      [
+        "Stacks",
+        "  core",
+        "",
+        "Skills",
+        "  planning",
+        "  systematic-debugging",
+        "  verification",
+      ].join("\n"),
+    );
+    expect(await runResolveCommand({ ...base, stacks: ["typescript"] })).toContain(
+      "Stacks\n  core\n  typescript\n",
+    );
+    expect(await runResolveCommand({ ...base, stacks: ["typescript"] })).toContain(
+      "Skills\n  planning\n  systematic-debugging\n  verification\n  typescript-modern",
+    );
   });
 
   it("resolves several explicit stacks", async () => {
@@ -34,7 +63,7 @@ describe("agnox resolve <stack>", () => {
       cwd: tmpdir(),
     });
 
-    expect(output).toBe("core\ntypescript\nangular");
+    expect(output).toContain("Stacks\n  core\n  typescript\n  angular");
   });
 
   it("prints JSON only in --json mode", async () => {
@@ -47,7 +76,21 @@ describe("agnox resolve <stack>", () => {
     expect(JSON.parse(output)).toEqual({
       requestedStacks: ["angular"],
       resolvedStacks: ["core", "typescript", "angular"],
+      skills: [
+        "planning",
+        "systematic-debugging",
+        "verification",
+        "typescript-modern",
+        "angular-modern",
+      ],
     });
+  });
+
+  it("never prints skill instructions", async () => {
+    const output = await runResolveCommand({ stacks: ["angular"], json: false, cwd: tmpdir() });
+
+    expect(output).not.toContain("# Modern Angular");
+    expect(output.split("\n")).toHaveLength(11);
   });
 
   it("fails on an unknown stack", async () => {
@@ -92,6 +135,13 @@ describe("agnox resolve", () => {
         "  core",
         "  typescript",
         "  angular",
+        "",
+        "Skills",
+        "  planning",
+        "  systematic-debugging",
+        "  verification",
+        "  typescript-modern",
+        "  angular-modern",
       ].join("\n"),
     );
   });
@@ -114,6 +164,13 @@ describe("agnox resolve", () => {
     expect(JSON.parse(output)).toEqual({
       requestedStacks: ["angular"],
       resolvedStacks: ["core", "typescript", "angular"],
+      skills: [
+        "planning",
+        "systematic-debugging",
+        "verification",
+        "typescript-modern",
+        "angular-modern",
+      ],
       profile: "balanced",
       targets: ["codex", "kimi"],
     });
@@ -123,6 +180,7 @@ describe("agnox resolve", () => {
     const output = await runResolveCommand({ stacks: [], json: false, cwd: exampleProjectPath });
 
     expect(output).toContain("Stacks\n  core\n  typescript\n  angular");
+    expect(output).toContain("Skills\n  planning\n  systematic-debugging\n  verification");
   });
 
   it("fails when the project has no configuration", async () => {
@@ -144,7 +202,8 @@ describe("agnox resolve", () => {
       cwd: projectPath,
     });
 
-    expect(output).toBe("core\ntypescript");
+    expect(output).toContain("Stacks\n  core\n  typescript\n");
+    expect(output).not.toContain("angular");
   });
 });
 

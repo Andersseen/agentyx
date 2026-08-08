@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { skillNameSchema } from "../skill/schema.js";
 
 /**
  * Stack names are plain identifiers. They are intentionally not constrained to
@@ -7,9 +8,9 @@ import { z } from "zod";
 export const stackNameSchema = z.string().min(1, "Stack names must be non-empty strings.");
 
 /**
- * A stack describes a development environment that can build on other stacks.
- * It deliberately carries metadata only for now — skills, MCP tools, agents and
- * adapters are not part of the model yet.
+ * A stack describes a development environment that can build on other stacks
+ * and contribute skills to them. It stays provider agnostic — MCP tools,
+ * agents and adapters are not part of the model yet.
  */
 export const stackDefinitionSchema = z.strictObject({
   name: stackNameSchema.describe("Unique stack identifier."),
@@ -22,9 +23,13 @@ export const stackDefinitionSchema = z.strictObject({
     .array(stackNameSchema)
     .describe("Stacks this stack builds on, in dependency-first order.")
     .default([]),
+  skills: z
+    .array(skillNameSchema)
+    .describe("Skills this stack contributes, in declaration order.")
+    .default([]),
 });
 
-/** A validated stack definition, with `extends` always present. */
+/** A validated stack definition, with `extends` and `skills` always present. */
 export type StackDefinition = z.infer<typeof stackDefinitionSchema>;
 
 /** The shape accepted when authoring a stack definition. */

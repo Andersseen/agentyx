@@ -17,6 +17,7 @@ In `packages/core/src/stack/registry.ts`, append to `builtInStacks`:
   name: "react",
   description: "React development environment.",
   extends: ["typescript"],
+  skills: ["react-modern"],
 },
 ```
 
@@ -28,9 +29,11 @@ Rules for the definition:
 - Array position does not affect resolution — the resolver follows `extends`, so a parent may be
   declared after its child. It does affect `[...builtInStackRegistry.keys()]`, which
   `packages/core/test/stack-registry.test.ts` asserts exactly, so append and update that assertion.
-- Stacks carry metadata only. Do **not** add skills, MCP tools, agents, optimization rules, or
-  adapter configuration — those fields do not exist in `stackDefinitionSchema` yet, and
-  `strictObject` will reject them.
+- `skills` also defaults to `[]`. Every name listed must exist in `builtInSkillNames` with a
+  matching `packages/core/skills/<name>/SKILL.md`, or resolution throws `UnknownSkillError`. Adding
+  a stack does not require adding a skill — reuse the inherited ones when they cover it.
+- MCP tools, agents, optimization rules and adapter configuration do **not** exist in
+  `stackDefinitionSchema`, and `strictObject` will reject them.
 - Never name a stack after a provider. `codex`, `claude` and `kimi` are *targets*, not stacks.
 
 ## 2. Update the registry test
@@ -38,7 +41,8 @@ Rules for the definition:
 In `packages/core/test/stack-registry.test.ts`:
 
 - add the new name to the `[...builtInStackRegistry.keys()]` assertion, in position;
-- add its `extends` to the relationships test.
+- add its `extends` to the relationships test;
+- add its `skills` to the skills test.
 
 ## 3. Add a resolution test
 
@@ -49,6 +53,9 @@ it("resolves react through typescript", () => {
   expect(resolveStacks(["react"])).toEqual(["core", "typescript", "react"]);
 });
 ```
+
+If the stack contributes skills, assert the resolved skill list in
+`packages/core/test/skill-resolver.test.ts` too — inherited skills first, then its own.
 
 If the new stack shares a parent with an existing one, also assert the de-duplicated multi-root
 case — that is where ordering bugs show up.
