@@ -7,7 +7,9 @@ configuration — Agnox does not generate or read this file.
 
 Agnox is a provider-agnostic CLI for defining reusable development environments for coding agents.
 The current scope is deliberately narrow: a configuration model (`.agnox.json`), a stack definition
-model, a built-in stack registry, and stack resolution.
+model, a built-in stack registry, stack resolution, and skills — provider-agnostic instruction files
+that stacks contribute and Agnox resolves. Agnox understands skills; it does not install them into
+any agent yet.
 
 ## Commands
 
@@ -30,7 +32,9 @@ Tests import from source via the `@agnox/core` alias in `vitest.config.ts`, so `
 ## Layering
 
 ```
-packages/core        domain: config schema/loader/resolver, stack schema/registry/resolver/errors
+packages/core        domain: config schema/loader/resolver, stack and skill
+                     schema/registry/resolver/errors, SKILL.md parsing
+packages/core/skills built-in SKILL.md files, published as package assets
 packages/cli         Commander program and terminal output only
 packages/adapters    provider adapters — placeholder, do not build on it yet
 examples/angular     .agnox.json fixture, referenced by core and cli tests
@@ -47,8 +51,9 @@ Dependencies point one way: `cli → core`, `adapters → core`. Core depends on
    closed enum. Provider-specific behaviour goes to adapters, later.
 3. **Zod is the source of truth for types.** Infer with `z.infer` / `z.input`; never maintain a
    hand-written interface next to a schema.
-4. **Stacks are data.** New stacks are entries in `builtInStacks`. Resolution logic must not grow a
-   branch per stack.
+4. **Stacks and skills are data.** New stacks are entries in `builtInStacks`; new skills are a
+   `SKILL.md` file plus a name in `builtInSkillNames`. Resolution logic must not grow a branch per
+   stack or per skill, and skill instructions never live in TypeScript string constants.
 5. **Domain errors, not strings.** Extend `AgnoxError` (`packages/core/src/errors.ts`) and give it a
    stable `code`. One inheritance level — no error hierarchies.
 6. **No premature abstraction.** No repositories, service containers, DI, factories, or plugin
@@ -75,13 +80,17 @@ Dependencies point one way: `cli → core`, `adapters → core`. Core depends on
 - Filesystem tests use `mkdtemp(join(tmpdir(), "agnox-"))` and clean up in `afterEach`.
 - Every bug fix gets a regression test.
 
-## Two things that will bite you
+## Three things that will bite you
 
 - **The committed JSON Schema.** `packages/core/schema/agnox.schema.json` is generated from the Zod
   model and a test asserts they match. After changing `config/schema.ts`, run
   `pnpm --filter @agnox/core run build && pnpm --filter @agnox/core run schema`.
 - **The generator reads `dist`.** `scripts/generate-schema.mjs` imports the built output, not the
   source, so the build must run first.
+- **`packages/core/src/assets.ts` must stay directly under `src/`.** It locates the built-in
+  `SKILL.md` files relative to `import.meta.url`, and it works only because `src/assets.ts` and the
+  bundled `dist/index.mjs` sit at the same depth below the package root. `skills` is also listed in
+  the package's `files`; drop either and skills break after publish, not in tests.
 
 ## Before handing work back
 

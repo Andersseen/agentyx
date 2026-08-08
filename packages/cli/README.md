@@ -9,9 +9,17 @@ agnox resolve angular
 ```
 
 ```
-core
-typescript
-angular
+Stacks
+  core
+  typescript
+  angular
+
+Skills
+  planning
+  systematic-debugging
+  verification
+  typescript-modern
+  angular-modern
 ```
 
 Run without arguments to resolve the `.agnox.json` in the current directory, and add `--json` for
@@ -22,8 +30,16 @@ agnox resolve
 agnox resolve --json
 ```
 
-An explicit stack argument takes precedence over `.agnox.json` for stack selection. Errors print a
-readable message on stderr and exit with code 1.
+An explicit stack argument takes precedence over `.agnox.json` for stack selection. `resolve` prints
+skill identifiers only; `agnox skill` is what reads instructions:
+
+```sh
+agnox skill list
+agnox skill show angular-modern
+agnox skill show angular-modern --json
+```
+
+Errors print a readable message on stderr and exit with code 1.
 
 All resolution logic lives in
 [`@agnox/core`](https://github.com/Andersseen/agnox/tree/main/packages/core); this package only adds

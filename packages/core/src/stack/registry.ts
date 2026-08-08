@@ -37,16 +37,19 @@ export const builtInStacks: readonly StackDefinitionInput[] = [
   {
     name: "core",
     description: "Baseline development environment shared by every Agnox stack.",
+    skills: ["planning", "systematic-debugging", "verification"],
   },
   {
     name: "typescript",
     description: "TypeScript development environment.",
     extends: ["core"],
+    skills: ["typescript-modern"],
   },
   {
     name: "angular",
     description: "Modern Angular development environment.",
     extends: ["typescript"],
+    skills: ["angular-modern"],
   },
 ];
 

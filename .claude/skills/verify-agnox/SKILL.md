@@ -27,12 +27,17 @@ node packages/cli/dist/index.mjs resolve typescript   # -> core, typescript
 node packages/cli/dist/index.mjs resolve angular      # -> core, typescript, angular
 node packages/cli/dist/index.mjs resolve angular --json
 
+node packages/cli/dist/index.mjs skill list
+node packages/cli/dist/index.mjs skill show planning
+node packages/cli/dist/index.mjs skill show angular-modern --json
+
 cd examples/angular && node ../../packages/cli/dist/index.mjs resolve
 cd examples/angular && node ../../packages/cli/dist/index.mjs resolve --json
 ```
 
-Human output for the example project must be the `Agnox configuration` block with Profile, Targets
-and Stacks sections. `--json` must print JSON and nothing else.
+`resolve` prints a `Stacks` section and a `Skills` section, identifiers only — never skill contents.
+Human output for the example project must be the `Agnox configuration` block with Profile, Targets,
+Stacks and Skills sections. `--json` must print JSON and nothing else.
 
 ## 3. Error paths
 
@@ -40,6 +45,7 @@ Each of these must print a readable message on **stderr** and exit with code 1:
 
 ```sh
 node packages/cli/dist/index.mjs resolve svelte        # unknown stack
+node packages/cli/dist/index.mjs skill show nope       # unknown skill
 (cd /tmp && node "$OLDPWD/packages/cli/dist/index.mjs" resolve)   # missing .agnox.json
 ```
 
@@ -59,7 +65,20 @@ pnpm --filter @agnox/core run schema
 `packages/core/test/json-schema.test.ts` fails when the committed file drifts, so a failing test
 there means you skipped this step — not that the test is wrong.
 
-## 5. If a published package changed
+## 5. If a built-in skill or the assets path changed
+
+The `SKILL.md` files are package assets, not compiled output, so a passing test suite does not prove
+they survive publishing:
+
+```sh
+pnpm --filter @agnox/core exec pnpm pack --pack-destination /tmp
+tar -tzf /tmp/agnox-core-*.tgz | grep skills
+```
+
+Every built-in skill must appear under `package/skills/`. If it does not, `files` in
+`packages/core/package.json` or the relative path in `packages/core/src/assets.ts` is wrong.
+
+## 6. If a published package changed
 
 ```sh
 pnpm changeset
