@@ -7,8 +7,11 @@ import {
   CODEX_MCP_CONFIG_SEGMENTS,
   claudeMcpConfigPath,
   codexMcpConfigPath,
+  KIMI_MCP_CONFIG_SEGMENTS,
+  kimiMcpConfigPath,
   renderClaudeMcpConfig,
   renderCodexMcpConfig,
+  renderKimiMcpConfig,
 } from "./mcp-rendering.js";
 
 /** The file name every provider in this family expects inside a skill directory. */
@@ -29,7 +32,9 @@ export interface SkillDirectoryAdapterDefinition {
   readonly mcp?:
     | {
         readonly project: true;
-        readonly config: "codex-toml" | "claude-json";
+        readonly config: "codex-toml" | "claude-json" | "kimi-json";
+        readonly transports: readonly string[];
+        readonly reference: string;
       }
     | {
         readonly project: false;
@@ -66,8 +71,13 @@ export function createSkillDirectoryAdapter(
       mcp: {
         project: definition.mcp?.project ?? false,
         global: false,
+        transports: definition.mcp?.project === true ? definition.mcp.transports : [],
       },
     },
+    references:
+      definition.mcp?.project === true
+        ? [definition.reference, definition.mcp.reference]
+        : [definition.reference],
     skillsPath,
     detect: async (projectDir) => {
       const path = skillsPath(projectDir);
@@ -88,15 +98,31 @@ export function createSkillDirectoryAdapter(
 
   const config = definition.mcp.config;
 
+  const mcpConfigPath =
+    config === "codex-toml"
+      ? codexMcpConfigPath
+      : config === "claude-json"
+        ? claudeMcpConfigPath
+        : kimiMcpConfigPath;
+  const mcpConfigSegments =
+    config === "codex-toml"
+      ? CODEX_MCP_CONFIG_SEGMENTS
+      : config === "claude-json"
+        ? CLAUDE_MCP_CONFIG_SEGMENTS
+        : KIMI_MCP_CONFIG_SEGMENTS;
+  const renderMcpConfig =
+    config === "codex-toml"
+      ? renderCodexMcpConfig
+      : config === "claude-json"
+        ? renderClaudeMcpConfig
+        : renderKimiMcpConfig;
+
   return {
     ...adapter,
-    mcpConfigPath: config === "codex-toml" ? codexMcpConfigPath : claudeMcpConfigPath,
+    mcpConfigPath,
     planMcpConfig: (context: AdapterContext, existingContent: string | undefined) => ({
-      segments: config === "codex-toml" ? CODEX_MCP_CONFIG_SEGMENTS : CLAUDE_MCP_CONFIG_SEGMENTS,
-      content:
-        config === "codex-toml"
-          ? renderCodexMcpConfig(context.mcpServers ?? [], existingContent)
-          : renderClaudeMcpConfig(context.mcpServers ?? [], existingContent),
+      segments: mcpConfigSegments,
+      content: renderMcpConfig(context.mcpServers ?? [], existingContent),
       servers: (context.mcpServers ?? []).map((server) => server.name),
     }),
   };

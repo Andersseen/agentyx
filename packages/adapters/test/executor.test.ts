@@ -104,6 +104,7 @@ describe("applyInstallPlan", () => {
       relativePath: "escaped.md",
       skill: "planning",
       content: "nope",
+      usedBy: ["codex"],
     };
 
     await expect(applyInstallPlan({ ...plan, operations: [escaping] })).rejects.toThrow(
@@ -143,7 +144,30 @@ describe("applyInstallPlans", () => {
     await rm(projectDir, { recursive: true, force: true });
   });
 
-  it("installs the same skills for both providers, from one source", async () => {
+  it("installs shared skill destinations only once", async () => {
+    const plans = await planInstall({ targets: ["codex", "kimi"], projectDir, skills });
+    const results = await applyInstallPlans(plans);
+
+    expect(results.map((result) => result.target)).toEqual(["codex", "kimi"]);
+    expect(results[0]?.written).toEqual([
+      ".agents/skills/planning/SKILL.md",
+      ".agents/skills/verification/SKILL.md",
+    ]);
+    expect(results[1]?.written).toEqual([]);
+    expect(results[1]?.unchanged).toEqual([
+      ".agents/skills/planning/SKILL.md",
+      ".agents/skills/verification/SKILL.md",
+    ]);
+
+    const forCodex = await readFile(
+      join(projectDir, ".agents", "skills", "verification", "SKILL.md"),
+      "utf8",
+    );
+
+    expect(forCodex).toBe(formatSkillMarkdown(builtInSkillRegistry.get("verification")));
+  });
+
+  it("installs the same skills for provider-specific destinations, from one source", async () => {
     const plans = await planInstall({ targets: ["codex", "claude"], projectDir, skills });
     const results = await applyInstallPlans(plans);
 

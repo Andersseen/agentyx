@@ -5,6 +5,7 @@ export interface AdapterCapabilities {
   readonly mcp: {
     readonly project: boolean;
     readonly global: boolean;
+    readonly transports?: readonly string[];
   };
 }
 
@@ -74,6 +75,8 @@ export interface AgentAdapter {
   /** Human-readable provider name, for CLI output. */
   readonly name: string;
   readonly capabilities: AdapterCapabilities;
+  /** Official provider documentation that explains the locations/formats this adapter uses. */
+  readonly references?: readonly string[];
   /** The absolute directory Agnox owns for this provider in `projectDir`. */
   skillsPath(projectDir: string): string;
   /** Reads the filesystem to report where and whether the provider is set up. Never writes. */

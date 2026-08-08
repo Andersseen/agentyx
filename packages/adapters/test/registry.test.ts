@@ -15,8 +15,8 @@ const fakeAdapter = (id: string): AgentAdapter => ({
 });
 
 describe("builtInAdapterRegistry", () => {
-  it("lists codex and claude, in that order", () => {
-    expect(builtInAdapterRegistry.ids).toEqual(["codex", "claude"]);
+  it("lists codex, claude and kimi, in that order", () => {
+    expect(builtInAdapterRegistry.ids).toEqual(["codex", "claude", "kimi"]);
   });
 
   it("retrieves a known adapter", () => {
@@ -25,11 +25,13 @@ describe("builtInAdapterRegistry", () => {
     expect(codex.id).toBe("codex");
     expect(codex.name).toBe("Codex");
     expect(builtInAdapterRegistry.get("claude").name).toBe("Claude Code");
+    expect(builtInAdapterRegistry.get("kimi").name).toBe("Kimi Code");
   });
 
   it("answers has() without loading anything", () => {
     expect(builtInAdapterRegistry.has("codex")).toBe(true);
-    expect(builtInAdapterRegistry.has("kimi")).toBe(false);
+    expect(builtInAdapterRegistry.has("kimi")).toBe(true);
+    expect(builtInAdapterRegistry.has("opencode")).toBe(false);
   });
 
   it("lists the adapters themselves", () => {
@@ -37,18 +39,18 @@ describe("builtInAdapterRegistry", () => {
   });
 
   it("fails on an unknown target with a domain error", () => {
-    expect(() => builtInAdapterRegistry.get("kimi")).toThrow(UnknownAdapterError);
-    expect(() => builtInAdapterRegistry.get("kimi")).toThrow(
-      'Unknown target "kimi". Known targets: claude, codex.',
+    expect(() => builtInAdapterRegistry.get("opencode")).toThrow(UnknownAdapterError);
+    expect(() => builtInAdapterRegistry.get("opencode")).toThrow(
+      'Unknown target "opencode". Known targets: claude, codex, kimi.',
     );
 
     try {
-      builtInAdapterRegistry.get("kimi");
+      builtInAdapterRegistry.get("opencode");
       expect.unreachable("expected an UnknownAdapterError");
     } catch (error) {
       expect(error).toBeInstanceOf(AgnoxError);
       expect((error as UnknownAdapterError).code).toBe("unknown_adapter");
-      expect((error as UnknownAdapterError).target).toBe("kimi");
+      expect((error as UnknownAdapterError).target).toBe("opencode");
     }
   });
 
@@ -63,6 +65,7 @@ describe("builtInAdapterRegistry", () => {
         "name",
         "planFiles",
         "planMcpConfig",
+        "references",
         "skillsPath",
       ]);
     }

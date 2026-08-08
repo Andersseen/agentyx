@@ -101,18 +101,21 @@ describe("agnox install --dry-run --json", () => {
               status: "create",
               skill: "planning",
               path: ".agents/skills/planning/SKILL.md",
+              usedBy: ["codex"],
             },
             {
               type: "write-file",
               status: "create",
               skill: "systematic-debugging",
               path: ".agents/skills/systematic-debugging/SKILL.md",
+              usedBy: ["codex"],
             },
             {
               type: "write-file",
               status: "create",
               skill: "verification",
               path: ".agents/skills/verification/SKILL.md",
+              usedBy: ["codex"],
             },
           ],
           mcpOperations: [],
@@ -128,18 +131,21 @@ describe("agnox install --dry-run --json", () => {
               status: "create",
               skill: "planning",
               path: ".claude/skills/planning/SKILL.md",
+              usedBy: ["claude"],
             },
             {
               type: "write-file",
               status: "create",
               skill: "systematic-debugging",
               path: ".claude/skills/systematic-debugging/SKILL.md",
+              usedBy: ["claude"],
             },
             {
               type: "write-file",
               status: "create",
               skill: "verification",
               path: ".claude/skills/verification/SKILL.md",
+              usedBy: ["claude"],
             },
           ],
           mcpOperations: [],
@@ -162,6 +168,17 @@ describe("agnox install --dry-run --json", () => {
 
     expect(output).not.toContain(projectDir);
     expect(output).not.toContain("# Modern Angular");
+  });
+
+  it("reports shared Codex and Kimi skill writes once", async () => {
+    await writeConfig({ extends: ["core"], targets: ["codex", "kimi"] });
+
+    const output = await runInstallCommand({ ...baseInput, dryRun: true, cwd: projectDir });
+
+    expect(output).toContain("create    .agents/skills/planning/SKILL.md (used by: codex, kimi)");
+    expect(output).toContain("kimi -> .agents/skills");
+    expect(output).toContain("Skills\n  (none)");
+    expect(output).toContain("Dry run: 3 to create, 0 to update, 0 unchanged.");
   });
 });
 
@@ -204,7 +221,7 @@ describe("target selection", () => {
   });
 
   it("fails on a target with no adapter", async () => {
-    await writeConfig({ extends: ["core"], targets: ["kimi"] });
+    await writeConfig({ extends: ["core"], targets: ["opencode"] });
 
     await expect(
       runInstallCommand({ ...baseInput, dryRun: true, cwd: projectDir }),

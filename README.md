@@ -23,11 +23,11 @@ capabilities
 skills    MCP
  \        /
  adapters
- /      \
-Codex   Claude
+ /    |    \
+Codex Claude Kimi
 ```
 
-Today that runs end to end for two targets — Codex and Claude Code — from one set of skill and MCP
+Today that runs end to end for Codex, Claude Code and Kimi Code from one set of skill and MCP
 sources.
 
 > **Status: early development.** APIs will change. Nothing is published to npm yet.
@@ -52,7 +52,7 @@ resolveStackMcpServers(["angular"]) -> context7
 ```
 
 Stacks describe **development environments, not providers**. There is no `CodexStack` or
-`ClaudeStack`; which agents you target is a separate axis (`targets`), and provider-specific
+`ClaudeStack` or `KimiStack`; which agents you target is a separate axis (`targets`), and provider-specific
 behaviour lives in adapters.
 
 ## Skills
@@ -288,6 +288,7 @@ pnpm --silent agnox target list
 ```
 codex
 claude
+kimi
 ```
 
 `agnox target show <target>` adds the provider name and where it installs skills in the current
@@ -300,24 +301,30 @@ pnpm --silent agnox target show codex
 ```
 codex
 Codex
-.agents/skills (not present)
+Skills: .agents/skills (not present)
+MCP: .codex/config.toml
+MCP transports: stdio, http
+Reference: https://developers.openai.com/codex/skills
+Reference: https://developers.openai.com/codex/mcp
 ```
 
 | Target   | Agent       | Project skill destination | Project MCP config     |
 | -------- | ----------- | ------------------------- | ---------------------- |
 | `codex`  | Codex       | `.agents/skills`          | `.codex/config.toml`   |
 | `claude` | Claude Code | `.claude/skills`          | `.mcp.json`            |
+| `kimi`   | Kimi Code   | `.agents/skills`          | `.kimi-code/mcp.json`  |
 
-Both are the providers' own documented project-local conventions — Codex reads repository skills
-from the vendor-neutral [`.agents/skills`](https://developers.openai.com/codex/skills), Claude Code
-from [`.claude/skills`](https://code.claude.com/docs/en/skills). For MCP, Codex reads trusted
-project `.codex/config.toml` layers and uses `[mcp_servers.<id>]`; Claude Code uses project
-`.mcp.json` with an `mcpServers` object. Installation is project-local only: Agnox never writes to
-`$HOME`.
+These are the providers' own documented project-local conventions — Codex and Kimi Code both read
+repository skills from the shared `.agents/skills` directory, while Claude Code reads
+`.claude/skills`. For MCP, Codex reads trusted project `.codex/config.toml` layers and uses
+`[mcp_servers.<id>]`; Claude Code uses project `.mcp.json` with an `mcpServers` object; Kimi Code
+uses project `.kimi-code/mcp.json` with an `mcpServers` object. Installation is project-local only:
+Agnox never writes to `$HOME`.
 
 Codex MCP is TOML, so Agnox parses and rewrites the file with a TOML library. Unrelated values and
 MCP servers are preserved semantically, but comments and exact formatting may be normalized. Claude
-MCP is JSON, so Agnox parses, merges, and serializes deterministically.
+and Kimi MCP are JSON, so Agnox parses, merges, and serializes deterministically. Kimi supports SSE
+too, but Agnox's provider-neutral MCP model currently installs only `stdio` and HTTP definitions.
 
 ## `agnox install`
 
@@ -376,7 +383,7 @@ that run only, and never edits the configuration:
 
 ```sh
 agnox install --target codex
-agnox install --target codex --target claude
+agnox install --target codex --target claude --target kimi
 ```
 
 A stack can be named directly, exactly as with `resolve`, which installs without a `.agnox.json` at
@@ -483,12 +490,17 @@ import { builtInMcpServerRegistry, builtInSkillRegistry } from "@agnox/core";
 
 const skills = ["planning", "angular-modern"].map((name) => builtInSkillRegistry.get(name));
 const mcpServers = ["context7"].map((name) => builtInMcpServerRegistry.get(name));
-const plans = await planInstall({ targets: ["codex", "claude"], projectDir, skills, mcpServers });
+const plans = await planInstall({
+  targets: ["codex", "claude", "kimi"],
+  projectDir,
+  skills,
+  mcpServers,
+});
 // one plan per target; no file has been touched
 
 await applyInstallPlans(plans); // the only code that writes
 
-builtInAdapterRegistry.ids; // ["codex", "claude"]
+builtInAdapterRegistry.ids; // ["codex", "claude", "kimi"]
 ```
 
 `createAdapterRegistry(adapters)` builds an independent registry, and `createSkillDirectoryAdapter`

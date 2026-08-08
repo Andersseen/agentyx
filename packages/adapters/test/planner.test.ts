@@ -7,6 +7,7 @@ import type { AgentAdapter } from "../src/adapter.js";
 import {
   InstallPathError,
   MissingInstallTargetsError,
+  SharedInstallConflictError,
   UnknownAdapterError,
 } from "../src/errors.js";
 import { planInstall, planTargetInstall } from "../src/planner.js";
@@ -212,7 +213,7 @@ describe("planTargetInstall", () => {
   });
 
   it("fails on an unknown target", async () => {
-    await expect(planTargetInstall({ target: "kimi", projectDir, skills })).rejects.toThrow(
+    await expect(planTargetInstall({ target: "opencode", projectDir, skills })).rejects.toThrow(
       UnknownAdapterError,
     );
   });
@@ -331,16 +332,23 @@ describe("planInstall", () => {
   });
 
   it("returns one plan per target, in the requested order", async () => {
-    const plans = await planInstall({ targets: ["claude", "codex"], projectDir, skills });
+    const plans = await planInstall({ targets: ["claude", "codex", "kimi"], projectDir, skills });
 
-    expect(plans.map((plan) => plan.target)).toEqual(["claude", "codex"]);
+    expect(plans.map((plan) => plan.target)).toEqual(["claude", "codex", "kimi"]);
   });
 
-  it("installs the same skill content into both providers", async () => {
-    const [codex, claude] = await planInstall({ targets: ["codex", "claude"], projectDir, skills });
+  it("installs the same skill content into every provider", async () => {
+    const [codex, claude, kimi] = await planInstall({
+      targets: ["codex", "claude", "kimi"],
+      projectDir,
+      skills,
+    });
 
     expect(codex?.operations.map((operation) => operation.content)).toEqual(
       claude?.operations.map((operation) => operation.content),
+    );
+    expect(kimi?.operations.map((operation) => operation.content)).toEqual(
+      codex?.operations.map((operation) => operation.content),
     );
     expect(codex?.operations.map((operation) => operation.relativePath)).toEqual([
       ".agents/skills/planning/SKILL.md",
@@ -350,11 +358,23 @@ describe("planInstall", () => {
       ".claude/skills/planning/SKILL.md",
       ".claude/skills/verification/SKILL.md",
     ]);
+    expect(kimi?.operations.map((operation) => operation.relativePath)).toEqual([
+      ".agents/skills/planning/SKILL.md",
+      ".agents/skills/verification/SKILL.md",
+    ]);
+    expect(kimi?.operations.map((operation) => operation.usedBy)).toEqual([
+      ["codex", "kimi"],
+      ["codex", "kimi"],
+    ]);
   });
 
   it("hands every adapter the very same skill objects", async () => {
     const skill = builtInSkillRegistry.get("angular-modern");
-    const plans = await planInstall({ targets: ["codex", "claude"], projectDir, skills: [skill] });
+    const plans = await planInstall({
+      targets: ["codex", "claude", "kimi"],
+      projectDir,
+      skills: [skill],
+    });
     const contents = new Set(
       plans.flatMap((plan) => plan.operations.map((operation) => operation.content)),
     );
@@ -376,8 +396,76 @@ describe("planInstall", () => {
   });
 
   it("writes nothing", async () => {
-    await planInstall({ targets: ["codex", "claude"], projectDir, skills });
+    await planInstall({ targets: ["codex", "claude", "kimi"], projectDir, skills });
 
     expect(await readdir(projectDir)).toEqual([]);
+  });
+
+  it("keeps one effective operation for providers sharing the same destination and content", async () => {
+    const plans = await planInstall({ targets: ["codex", "kimi"], projectDir, skills });
+
+    expect(
+      plans.flatMap((plan) => plan.operations.map((operation) => operation.relativePath)),
+    ).toEqual([
+      ".agents/skills/planning/SKILL.md",
+      ".agents/skills/verification/SKILL.md",
+      ".agents/skills/planning/SKILL.md",
+      ".agents/skills/verification/SKILL.md",
+    ]);
+    expect(plans[0]?.operations[0]?.usedBy).toEqual(["codex", "kimi"]);
+    expect(plans[1]?.operations[0]?.usedBy).toEqual(["codex", "kimi"]);
+  });
+
+  it("hands one MCP definition set to Codex, Claude and Kimi", async () => {
+    const plans = await planInstall({
+      targets: ["codex", "claude", "kimi"],
+      projectDir,
+      skills: [],
+      mcpServers: [
+        builtInMcpServerRegistry.get("context7"),
+        builtInMcpServerRegistry.get("playwright"),
+      ],
+    });
+
+    expect(plans.map((plan) => plan.target)).toEqual(["codex", "claude", "kimi"]);
+    expect(plans.map((plan) => plan.mcpOperations[0]?.relativePath)).toEqual([
+      ".codex/config.toml",
+      ".mcp.json",
+      ".kimi-code/mcp.json",
+    ]);
+    expect(plans.map((plan) => plan.mcpOperations[0]?.servers)).toEqual([
+      ["context7", "playwright"],
+      ["context7", "playwright"],
+      ["context7", "playwright"],
+    ]);
+  });
+
+  it("rejects shared destinations with different content", async () => {
+    const shared = (id: string, content: string): AgentAdapter => ({
+      id,
+      name: id,
+      capabilities: { skills: true, mcp: { project: false, global: false } },
+      skillsPath: (dir) => join(dir, ".agents", "skills"),
+      detect: async (dir) => ({
+        target: id,
+        skillsPath: join(dir, ".agents", "skills"),
+        present: false,
+      }),
+      planFiles: ({ skills: resolved }) =>
+        resolved.map((skill) => ({
+          segments: [".agents", "skills", skill.name, "SKILL.md"],
+          content,
+          skill: skill.name,
+        })),
+    });
+
+    await expect(
+      planInstall({
+        targets: ["left", "right"],
+        projectDir,
+        skills: [builtInSkillRegistry.get("planning")],
+        registry: createAdapterRegistry([shared("left", "left"), shared("right", "right")]),
+      }),
+    ).rejects.toThrow(SharedInstallConflictError);
   });
 });

@@ -27,7 +27,10 @@ export interface InstallResult {
  *
  * @throws {InstallPathError} when an operation would write outside the target's directory.
  */
-export async function applyInstallPlan(plan: InstallPlan): Promise<InstallResult> {
+export async function applyInstallPlan(
+  plan: InstallPlan,
+  applied = new Set<string>(),
+): Promise<InstallResult> {
   assertInside(plan.skillsPath, plan.projectDir);
 
   const written: string[] = [];
@@ -35,27 +38,31 @@ export async function applyInstallPlan(plan: InstallPlan): Promise<InstallResult
 
   for (const operation of plan.operations) {
     assertInside(operation.path, plan.skillsPath);
+    const key = operationKey(operation.path, operation.content);
 
-    if (operation.status === "unchanged") {
+    if (operation.status === "unchanged" || applied.has(key)) {
       unchanged.push(operation.relativePath);
       continue;
     }
 
     await mkdir(dirname(operation.path), { recursive: true });
     await writeFile(operation.path, operation.content, "utf8");
+    applied.add(key);
     written.push(operation.relativePath);
   }
 
   for (const operation of plan.mcpOperations) {
     assertInside(operation.path, plan.projectDir);
+    const key = operationKey(operation.path, operation.content);
 
-    if (operation.status === "unchanged") {
+    if (operation.status === "unchanged" || applied.has(key)) {
       unchanged.push(operation.relativePath);
       continue;
     }
 
     await mkdir(dirname(operation.path), { recursive: true });
     await writeFile(operation.path, operation.content, "utf8");
+    applied.add(key);
     written.push(operation.relativePath);
   }
 
@@ -65,10 +72,15 @@ export async function applyInstallPlan(plan: InstallPlan): Promise<InstallResult
 /** Applies plans one after another, in order, and reports each result. */
 export async function applyInstallPlans(plans: readonly InstallPlan[]): Promise<InstallResult[]> {
   const results: InstallResult[] = [];
+  const applied = new Set<string>();
 
   for (const plan of plans) {
-    results.push(await applyInstallPlan(plan));
+    results.push(await applyInstallPlan(plan, applied));
   }
 
   return results;
+}
+
+function operationKey(path: string, content: string): string {
+  return `${path}\u0000${content}`;
 }

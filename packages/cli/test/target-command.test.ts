@@ -22,17 +22,44 @@ afterEach(async () => {
 
 describe("agnox target list", () => {
   it("prints the installable target ids", () => {
-    expect(runTargetListCommand()).toBe(["codex", "claude"].join("\n"));
+    expect(runTargetListCommand()).toBe(["codex", "claude", "kimi"].join("\n"));
   });
 });
 
 describe("agnox target show", () => {
   it("prints the id, the provider name and the project destination", async () => {
     expect(await runTargetShowCommand({ target: "codex", json: false, cwd: projectDir })).toBe(
-      ["codex", "Codex", ".agents/skills (not present)"].join("\n"),
+      [
+        "codex",
+        "Codex",
+        "Skills: .agents/skills (not present)",
+        "MCP: .codex/config.toml",
+        "MCP transports: stdio, http",
+        "Reference: https://developers.openai.com/codex/skills",
+        "Reference: https://developers.openai.com/codex/mcp",
+      ].join("\n"),
     );
     expect(await runTargetShowCommand({ target: "claude", json: false, cwd: projectDir })).toBe(
-      ["claude", "Claude Code", ".claude/skills (not present)"].join("\n"),
+      [
+        "claude",
+        "Claude Code",
+        "Skills: .claude/skills (not present)",
+        "MCP: .mcp.json",
+        "MCP transports: stdio, http",
+        "Reference: https://code.claude.com/docs/en/skills",
+        "Reference: https://docs.anthropic.com/en/docs/claude-code/mcp",
+      ].join("\n"),
+    );
+    expect(await runTargetShowCommand({ target: "kimi", json: false, cwd: projectDir })).toBe(
+      [
+        "kimi",
+        "Kimi Code",
+        "Skills: .agents/skills (not present)",
+        "MCP: .kimi-code/mcp.json",
+        "MCP transports: stdio, http",
+        "Reference: https://www.kimi.com/code/docs/en/kimi-code-cli/customization/skills.html",
+        "Reference: https://www.kimi.com/code/docs/en/kimi-code-cli/customization/mcp.html",
+      ].join("\n"),
     );
   });
 
@@ -40,7 +67,15 @@ describe("agnox target show", () => {
     await mkdir(join(projectDir, ".agents", "skills"), { recursive: true });
 
     expect(await runTargetShowCommand({ target: "codex", json: false, cwd: projectDir })).toBe(
-      ["codex", "Codex", ".agents/skills"].join("\n"),
+      [
+        "codex",
+        "Codex",
+        "Skills: .agents/skills",
+        "MCP: .codex/config.toml",
+        "MCP transports: stdio, http",
+        "Reference: https://developers.openai.com/codex/skills",
+        "Reference: https://developers.openai.com/codex/mcp",
+      ].join("\n"),
     );
   });
 
@@ -52,13 +87,29 @@ describe("agnox target show", () => {
       name: "Claude Code",
       skillsPath: ".claude/skills",
       present: false,
+      mcp: {
+        project: true,
+        path: ".mcp.json",
+        transports: ["stdio", "http"],
+      },
+      references: [
+        "https://code.claude.com/docs/en/skills",
+        "https://docs.anthropic.com/en/docs/claude-code/mcp",
+      ],
     });
   });
 
   it("exposes no adapter internals", async () => {
     const output = await runTargetShowCommand({ target: "codex", json: true, cwd: projectDir });
 
-    expect(Object.keys(JSON.parse(output)).sort()).toEqual(["id", "name", "present", "skillsPath"]);
+    expect(Object.keys(JSON.parse(output)).sort()).toEqual([
+      "id",
+      "mcp",
+      "name",
+      "present",
+      "references",
+      "skillsPath",
+    ]);
   });
 
   it("fails on an unknown target", async () => {

@@ -75,3 +75,18 @@ export class ProviderConfigParseError extends AgnoxError {
     this.path = path;
   }
 }
+
+export class SharedInstallConflictError extends AgnoxError {
+  readonly path: string;
+  readonly targets: readonly string[];
+
+  constructor(path: string, targets: readonly string[]) {
+    super(
+      "shared_install_conflict",
+      `Conflicting install content for ${path} requested by targets: ${[...targets].sort().join(", ")}.`,
+    );
+    this.name = "SharedInstallConflictError";
+    this.path = path;
+    this.targets = targets;
+  }
+}

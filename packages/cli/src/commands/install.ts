@@ -101,15 +101,22 @@ function renderText(input: InstallCommandInput, plans: readonly InstallPlan[]): 
       `${plan.target} -> ${plan.relativeSkillsPath}`,
       section(
         "Skills",
-        plan.operations.map(
-          (operation) => `${operation.status.padEnd(9)} ${operation.relativePath}`,
-        ),
+        plan.operations
+          .filter((operation) => operation.usedBy[0] === plan.target)
+          .map((operation) =>
+            renderOperationLine(operation.status, operation.relativePath, operation.usedBy),
+          ),
       ),
       section("MCP", [
-        ...plan.mcpOperations.map(
-          (operation) =>
-            `${operation.status.padEnd(9)} ${operation.relativePath} (${operation.servers.join(", ")})`,
-        ),
+        ...plan.mcpOperations
+          .filter((operation) => operation.usedBy[0] === plan.target)
+          .map((operation) =>
+            renderOperationLine(
+              operation.status,
+              `${operation.relativePath} (${operation.servers.join(", ")})`,
+              operation.usedBy,
+            ),
+          ),
         ...plan.unsupportedMcp.map((name) => `unsupported project scope ${name}`),
       ]),
     ].join("\n"),
@@ -121,6 +128,12 @@ function renderText(input: InstallCommandInput, plans: readonly InstallPlan[]): 
   return [input.dryRun ? "Agnox install (dry run)" : "Agnox install", ...blocks, footer].join(
     "\n\n",
   );
+}
+
+function renderOperationLine(status: string, detail: string, usedBy: readonly string[]): string {
+  const suffix = usedBy.length > 1 ? ` (used by: ${usedBy.join(", ")})` : "";
+
+  return `${status.padEnd(9)} ${detail}${suffix}`;
 }
 
 /**
@@ -148,12 +161,14 @@ function renderJson(
         status: operation.status,
         skill: operation.skill,
         path: operation.relativePath,
+        usedBy: operation.usedBy,
       })),
       mcpOperations: plan.mcpOperations.map((operation) => ({
         type: operation.type,
         status: operation.status,
         servers: operation.servers,
         path: operation.relativePath,
+        usedBy: operation.usedBy,
       })),
       unsupportedMcp: plan.unsupportedMcp,
     })),

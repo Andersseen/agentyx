@@ -22,8 +22,12 @@ file, follow the body.
   and schema checks `pnpm check` does not cover.
 - [add-builtin-stack](skills/add-builtin-stack/SKILL.md) — add a stack to the built-in registry with
   the tests it needs.
+- [context-efficient-development](skills/context-efficient-development/SKILL.md) — keep Agnox
+  development context, commands and output focused without weakening verification.
+- [navigate-agnox](skills/navigate-agnox/SKILL.md) — quickly choose the right package or directory
+  for a change.
 
-[AGENTS.md](../AGENTS.md) lists the same two, so an agent that reads the repository's instruction
+[AGENTS.md](../AGENTS.md) lists the same skills, so an agent that reads the repository's instruction
 file finds the skills without knowing this directory exists.
 
 ## Provider bridges
@@ -31,7 +35,8 @@ file finds the skills without knowing this directory exists.
 Some agents have a native skill mechanism and only look in their own directory. Those get a **thin
 bridge**: a file in the provider's location carrying the frontmatter it needs and a link back here.
 
-Wired up today:
+Provider-native bridges are optional because Codex and Kimi Code both read this shared directory
+directly. Wired up today:
 
 - **Claude Code** — `.claude/skills/<name>/SKILL.md`, which makes each skill available as `/<name>`.
 

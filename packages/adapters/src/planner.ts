@@ -3,7 +3,7 @@ import { join, resolve } from "node:path";
 import type { McpServerDefinition, SkillDefinition } from "@agnox/core";
 import type { PlannedFile } from "./adapter.js";
 import { builtInAdapterRegistry } from "./built-in.js";
-import { MissingInstallTargetsError } from "./errors.js";
+import { MissingInstallTargetsError, SharedInstallConflictError } from "./errors.js";
 import { assertInside, toDisplayPath } from "./path.js";
 import type {
   InstallOperation,
@@ -49,13 +49,16 @@ export async function planTargetInstall(input: PlanTargetInstallInput): Promise<
   const mcpServers = input.mcpServers ?? [];
   const context = { projectDir, skills: input.skills, mcpServers };
   const files = adapter.planFiles(context);
-  const operations = await Promise.all(files.map((file) => planFile(file, projectDir, skillsPath)));
+  const operations = await Promise.all(
+    files.map((file) => planFile(file, projectDir, skillsPath, adapter.id)),
+  );
   const mcpOperations =
     mcpServers.length > 0 && adapter.capabilities.mcp.project && adapter.planMcpConfig !== undefined
       ? [
           await planMcpConfig(
             adapter.planMcpConfig(context, await readExistingMcpConfig(adapter, projectDir)),
             projectDir,
+            adapter.id,
           ),
         ]
       : [];
@@ -92,13 +95,16 @@ export async function planInstall(input: PlanInstallInput): Promise<InstallPlan[
     throw new MissingInstallTargetsError();
   }
 
-  return Promise.all(targets.map((target) => planTargetInstall({ ...input, target })));
+  const plans = await Promise.all(targets.map((target) => planTargetInstall({ ...input, target })));
+
+  return annotateSharedOperations(plans);
 }
 
 async function planFile(
   file: PlannedFile,
   projectDir: string,
   skillsPath: string,
+  target: string,
 ): Promise<InstallOperation> {
   const path = resolve(projectDir, join(...file.segments));
 
@@ -111,6 +117,7 @@ async function planFile(
     relativePath: toDisplayPath(projectDir, path),
     skill: file.skill,
     content: file.content,
+    usedBy: [target],
   };
 }
 
@@ -121,6 +128,7 @@ async function planMcpConfig(
     readonly servers: readonly string[];
   },
   projectDir: string,
+  target: string,
 ): Promise<McpInstallOperation> {
   const path = resolve(projectDir, join(...file.segments));
 
@@ -133,6 +141,7 @@ async function planMcpConfig(
     relativePath: toDisplayPath(projectDir, path),
     servers: file.servers,
     content: file.content,
+    usedBy: [target],
   };
 }
 
@@ -173,4 +182,52 @@ async function statusOf(path: string, content: string): Promise<InstallOperation
   }
 
   return installed === content ? "unchanged" : "update";
+}
+
+function annotateSharedOperations(plans: readonly InstallPlan[]): InstallPlan[] {
+  const byPath = new Map<string, { readonly content: string; readonly targets: Set<string> }>();
+
+  for (const plan of plans) {
+    for (const operation of [...plan.operations, ...plan.mcpOperations]) {
+      const found = byPath.get(operation.path);
+
+      if (found !== undefined && found.content !== operation.content) {
+        throw new SharedInstallConflictError(operation.relativePath, [
+          ...found.targets,
+          plan.target,
+        ]);
+      }
+
+      if (found === undefined) {
+        byPath.set(operation.path, {
+          content: operation.content,
+          targets: new Set([plan.target]),
+        });
+        continue;
+      }
+
+      found.targets.add(plan.target);
+    }
+  }
+
+  const usedBy = new Map<string, readonly string[]>();
+  for (const [path, value] of byPath) {
+    usedBy.set(operationKey(path, value.content), [...value.targets]);
+  }
+
+  return plans.map((plan) => ({
+    ...plan,
+    operations: plan.operations.map((operation) => ({
+      ...operation,
+      usedBy: usedBy.get(operationKey(operation.path, operation.content)) ?? [plan.target],
+    })),
+    mcpOperations: plan.mcpOperations.map((operation) => ({
+      ...operation,
+      usedBy: usedBy.get(operationKey(operation.path, operation.content)) ?? [plan.target],
+    })),
+  }));
+}
+
+function operationKey(path: string, content: string): string {
+  return `${path}\u0000${content}`;
 }
