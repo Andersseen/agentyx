@@ -2,11 +2,15 @@ import { cp, mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/pr
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { MissingInstallTargetsError, UnknownAdapterError } from "@agnox/adapters";
-import { AgnoxConfigNotFoundError, builtInSkillRegistry, formatSkillMarkdown } from "@agnox/core";
+import { MissingInstallTargetsError, UnknownAdapterError } from "@agentyx/adapters";
+import {
+  AgentyxConfigNotFoundError,
+  builtInSkillRegistry,
+  formatSkillMarkdown,
+} from "@agentyx/core";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { createInstallCommand, runInstallCommand } from "../src/commands/install.js";
-import { createAgnoxProgram } from "../src/index.js";
+import { createAgentyxProgram } from "../src/index.js";
 
 const exampleProjectPath = fileURLToPath(new URL("../../../examples/angular", import.meta.url));
 
@@ -15,7 +19,7 @@ const baseInput = { stacks: [], targets: [], dryRun: false, json: false };
 let projectDir: string;
 
 beforeEach(async () => {
-  projectDir = await mkdtemp(join(tmpdir(), "agnox-install-"));
+  projectDir = await mkdtemp(join(tmpdir(), "agentyx-install-"));
 });
 
 afterEach(async () => {
@@ -23,10 +27,10 @@ afterEach(async () => {
 });
 
 async function writeConfig(config: Record<string, unknown>): Promise<void> {
-  await writeFile(join(projectDir, ".agnox.json"), JSON.stringify(config), "utf8");
+  await writeFile(join(projectDir, ".agentyx.json"), JSON.stringify(config), "utf8");
 }
 
-describe("agnox install --dry-run", () => {
+describe("agentyx install --dry-run", () => {
   it("reports the planned writes and touches nothing", async () => {
     await writeConfig({ extends: ["core"], targets: ["codex"] });
 
@@ -38,7 +42,7 @@ describe("agnox install --dry-run", () => {
 
     expect(output).toBe(
       [
-        "Agnox install (dry run)",
+        "Agentyx install (dry run)",
         "",
         "codex -> .agents/skills",
         "Skills",
@@ -51,7 +55,7 @@ describe("agnox install --dry-run", () => {
         "Dry run: 3 to create, 0 to update, 0 unchanged. Nothing was written.",
       ].join("\n"),
     );
-    expect(await readdir(projectDir)).toEqual([".agnox.json"]);
+    expect(await readdir(projectDir)).toEqual([".agentyx.json"]);
   });
 
   it("plans every configured target", async () => {
@@ -73,7 +77,7 @@ describe("agnox install --dry-run", () => {
   });
 });
 
-describe("agnox install --dry-run --json", () => {
+describe("agentyx install --dry-run --json", () => {
   it("emits a machine-readable plan and nothing else", async () => {
     await writeConfig({ extends: ["core"], targets: ["codex", "claude"] });
 
@@ -213,13 +217,13 @@ describe("target selection", () => {
     expect(output).toContain("claude -> .claude/skills");
   });
 
-  it("leaves .agnox.json untouched", async () => {
+  it("leaves .agentyx.json untouched", async () => {
     const config = { extends: ["core"], targets: ["codex"] };
     await writeConfig(config);
 
     await runInstallCommand({ ...baseInput, targets: ["claude"], cwd: projectDir });
 
-    expect(JSON.parse(await readFile(join(projectDir, ".agnox.json"), "utf8"))).toEqual(config);
+    expect(JSON.parse(await readFile(join(projectDir, ".agentyx.json"), "utf8"))).toEqual(config);
   });
 
   it("fails on a target with no adapter", async () => {
@@ -241,11 +245,11 @@ describe("target selection", () => {
   it("fails when the project has no configuration", async () => {
     await expect(
       runInstallCommand({ ...baseInput, dryRun: true, cwd: projectDir }),
-    ).rejects.toThrow(AgnoxConfigNotFoundError);
+    ).rejects.toThrow(AgentyxConfigNotFoundError);
   });
 });
 
-describe("agnox install <stack>", () => {
+describe("agentyx install <stack>", () => {
   it("installs explicit stacks without a project configuration", async () => {
     const output = await runInstallCommand({
       ...baseInput,
@@ -282,7 +286,7 @@ describe("agnox install <stack>", () => {
   });
 });
 
-describe("agnox install", () => {
+describe("agentyx install", () => {
   it("uses effective MCP capabilities from the selected profile", async () => {
     await writeConfig({ extends: ["angular"], profile: "lean", targets: ["codex"] });
 
@@ -303,7 +307,7 @@ describe("agnox install", () => {
     });
 
     expect(output).toContain(".codex/config.toml (context7)");
-    expect(JSON.parse(await readFile(join(projectDir, ".agnox.json"), "utf8")).profile).toBe(
+    expect(JSON.parse(await readFile(join(projectDir, ".agentyx.json"), "utf8")).profile).toBe(
       "lean",
     );
   });
@@ -385,7 +389,7 @@ describe("agnox install", () => {
     expect(await readFile(join(projectDir, ".claude", "settings.json"), "utf8")).toBe("{}\n");
     expect((await readdir(projectDir)).sort()).toEqual([
       ".agents",
-      ".agnox.json",
+      ".agentyx.json",
       ".claude",
       ".codex",
       ".mcp.json",
@@ -421,7 +425,7 @@ describe("install command wiring", () => {
     expect(command.registeredArguments[0]?.variadic).toBe(true);
   });
 
-  it("is registered on the agnox program", () => {
-    expect(createAgnoxProgram().commands.map((command) => command.name())).toContain("install");
+  it("is registered on the agentyx program", () => {
+    expect(createAgentyxProgram().commands.map((command) => command.name())).toContain("install");
   });
 });

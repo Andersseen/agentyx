@@ -1,14 +1,14 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://agnox.dev/schema/agnox.schema.json",
-  "title": "Agnox project configuration",
-  "description": "Configuration for an Agnox project (.agnox.json).",
+  "$id": "https://agentyx.dev/schema/agentyx.schema.json",
+  "title": "Agentyx project configuration",
+  "description": "Configuration for an Agentyx project (.agentyx.json).",
   "type": "object",
   "properties": {
     "$schema": {
       "type": "string",
       "minLength": 1,
-      "description": "Optional path or URL to the Agnox JSON Schema."
+      "description": "Optional path or URL to the Agentyx JSON Schema."
     },
     "extends": {
       "default": [],

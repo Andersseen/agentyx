@@ -6,9 +6,9 @@ import {
 } from "./skill-directory.js";
 
 /**
- * The providers Agnox can install into, expressed as data.
+ * The providers Agentyx can install into, expressed as data.
  *
- * Both are project-local on purpose: Agnox never writes into `$HOME`, so an
+ * Both are project-local on purpose: Agentyx never writes into `$HOME`, so an
  * installation is reviewable in the project's own diff and disappears with the
  * checkout.
  *
@@ -22,15 +22,15 @@ import {
  * - **Kimi Code** reads project skills from `.agents/skills`, the shared directory that Kimi
  *   documents alongside its `.kimi-code/skills` directory.
  * - **Codex MCP** uses project `.codex/config.toml` under `mcp_servers`. Codex only loads project
- *   `.codex/` layers for trusted projects, so Agnox writes the project file and never falls back to
+ *   `.codex/` layers for trusted projects, so Agentyx writes the project file and never falls back to
  *   `$HOME`.
  * - **Claude Code MCP** supports project scope in `.mcp.json` with an `mcpServers` object. Local
- *   and user MCP scopes live in `~/.claude.json`, which Agnox deliberately does not mutate.
+ *   and user MCP scopes live in `~/.claude.json`, which Agentyx deliberately does not mutate.
  * - **Kimi Code MCP** supports project scope in `.kimi-code/mcp.json` with an `mcpServers` object.
- *   Kimi also supports SSE, but Agnox's provider-neutral MCP model currently covers stdio and HTTP.
+ *   Kimi also supports SSE, but Agentyx's provider-neutral MCP model currently covers stdio and HTTP.
  *
  * Neither definition carries skill content: they are three fields and a
- * directory, and the instructions come from the Agnox skill registry.
+ * directory, and the instructions come from the Agentyx skill registry.
  */
 export const builtInAdapterDefinitions: readonly SkillDirectoryAdapterDefinition[] = [
   {
@@ -71,7 +71,7 @@ export const builtInAdapterDefinitions: readonly SkillDirectoryAdapterDefinition
   },
 ];
 
-/** The adapters Agnox ships with, in listing order. */
+/** The adapters Agentyx ships with, in listing order. */
 export const builtInAdapters: readonly AgentAdapter[] = builtInAdapterDefinitions.map(
   createSkillDirectoryAdapter,
 );

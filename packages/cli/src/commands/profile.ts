@@ -1,9 +1,9 @@
 import {
-  AGNOX_PROFILES,
-  type AgnoxProfile,
+  AGENTYX_PROFILES,
+  type AgentyxProfile,
   getOptimizationProfile,
   optimizationProfiles,
-} from "@agnox/core";
+} from "@agentyx/core";
 import { Command } from "commander";
 import { emit, section, toJson } from "../output.js";
 
@@ -12,7 +12,7 @@ export function runProfileListCommand(): string {
 }
 
 export interface ProfileShowCommandInput {
-  readonly name: AgnoxProfile;
+  readonly name: AgentyxProfile;
   readonly json: boolean;
 }
 
@@ -48,11 +48,11 @@ export function createProfileCommand(): Command {
     .argument("<name>", "profile identifier: lean, balanced, or autonomous")
     .option("--json", "print machine-readable JSON only", false)
     .action(async (name: string, options: { json: boolean }) => {
-      if (!AGNOX_PROFILES.includes(name as AgnoxProfile)) {
-        throw new Error(`Profile must be one of: ${AGNOX_PROFILES.join(", ")}.`);
+      if (!AGENTYX_PROFILES.includes(name as AgentyxProfile)) {
+        throw new Error(`Profile must be one of: ${AGENTYX_PROFILES.join(", ")}.`);
       }
 
-      await emit(() => runProfileShowCommand({ name: name as AgnoxProfile, json: options.json }));
+      await emit(() => runProfileShowCommand({ name: name as AgentyxProfile, json: options.json }));
     });
 
   return profile;

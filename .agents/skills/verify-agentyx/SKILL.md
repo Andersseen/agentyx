@@ -1,9 +1,9 @@
 ---
-name: verify-agnox
-description: Run the full Agnox verification pipeline before handing work back - formatting, typecheck, tests, build, and the CLI behaviour checks that pnpm check does not cover. Use after any change to packages/core, packages/cli, or the config schema.
+name: verify-agentyx
+description: Run the full Agentyx verification pipeline before handing work back - formatting, typecheck, tests, build, and the CLI behaviour checks that pnpm check does not cover. Use after any change to packages/core, packages/cli, or the config schema.
 ---
 
-# Verify an Agnox change
+# Verify an Agentyx change
 
 `pnpm check` covers formatting, types, tests and build. It does **not** exercise the built CLI, and
 it does not catch a JSON Schema that has drifted from the Zod model. Run both halves.
@@ -36,7 +36,7 @@ cd examples/angular && node ../../packages/cli/dist/index.mjs resolve --json
 ```
 
 `resolve` prints a `Stacks` section and a `Skills` section, identifiers only — never skill contents.
-Human output for the example project must be the `Agnox configuration` block with Profile, Targets,
+Human output for the example project must be the `Agentyx configuration` block with Profile, Targets,
 Stacks and Skills sections. `--json` must print JSON and nothing else.
 
 ## 3. Error paths
@@ -46,20 +46,20 @@ Each of these must print a readable message on **stderr** and exit with code 1:
 ```sh
 node packages/cli/dist/index.mjs resolve svelte        # unknown stack
 node packages/cli/dist/index.mjs skill show nope       # unknown skill
-(cd /tmp && node "$OLDPWD/packages/cli/dist/index.mjs" resolve)   # missing .agnox.json
+(cd /tmp && node "$OLDPWD/packages/cli/dist/index.mjs" resolve)   # missing .agentyx.json
 ```
 
-An unhandled stack trace instead of a message means an error escaped `AgnoxError` handling in
+An unhandled stack trace instead of a message means an error escaped `AgentyxError` handling in
 `packages/cli/src/commands/resolve.ts`.
 
 ## 4. If the config schema changed
 
-`packages/core/schema/agnox.schema.json` is generated from the Zod model, and the generator reads
+`packages/core/schema/agentyx.schema.json` is generated from the Zod model, and the generator reads
 the **built** output:
 
 ```sh
-pnpm --filter @agnox/core run build
-pnpm --filter @agnox/core run schema
+pnpm --filter @agentyx/core run build
+pnpm --filter @agentyx/core run schema
 ```
 
 `packages/core/test/json-schema.test.ts` fails when the committed file drifts, so a failing test
@@ -71,8 +71,8 @@ The `SKILL.md` files are package assets, not compiled output, so a passing test 
 they survive publishing:
 
 ```sh
-pnpm --filter @agnox/core exec pnpm pack --pack-destination /tmp
-tar -tzf /tmp/agnox-core-*.tgz | grep skills
+pnpm --filter @agentyx/core exec pnpm pack --pack-destination /tmp
+tar -tzf /tmp/agentyx-core-*.tgz | grep skills
 ```
 
 Every built-in skill must appear under `package/skills/`. If it does not, `files` in

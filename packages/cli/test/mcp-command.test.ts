@@ -1,15 +1,15 @@
-import { UnknownMcpServerError } from "@agnox/core";
+import { UnknownMcpServerError } from "@agentyx/core";
 import { describe, expect, it } from "vitest";
 import { createMcpCommand, runMcpListCommand, runMcpShowCommand } from "../src/commands/mcp.js";
-import { createAgnoxProgram } from "../src/index.js";
+import { createAgentyxProgram } from "../src/index.js";
 
-describe("agnox mcp list", () => {
+describe("agentyx mcp list", () => {
   it("lists built-in MCP server identifiers", () => {
     expect(runMcpListCommand()).toBe(["context7", "playwright"].join("\n"));
   });
 });
 
-describe("agnox mcp show", () => {
+describe("agentyx mcp show", () => {
   it("shows HTTP MCP server data without secrets", () => {
     expect(runMcpShowCommand({ name: "context7", json: false })).toBe(
       [
@@ -54,7 +54,7 @@ describe("mcp command wiring", () => {
     expect(createMcpCommand().commands.map((command) => command.name())).toEqual(["list", "show"]);
   });
 
-  it("is registered on the agnox program", () => {
-    expect(createAgnoxProgram().commands.map((command) => command.name())).toContain("mcp");
+  it("is registered on the agentyx program", () => {
+    expect(createAgentyxProgram().commands.map((command) => command.name())).toContain("mcp");
   });
 });

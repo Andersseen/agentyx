@@ -3,33 +3,33 @@ import {
   type InstallPlan,
   planInstall,
   summarizeInstallPlans,
-} from "@agnox/adapters";
+} from "@agentyx/adapters";
 import {
-  AGNOX_PROFILES,
-  type AgnoxProfile,
+  AGENTYX_PROFILES,
+  type AgentyxProfile,
   builtInMcpServerRegistry,
   builtInSkillRegistry,
-  DEFAULT_AGNOX_PROFILE,
+  DEFAULT_AGENTYX_PROFILE,
   filterEffectiveMcpServers,
-  loadAgnoxConfig,
-  resolveAgnoxConfig,
+  loadAgentyxConfig,
+  resolveAgentyxConfig,
   resolveStackMcpServerReferences,
   resolveStackSkills,
   resolveStacks,
-} from "@agnox/core";
+} from "@agentyx/core";
 import { Command } from "commander";
 import { emit, section, toJson } from "../output.js";
 
 export interface InstallCommandInput {
   /**
    * Stacks passed on the command line. As with `resolve`, they replace the
-   * stacks from `.agnox.json` and the project configuration is not read at all
+   * stacks from `.agentyx.json` and the project configuration is not read at all
    * — which also means the targets must then be explicit.
    */
   readonly stacks: readonly string[];
-  /** `--target`, repeatable. Overrides the targets in `.agnox.json` for this run only. */
+  /** `--target`, repeatable. Overrides the targets in `.agentyx.json` for this run only. */
   readonly targets: readonly string[];
-  readonly profile?: AgnoxProfile;
+  readonly profile?: AgentyxProfile;
   readonly dryRun: boolean;
   readonly json: boolean;
   readonly skillsOnly?: boolean;
@@ -38,14 +38,14 @@ export interface InstallCommandInput {
 }
 
 /**
- * Produces the exact text `agnox install` writes to stdout, and, unless this is
+ * Produces the exact text `agentyx install` writes to stdout, and, unless this is
  * a dry run, performs the installation.
  *
  * The skills are loaded once and handed to every target, so the providers
  * cannot receive different instructions; the plans differ only in where the
- * files go. `.agnox.json` is never modified.
+ * files go. `.agentyx.json` is never modified.
  *
- * @throws {AgnoxConfigNotFoundError} when no stacks were named and the project has no configuration.
+ * @throws {AgentyxConfigNotFoundError} when no stacks were named and the project has no configuration.
  * @throws {MissingInstallTargetsError} when neither the configuration nor `--target` names a target.
  * @throws {UnknownAdapterError} when a target has no adapter.
  */
@@ -76,13 +76,13 @@ interface ResolvedEnvironment {
   readonly skills: readonly string[];
   readonly declaredMcpServers: readonly { readonly name: string; readonly level: string }[];
   readonly mcpServers: readonly string[];
-  readonly profile: AgnoxProfile;
+  readonly profile: AgentyxProfile;
   readonly targets: readonly string[];
 }
 
 async function resolveEnvironment(input: InstallCommandInput): Promise<ResolvedEnvironment> {
   if (input.stacks.length > 0) {
-    const profile = input.profile ?? DEFAULT_AGNOX_PROFILE;
+    const profile = input.profile ?? DEFAULT_AGENTYX_PROFILE;
     const declaredMcpServers = resolveStackMcpServerReferences([...input.stacks]);
 
     return {
@@ -95,9 +95,9 @@ async function resolveEnvironment(input: InstallCommandInput): Promise<ResolvedE
     };
   }
 
-  const config = await loadAgnoxConfig(input.cwd);
+  const config = await loadAgentyxConfig(input.cwd);
   const profile = input.profile ?? config.profile;
-  const resolved = resolveAgnoxConfig({ ...config, profile });
+  const resolved = resolveAgentyxConfig({ ...config, profile });
 
   return {
     stacks: resolved.resolvedStacks,
@@ -141,7 +141,7 @@ function renderText(input: InstallCommandInput, plans: readonly InstallPlan[]): 
     ? `Dry run: ${summary.create} to create, ${summary.update} to update, ${summary.unchanged} unchanged. Nothing was written.`
     : `Installed: ${summary.create + summary.update} written, ${summary.unchanged} unchanged.`;
 
-  return [input.dryRun ? "Agnox install (dry run)" : "Agnox install", ...blocks, footer].join(
+  return [input.dryRun ? "Agentyx install (dry run)" : "Agentyx install", ...blocks, footer].join(
     "\n\n",
   );
 }
@@ -201,7 +201,7 @@ function collectTarget(value: string, previous: string[]): string[] {
 export function createInstallCommand(): Command {
   return new Command("install")
     .description("Install the resolved skills into each target agent.")
-    .argument("[stacks...]", "install these stacks instead of the ones in .agnox.json")
+    .argument("[stacks...]", "install these stacks instead of the ones in .agentyx.json")
     .option(
       "--target <id>",
       "install into this target instead of the configured ones; repeatable",
@@ -211,11 +211,11 @@ export function createInstallCommand(): Command {
     .option("--dry-run", "report the planned changes without writing anything", false)
     .option("--json", "print machine-readable JSON only", false)
     .option("--profile <profile>", "override the optimization profile for this run", (value) => {
-      if (!AGNOX_PROFILES.includes(value as AgnoxProfile)) {
-        throw new Error(`Profile must be one of: ${AGNOX_PROFILES.join(", ")}.`);
+      if (!AGENTYX_PROFILES.includes(value as AgentyxProfile)) {
+        throw new Error(`Profile must be one of: ${AGENTYX_PROFILES.join(", ")}.`);
       }
 
-      return value as AgnoxProfile;
+      return value as AgentyxProfile;
     })
     .option("--skills-only", "install skills without MCP configuration", false)
     .option("--mcp-only", "install MCP configuration without skills", false)
@@ -224,7 +224,7 @@ export function createInstallCommand(): Command {
         stacks: string[],
         options: {
           target: string[];
-          profile?: AgnoxProfile;
+          profile?: AgentyxProfile;
           dryRun: boolean;
           json: boolean;
           skillsOnly: boolean;

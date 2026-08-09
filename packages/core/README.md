@@ -1,22 +1,22 @@
-# @agnox/core
+# @agentyx/core
 
-Domain foundations for [Agnox](https://github.com/Andersseen/agnox): the `.agnox.json` configuration
+Domain foundations for [Agentyx](https://github.com/Andersseen/agentyx): the `.agentyx.json` configuration
 model, stack definitions, built-in stack/skill/MCP registries, optimization profiles, and
 resolution.
 
 This package has no dependency on Commander or any terminal UI — CLI concerns live in
-[`@agnox/cli`](https://github.com/Andersseen/agnox/tree/main/packages/cli).
+[`@agentyx/cli`](https://github.com/Andersseen/agentyx/tree/main/packages/cli).
 
 ```ts
 import {
   builtInSkillRegistry,
   builtInStacks,
-  loadAgnoxConfig,
-  resolveAgnoxConfig,
+  loadAgentyxConfig,
+  resolveAgentyxConfig,
   resolveStackMcpServerReferences,
   resolveStacks,
   resolveStackSkills,
-} from "@agnox/core";
+} from "@agentyx/core";
 
 resolveStacks(["angular"]);
 // ["core", "typescript", "angular"]
@@ -27,7 +27,7 @@ resolveStackSkills(["angular"]);
 resolveStackMcpServerReferences(["angular"]);
 // [{ name: "context7", level: "recommended" }]
 
-resolveAgnoxConfig(await loadAgnoxConfig(process.cwd()));
+resolveAgentyxConfig(await loadAgentyxConfig(process.cwd()));
 // { requestedStacks, resolvedStacks, skills, declaredMcpServers, mcpServers, profile, targets }
 ```
 
@@ -56,22 +56,22 @@ MCP resolution keeps both declared and effective capabilities visible. Profiles 
 `autonomous` enables essential, recommended and optional MCP. Skill identifiers are not filtered by
 profile.
 
-The JSON Schema for `.agnox.json` ships with the package:
+The JSON Schema for `.agentyx.json` ships with the package:
 
 ```json
 {
-  "$schema": "./node_modules/@agnox/core/schema/agnox.schema.json"
+  "$schema": "./node_modules/@agentyx/core/schema/agentyx.schema.json"
 }
 ```
 
 Resolution failures throw domain errors — `UnknownStackError`, `CircularStackDependencyError`,
-`UnknownSkillError`, `DuplicateSkillError`, `InvalidSkillError`, `AgnoxConfigNotFoundError`,
-`AgnoxConfigParseError`, `AgnoxConfigValidationError` — all extending `AgnoxError` with a stable
+`UnknownSkillError`, `DuplicateSkillError`, `InvalidSkillError`, `AgentyxConfigNotFoundError`,
+`AgentyxConfigParseError`, `AgentyxConfigValidationError` — all extending `AgentyxError` with a stable
 `code`.
 
 Installing skills and effective MCP capabilities into an agent is
-[`@agnox/adapters`](https://github.com/Andersseen/agnox/tree/main/packages/adapters); core knows
-nothing about providers. See the [main README](https://github.com/Andersseen/agnox#readme) for the
+[`@agentyx/adapters`](https://github.com/Andersseen/agentyx/tree/main/packages/adapters); core knows
+nothing about providers. See the [main README](https://github.com/Andersseen/agentyx#readme) for the
 full picture.
 
 MIT © Andersseen

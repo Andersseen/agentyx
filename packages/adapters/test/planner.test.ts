@@ -1,7 +1,7 @@
 import { mkdir, mkdtemp, readdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { builtInMcpServerRegistry, builtInSkillRegistry, formatSkillMarkdown } from "@agnox/core";
+import { builtInMcpServerRegistry, builtInSkillRegistry, formatSkillMarkdown } from "@agentyx/core";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { AgentAdapter } from "../src/adapter.js";
 import {
@@ -19,7 +19,7 @@ describe("planTargetInstall", () => {
   let projectDir: string;
 
   beforeEach(async () => {
-    projectDir = await mkdtemp(join(tmpdir(), "agnox-planner-"));
+    projectDir = await mkdtemp(join(tmpdir(), "agentyx-planner-"));
   });
 
   afterEach(async () => {
@@ -248,7 +248,7 @@ describe("planTargetInstall containment", () => {
   let projectDir: string;
 
   beforeEach(async () => {
-    projectDir = await mkdtemp(join(tmpdir(), "agnox-planner-"));
+    projectDir = await mkdtemp(join(tmpdir(), "agentyx-planner-"));
   });
 
   afterEach(async () => {
@@ -288,7 +288,7 @@ describe("planTargetInstall containment", () => {
   });
 
   it("rejects an absolute destination", async () => {
-    await expect(withAdapter(escaping([join(tmpdir(), "agnox-escaped.md")]))).rejects.toThrow(
+    await expect(withAdapter(escaping([join(tmpdir(), "agentyx-escaped.md")]))).rejects.toThrow(
       InstallPathError,
     );
   });
@@ -324,7 +324,7 @@ describe("planInstall", () => {
   let projectDir: string;
 
   beforeEach(async () => {
-    projectDir = await mkdtemp(join(tmpdir(), "agnox-planner-"));
+    projectDir = await mkdtemp(join(tmpdir(), "agentyx-planner-"));
   });
 
   afterEach(async () => {

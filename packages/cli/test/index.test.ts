@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { cliVersion, createAgnoxProgram } from "../src/index.js";
+import { cliVersion, createAgentyxProgram } from "../src/index.js";
 
-describe("@agnox/cli", () => {
+describe("@agentyx/cli", () => {
   it("configures the basic CLI metadata", () => {
-    const program = createAgnoxProgram();
+    const program = createAgentyxProgram();
 
-    expect(program.name()).toBe("agnox");
-    expect(program.description()).toBe("Agnox — provider-agnostic tooling for coding agents.");
+    expect(program.name()).toBe("agentyx");
+    expect(program.description()).toBe("Agentyx — provider-agnostic tooling for coding agents.");
     expect(program.version()).toBe(cliVersion);
   });
 });

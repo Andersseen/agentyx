@@ -1,13 +1,13 @@
-import { UnknownSkillError } from "@agnox/core";
+import { UnknownSkillError } from "@agentyx/core";
 import { describe, expect, it } from "vitest";
 import {
   createSkillCommand,
   runSkillListCommand,
   runSkillShowCommand,
 } from "../src/commands/skill.js";
-import { createAgnoxProgram } from "../src/index.js";
+import { createAgentyxProgram } from "../src/index.js";
 
-describe("agnox skill list", () => {
+describe("agentyx skill list", () => {
   it("prints the built-in skill identifiers", () => {
     expect(runSkillListCommand()).toBe(
       [
@@ -21,7 +21,7 @@ describe("agnox skill list", () => {
   });
 });
 
-describe("agnox skill show", () => {
+describe("agentyx skill show", () => {
   it("prints the name, the description and the instructions", () => {
     const output = runSkillShowCommand({ name: "angular-modern", json: false });
     const [name, description, blank, ...body] = output.split("\n");
@@ -68,8 +68,8 @@ describe("skill command wiring", () => {
     expect(show?.options.map((option) => option.long)).toContain("--json");
   });
 
-  it("is registered on the agnox program", () => {
-    const names = createAgnoxProgram().commands.map((command) => command.name());
+  it("is registered on the agentyx program", () => {
+    const names = createAgentyxProgram().commands.map((command) => command.name());
 
     expect(names).toContain("skill");
   });

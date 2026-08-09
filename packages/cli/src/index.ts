@@ -1,10 +1,12 @@
 #!/usr/bin/env node
 import { realpathSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { agnoxAdaptersName } from "@agnox/adapters";
-import { agnoxCoreName } from "@agnox/core";
+import { agentyxAdaptersName } from "@agentyx/adapters";
+import { agentyxCoreName } from "@agentyx/core";
 import { Command } from "commander";
 import { z } from "zod";
+import { createDoctorCommand } from "./commands/doctor.js";
+import { createInitCommand } from "./commands/init.js";
 import { createInstallCommand } from "./commands/install.js";
 import { createMcpCommand } from "./commands/mcp.js";
 import { createProfileCommand } from "./commands/profile.js";
@@ -15,20 +17,22 @@ import { createTargetCommand } from "./commands/target.js";
 export const cliVersion = "0.0.0";
 
 const cliMetadataSchema = z.object({
-  adaptersPackage: z.literal("agnox-adapters"),
-  corePackage: z.literal("agnox-core"),
+  adaptersPackage: z.literal("agentyx-adapters"),
+  corePackage: z.literal("agentyx-core"),
 });
 
-export function createAgnoxProgram(): Command {
+export function createAgentyxProgram(): Command {
   cliMetadataSchema.parse({
-    adaptersPackage: agnoxAdaptersName,
-    corePackage: agnoxCoreName,
+    adaptersPackage: agentyxAdaptersName,
+    corePackage: agentyxCoreName,
   });
 
   return new Command()
-    .name("agnox")
-    .description("Agnox — provider-agnostic tooling for coding agents.")
+    .name("agentyx")
+    .description("Agentyx — provider-agnostic tooling for coding agents.")
     .version(cliVersion)
+    .addCommand(createInitCommand())
+    .addCommand(createDoctorCommand())
     .addCommand(createResolveCommand())
     .addCommand(createSkillCommand())
     .addCommand(createMcpCommand())
@@ -48,5 +52,5 @@ function isMainModule(): boolean {
 }
 
 if (isMainModule()) {
-  await createAgnoxProgram().parseAsync(process.argv);
+  await createAgentyxProgram().parseAsync(process.argv);
 }

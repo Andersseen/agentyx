@@ -15,7 +15,7 @@ permissions:
 
 jobs:
   release:
-    # Requires an NPM_TOKEN repository secret with publish rights on the @agnox scope.
+    # Requires an NPM_TOKEN repository secret with publish rights on the @agentyx scope.
     # Without it, the version pull request is still opened; only publishing is skipped.
     runs-on: ubuntu-latest
 

@@ -1,5 +1,5 @@
 import { resolve } from "node:path";
-import type { McpServerDefinition } from "@agnox/core";
+import type { McpServerDefinition } from "@agentyx/core";
 import { parse, stringify } from "@iarna/toml";
 import { ProviderConfigParseError } from "./errors.js";
 

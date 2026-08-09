@@ -1,4 +1,4 @@
-import { AgnoxError } from "@agnox/core";
+import { AgentyxError } from "@agentyx/core";
 
 /**
  * Runs a command body and writes its output.
@@ -11,7 +11,7 @@ export async function emit(produce: () => string | Promise<string>): Promise<voi
   try {
     process.stdout.write(`${await produce()}\n`);
   } catch (error) {
-    if (!(error instanceof AgnoxError)) {
+    if (!(error instanceof AgentyxError)) {
       throw error;
     }
 

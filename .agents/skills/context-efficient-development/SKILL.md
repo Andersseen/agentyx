@@ -1,12 +1,12 @@
 ---
 name: context-efficient-development
-description: Develop Agnox with targeted exploration, narrow iteration commands, concise output, and full verification before handoff.
+description: Develop Agentyx with targeted exploration, narrow iteration commands, concise output, and full verification before handoff.
 ---
 
-# Context-efficient Agnox development
+# Context-efficient Agentyx development
 
-Use this skill for non-trivial work on Agnox itself. It is a repository-development skill, not a
-built-in Agnox product skill.
+Use this skill for non-trivial work on Agentyx itself. It is a repository-development skill, not a
+built-in Agentyx product skill.
 
 ## Exploration
 
@@ -22,7 +22,7 @@ During iteration, prefer the smallest command that exercises the touched surface
 ```sh
 pnpm vitest run packages/adapters
 pnpm vitest run packages/cli/test/install-command.test.ts
-pnpm --filter @agnox/core run build
+pnpm --filter @agentyx/core run build
 pnpm typecheck
 ```
 

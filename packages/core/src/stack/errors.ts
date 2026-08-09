@@ -1,4 +1,4 @@
-import { AgnoxError } from "../errors.js";
+import { AgentyxError } from "../errors.js";
 
 /**
  * Raised when a requested or inherited stack is not present in the registry.
@@ -6,7 +6,7 @@ import { AgnoxError } from "../errors.js";
  * The offending name is exposed as `stackName`; `stack` stays the JS stack
  * trace inherited from `Error`.
  */
-export class UnknownStackError extends AgnoxError {
+export class UnknownStackError extends AgentyxError {
   readonly stackName: string;
   readonly requiredBy: string | undefined;
   readonly knownStacks: readonly string[];
@@ -24,7 +24,7 @@ export class UnknownStackError extends AgnoxError {
 }
 
 /** Raised when stack inheritance forms a cycle. */
-export class CircularStackDependencyError extends AgnoxError {
+export class CircularStackDependencyError extends AgentyxError {
   /** The cycle path, starting and ending with the same stack. */
   readonly cycle: readonly string[];
 
@@ -36,7 +36,7 @@ export class CircularStackDependencyError extends AgnoxError {
 }
 
 /** Raised when a registry is built from definitions that reuse a stack name. */
-export class DuplicateStackError extends AgnoxError {
+export class DuplicateStackError extends AgentyxError {
   readonly stackName: string;
 
   constructor(stackName: string) {

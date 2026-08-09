@@ -1,0 +1,7 @@
+{
+  "name": "agentyx-fixture-typescript",
+  "private": true,
+  "devDependencies": {
+    "typescript": "^5.9.2"
+  }
+}

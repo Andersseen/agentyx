@@ -1,0 +1,10 @@
+{
+  "name": "agentyx-fixture-angular",
+  "private": true,
+  "dependencies": {
+    "@angular/core": "^20.0.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.2"
+  }
+}

@@ -1,12 +1,12 @@
 ---
-name: navigate-agnox
-description: Navigate the Agnox repository by package responsibility so changes start in the right place.
+name: navigate-agentyx
+description: Navigate the Agentyx repository by package responsibility so changes start in the right place.
 ---
 
-# Navigate Agnox
+# Navigate Agentyx
 
-Use this skill when deciding where an Agnox change belongs. It is a repository-development skill,
-not a built-in Agnox product skill.
+Use this skill when deciding where an Agentyx change belongs. It is a repository-development skill,
+not a built-in Agentyx product skill.
 
 ## Conceptual Map
 
@@ -20,10 +20,10 @@ does not define stacks, skills or MCP servers.
 `packages/cli` owns Commander wiring and terminal/JSON output. CLI tests call command functions and
 assert returned strings; do not spawn the binary in unit tests.
 
-`packages/core/skills` contains built-in product Skills that Agnox can install into user projects.
+`packages/core/skills` contains built-in product Skills that Agentyx can install into user projects.
 Each skill is data: a directory with `SKILL.md`, loaded by the core registry.
 
-`.agents/skills` contains Skills for developing this repository. These are not Agnox product
+`.agents/skills` contains Skills for developing this repository. These are not Agentyx product
 configuration unless explicitly promoted later.
 
 `examples` contains fixtures used across core, adapters and CLI tests.
@@ -38,5 +38,5 @@ Adding a CLI command, flag or output shape -> `packages/cli`.
 
 Changing a built-in installed Skill -> `packages/core/skills`.
 
-Changing how agents develop Agnox -> `.agents/skills` and, only if always-loaded context needs to
+Changing how agents develop Agentyx -> `.agents/skills` and, only if always-loaded context needs to
 change, `AGENTS.md`.

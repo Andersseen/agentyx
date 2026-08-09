@@ -1,20 +1,70 @@
 <div align="center">
 
-# Agnox
+# Agentyx
 
 **Provider-agnostic tooling for coding-agent environments.**
 
-[![CI](https://github.com/Andersseen/agnox/actions/workflows/ci.yml/badge.svg)](https://github.com/Andersseen/agnox/actions/workflows/ci.yml)
+[![CI](https://github.com/Andersseen/agentyx/actions/workflows/ci.yml/badge.svg)](https://github.com/Andersseen/agentyx/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Node.js >=22](https://img.shields.io/badge/node-%3E%3D22-green.svg)](.nvmrc)
 
 </div>
 
-Agnox lets a project describe its development environment once, in a way that is not tied to any
-single coding agent, and installs it into the agents you actually use:
+Agentyx lets an existing project describe its coding-agent environment once, in a way that is not
+tied to any single provider, then install the same resolved Skills and MCP configuration into the
+agents you actually use.
+
+> **Status: early development.** APIs will change. Nothing is published to npm yet. The commands
+> below use this repository checkout until the first public package release.
+
+## Quick Start
+
+From this repository checkout:
+
+```sh
+pnpm install
+pnpm build
+```
+
+In an existing TypeScript or Angular project, run the built CLI:
+
+```sh
+node /path/to/agentyx/packages/cli/dist/index.mjs init
+node /path/to/agentyx/packages/cli/dist/index.mjs doctor
+node /path/to/agentyx/packages/cli/dist/index.mjs install --dry-run
+node /path/to/agentyx/packages/cli/dist/index.mjs install
+```
+
+For agents and CI, use non-interactive init:
+
+```sh
+agentyx init --stack angular --profile lean --target codex --target kimi --yes
+```
+
+`init` only creates `.agentyx.json`; it never installs Skills or MCP. `doctor` is deterministic
+diagnostics, `install --dry-run` shows the exact project-local writes, and `install` performs them.
+
+Future npm usage will look like an installed `agentyx` binary, but Agentyx is not published to npm yet.
+
+## Local Package Validation
+
+For release-style testing without publishing, pack the workspace artifacts and execute the packaged
+CLI in a temporary external project:
+
+```sh
+pnpm smoke:pack
+```
+
+This validates the package tarballs rather than workspace source imports, including the CLI bin,
+runtime dependencies, built-in Skill assets, JSON Schema packaging, adapters, `init`, `doctor`,
+`resolve`, and `install --dry-run`.
+
+The generated `.agentyx.json` intentionally omits `$schema` for now. `@agentyx/core` packages
+`schema/agentyx.schema.json`, but a relative `node_modules` schema path is fragile before packages are
+installed and Agentyx does not yet host a stable public schema URL.
 
 ```
-.agnox.json
+.agentyx.json
     ↓
   stacks
     ↓
@@ -30,12 +80,10 @@ Codex Claude Kimi
 Today that runs end to end for Codex, Claude Code and Kimi Code from one set of skill and MCP
 sources.
 
-> **Status: early development.** APIs will change. Nothing is published to npm yet.
-
 ## Concept
 
 A **stack** is a composable definition of a development environment. Stacks extend other stacks and
-contribute **capabilities** such as skills and MCP servers, and Agnox resolves the full inheritance
+contribute **capabilities** such as skills and MCP servers, and Agentyx resolves the full inheritance
 chain in dependency-first order.
 
 | Stack        | Extends      | Skills                                             | MCP                              |
@@ -81,19 +129,19 @@ description: Plan non-trivial work before editing, and keep small changes small.
 Instructions...
 ```
 
-The frontmatter is a small flat `key: value` subset of YAML, so `@agnox/core` keeps depending on
+The frontmatter is a small flat `key: value` subset of YAML, so `@agentyx/core` keeps depending on
 Zod alone. Anything richer is rejected rather than guessed at, and a malformed built-in skill is a
 build failure, not a silently skipped file.
 
 Resolution works on **identifiers only** — skill bodies are read when something asks for them, so
-`agnox resolve` never pays for the instruction text. Skills are resolved in stack order, then
+`agentyx resolve` never pays for the instruction text. Skills are resolved in stack order, then
 declaration order, de-duplicated by first occurrence.
 
 ## MCP Servers
 
 An **MCP server** is also authored once, without Codex or Claude fields attached. The initial model
 is deliberately small: `stdio` servers have `command`, `args`, and environment variable references;
-`http` servers have a `url` and optional header environment variable references. Agnox carries
+`http` servers have a `url` and optional header environment variable references. Agentyx carries
 environment variable names, never committed secret values.
 
 Stack MCP membership has an importance level: `essential`, `recommended`, or `optional`. A plain
@@ -109,14 +157,14 @@ Built-ins are intentionally limited to two examples:
 List them:
 
 ```sh
-pnpm --silent agnox mcp list
+pnpm --silent agentyx mcp list
 ```
 
 Show provider-independent data:
 
 ```sh
-pnpm --silent agnox mcp show context7
-pnpm --silent agnox mcp show context7 --json
+pnpm --silent agentyx mcp show context7
+pnpm --silent agentyx mcp show context7 --json
 ```
 
 ## Requirements
@@ -124,20 +172,19 @@ pnpm --silent agnox mcp show context7 --json
 - Node.js >=22
 - pnpm 10.30.1 (`corepack enable`)
 
-## Setup
+## Repository Setup
 
 ```sh
 pnpm install
 pnpm build
 ```
 
-## `.agnox.json`
+## `.agentyx.json`
 
-A project describes itself with `.agnox.json` in its root directory:
+A project describes itself with `.agentyx.json` in its root directory:
 
 ```json
 {
-  "$schema": "./node_modules/@agnox/core/schema/agnox.schema.json",
   "extends": ["angular"],
   "profile": "balanced",
   "targets": ["codex", "claude"]
@@ -165,15 +212,44 @@ All resolved Skills remain available in every profile. Profiles only filter curr
 external capabilities such as MCP.
 
 Parent directories are not searched, and an invalid configuration is reported rather than repaired.
-A working example lives in [examples/angular/.agnox.json](examples/angular/.agnox.json) — it is a
+A working example lives in [examples/angular/.agentyx.json](examples/angular/.agentyx.json) — it is a
 configuration fixture, not an Angular project.
 
-## `agnox resolve`
+Create one for an existing project:
+
+```sh
+agentyx init
+```
+
+Non-interactive mode is deterministic and never chooses providers silently:
+
+```sh
+agentyx init --stack typescript --profile lean --target codex --yes
+```
+
+If `.agentyx.json` already exists, init refuses to replace it unless `--force` is supplied.
+
+## `agentyx doctor`
+
+`doctor` inspects the current project without writing files, contacting providers, starting MCP
+servers, or scanning the whole filesystem:
+
+```sh
+agentyx doctor
+agentyx doctor --json
+```
+
+It reports project detection, package-manager ambiguity, `.agentyx.json` validity, configured and
+resolved stacks, Skill and MCP counts, target adapters, expected Skill and MCP destinations,
+installability, and profile-filtered MCP. Errors such as invalid configuration or unknown targets
+exit non-zero; warnings do not.
+
+## `agentyx resolve`
 
 Resolve a stack without needing a project configuration:
 
 ```sh
-pnpm agnox resolve angular
+pnpm agentyx resolve angular
 ```
 
 ```
@@ -196,7 +272,7 @@ MCP
   context7    recommended
 ```
 
-Resolve the current project's `.agnox.json`:
+Resolve the current project's `.agentyx.json`:
 
 ```sh
 cd examples/angular
@@ -204,7 +280,7 @@ node ../../packages/cli/dist/index.mjs resolve
 ```
 
 ```
-Agnox configuration
+Agentyx configuration
 
 Profile
   balanced
@@ -229,10 +305,10 @@ MCP
   context7    recommended
 ```
 
-Override the profile for one invocation without editing `.agnox.json`:
+Override the profile for one invocation without editing `.agentyx.json`:
 
 ```sh
-pnpm agnox resolve angular --profile lean
+pnpm agentyx resolve angular --profile lean
 ```
 
 ```
@@ -259,7 +335,7 @@ Add `--json` for machine-readable output. Use `pnpm --silent` so pnpm's own bann
 stdout:
 
 ```sh
-pnpm --silent agnox resolve angular --json
+pnpm --silent agentyx resolve angular --json
 ```
 
 ```json
@@ -283,16 +359,16 @@ pnpm --silent agnox resolve angular --json
 selected profile. `resolve` prints skill and MCP identifiers, never skill contents or provider
 config, so its output stays cheap to hand to an agent.
 
-An explicit stack argument takes precedence over `.agnox.json` for stack selection. Unknown stacks,
+An explicit stack argument takes precedence over `.agentyx.json` for stack selection. Unknown stacks,
 unknown skills, circular inheritance, a missing file, malformed JSON, and schema violations all
 print a readable message on stderr and exit with code 1.
 
-## `agnox skill`
+## `agentyx skill`
 
 List the built-in skills:
 
 ```sh
-pnpm --silent agnox skill list
+pnpm --silent agentyx skill list
 ```
 
 ```
@@ -306,7 +382,7 @@ angular-modern
 Read one, instructions included:
 
 ```sh
-pnpm --silent agnox skill show angular-modern
+pnpm --silent agentyx skill show angular-modern
 ```
 
 ```
@@ -320,17 +396,17 @@ Modern Angular conventions - standalone, signals, inject(), OnPush, zoneless.
 `--json` gives the same skill as a `{ name, description, content }` document:
 
 ```sh
-pnpm --silent agnox skill show angular-modern --json
+pnpm --silent agentyx skill show angular-modern --json
 ```
 
 An unknown skill prints a readable message on stderr and exits with code 1.
 
-## `agnox profile`
+## `agentyx profile`
 
 List optimization profiles:
 
 ```sh
-pnpm --silent agnox profile list
+pnpm --silent agentyx profile list
 ```
 
 ```
@@ -342,16 +418,16 @@ autonomous
 Inspect one:
 
 ```sh
-pnpm --silent agnox profile show lean
-pnpm --silent agnox profile show lean --json
+pnpm --silent agentyx profile show lean
+pnpm --silent agentyx profile show lean --json
 ```
 
-## `agnox target`
+## `agentyx target`
 
-A **target** is a coding agent Agnox can install into. List them:
+A **target** is a coding agent Agentyx can install into. List them:
 
 ```sh
-pnpm --silent agnox target list
+pnpm --silent agentyx target list
 ```
 
 ```
@@ -360,11 +436,11 @@ claude
 kimi
 ```
 
-`agnox target show <target>` adds the provider name and where it installs skills in the current
+`agentyx target show <target>` adds the provider name and where it installs skills in the current
 project:
 
 ```sh
-pnpm --silent agnox target show codex
+pnpm --silent agentyx target show codex
 ```
 
 ```
@@ -388,14 +464,14 @@ repository skills from the shared `.agents/skills` directory, while Claude Code 
 `.claude/skills`. For MCP, Codex reads trusted project `.codex/config.toml` layers and uses
 `[mcp_servers.<id>]`; Claude Code uses project `.mcp.json` with an `mcpServers` object; Kimi Code
 uses project `.kimi-code/mcp.json` with an `mcpServers` object. Installation is project-local only:
-Agnox never writes to `$HOME`.
+Agentyx never writes to `$HOME`.
 
-Codex MCP is TOML, so Agnox parses and rewrites the file with a TOML library. Unrelated values and
+Codex MCP is TOML, so Agentyx parses and rewrites the file with a TOML library. Unrelated values and
 MCP servers are preserved semantically, but comments and exact formatting may be normalized. Claude
-and Kimi MCP are JSON, so Agnox parses, merges, and serializes deterministically. Kimi supports SSE
-too, but Agnox's provider-neutral MCP model currently installs only `stdio` and HTTP definitions.
+and Kimi MCP are JSON, so Agentyx parses, merges, and serializes deterministically. Kimi supports SSE
+too, but Agentyx's provider-neutral MCP model currently installs only `stdio` and HTTP definitions.
 
-## `agnox install`
+## `agentyx install`
 
 `install` resolves the project, turns the resolved skills into a plan per target, and writes it.
 Always look first:
@@ -406,7 +482,7 @@ node ../../packages/cli/dist/index.mjs install --dry-run
 ```
 
 ```
-Agnox install (dry run)
+Agentyx install (dry run)
 
 codex -> .agents/skills
 Skills
@@ -435,31 +511,31 @@ Dry run: 12 to create, 0 to update, 0 unchanged. Nothing was written.
 Drop it to install:
 
 ```sh
-agnox install
+agentyx install
 ```
 
 ```
 Installed: 12 written, 0 unchanged.
 ```
 
-Every skill and MCP server is installed from one source. `@agnox/core` renders the canonical
+Every skill and MCP server is installed from one source. `@agentyx/core` renders the canonical
 `SKILL.md` once and exposes one provider-independent MCP definition; adapters only decide where and
 how each provider expects it. Re-running reports `unchanged` and writes nothing; editing a managed
 entry makes the next run report `update` and restore it.
 
-Install into a specific agent, whatever `.agnox.json` says — `--target` is repeatable, applies to
+Install into a specific agent, whatever `.agentyx.json` says — `--target` is repeatable, applies to
 that run only, and never edits the configuration:
 
 ```sh
-agnox install --target codex
-agnox install --target codex --target claude --target kimi
+agentyx install --target codex
+agentyx install --target codex --target claude --target kimi
 ```
 
-A stack can be named directly, exactly as with `resolve`, which installs without a `.agnox.json` at
+A stack can be named directly, exactly as with `resolve`, which installs without a `.agentyx.json` at
 all. The configuration is then not read, so the target has to be explicit:
 
 ```sh
-agnox install angular --target codex --dry-run
+agentyx install angular --target codex --dry-run
 ```
 
 For inspection or focused rollout, `--skills-only` skips MCP configuration and `--mcp-only` skips
@@ -471,7 +547,7 @@ configured profile for that run only. Install consumes the effective MCP set, so
 skill bodies:
 
 ```sh
-pnpm --silent agnox install core --target codex --json --dry-run
+pnpm --silent agentyx install core --target codex --json --dry-run
 ```
 
 ```json
@@ -516,10 +592,13 @@ pnpm --silent agnox install core --target codex --json --dry-run
 }
 ```
 
-Agnox only manages `<destination>/<skill>/SKILL.md` for skills it resolved and MCP entries it
+Agentyx only manages `<destination>/<skill>/SKILL.md` for skills it resolved and MCP entries it
 resolved. Other skills, provider settings, and unrelated MCP servers are preserved; a plan that
-would write outside the project is refused, and nothing is ever deleted. A target with no adapter,
-or an installation with no target at all, prints a readable message on stderr and exits with code 1.
+would write outside the project is refused, and nothing is ever deleted. This is why this repository
+can dogfood a root `.agentyx.json` while keeping hand-authored repository-development Skills under
+`.agents/skills`: Agentyx may share the directory, but it only writes exact resolved Skill
+directories. A target with no adapter, or an installation with no target at all, prints a readable
+message on stderr and exits with code 1.
 
 ## Library use
 
@@ -528,12 +607,12 @@ import {
   builtInSkillRegistry,
   builtInMcpServerRegistry,
   builtInStacks,
-  loadAgnoxConfig,
-  resolveAgnoxConfig,
+  loadAgentyxConfig,
+  resolveAgentyxConfig,
   resolveStacks,
   resolveStackSkills,
   resolveStackMcpServers,
-} from "@agnox/core";
+} from "@agentyx/core";
 
 resolveStacks(["angular"]);
 // ["core", "typescript", "angular"]
@@ -544,7 +623,7 @@ resolveStackSkills(["angular"]);
 resolveStackMcpServers(["angular"]);
 // ["context7"]
 
-resolveAgnoxConfig(await loadAgnoxConfig(process.cwd()));
+resolveAgentyxConfig(await loadAgentyxConfig(process.cwd()));
 // { requestedStacks, resolvedStacks, skills, declaredMcpServers, mcpServers, profile, targets }
 
 builtInSkillRegistry.names; // identifiers, no file is read
@@ -555,11 +634,11 @@ builtInMcpServerRegistry.get("context7"); // { name, description, transport, con
 `createSkillRegistry(sources)` builds an independent registry from `{ name, load }` sources, which
 is the seam an external registry would use later.
 
-Installation lives in `@agnox/adapters`, and planning is always separate from writing:
+Installation lives in `@agentyx/adapters`, and planning is always separate from writing:
 
 ```ts
-import { applyInstallPlans, builtInAdapterRegistry, planInstall } from "@agnox/adapters";
-import { builtInMcpServerRegistry, builtInSkillRegistry } from "@agnox/core";
+import { applyInstallPlans, builtInAdapterRegistry, planInstall } from "@agentyx/adapters";
+import { builtInMcpServerRegistry, builtInSkillRegistry } from "@agentyx/core";
 
 const skills = ["planning", "angular-modern"].map((name) => builtInSkillRegistry.get(name));
 const mcpServers = ["context7"].map((name) => builtInMcpServerRegistry.get(name));
@@ -583,30 +662,30 @@ turns `{ id, name, skillsDir }` into an adapter for any agent that reads
 Resolution and installation failures throw domain errors — `UnknownStackError`,
 `CircularStackDependencyError`, `UnknownSkillError`, `DuplicateSkillError`, `InvalidSkillError`,
 `UnknownMcpServerError`, `DuplicateMcpServerError`, `InvalidMcpServerError`,
-`AgnoxConfigNotFoundError`, `AgnoxConfigParseError`, `AgnoxConfigValidationError`,
+`AgentyxConfigNotFoundError`, `AgentyxConfigParseError`, `AgentyxConfigValidationError`,
 `UnknownAdapterError`, `DuplicateAdapterError`, `MissingInstallTargetsError`, `InstallPathError`,
-`ProviderConfigParseError` — all extending `AgnoxError` with a stable `code`.
+`ProviderConfigParseError` — all extending `AgentyxError` with a stable `code`.
 
 ## Packages
 
 | Package                                     | Description                                             |
 | ------------------------------------------- | ------------------------------------------------------- |
-| [`@agnox/core`](packages/core)               | Configuration model, stacks, skills, MCP, resolution, JSON Schema |
-| [`@agnox/cli`](packages/cli)                 | The `agnox` command-line interface                         |
-| [`@agnox/adapters`](packages/adapters)       | Adapter contract, Codex and Claude Code adapters, install planning |
+| [`@agentyx/core`](packages/core)               | Configuration model, stacks, skills, MCP, resolution, JSON Schema |
+| [`@agentyx/cli`](packages/cli)                 | The `agentyx` command-line interface                         |
+| [`@agentyx/adapters`](packages/adapters)       | Adapter contract, Codex, Claude Code and Kimi Code adapters, MCP rendering, install planning |
 
 ## Not implemented yet
 
-Agnox installs skills and profile-filtered MCP configuration into Codex, Claude Code and Kimi Code,
+Agentyx installs skills and profile-filtered MCP configuration into Codex, Claude Code and Kimi Code,
 project-locally, and nothing more. Still to come: further providers such as OpenCode and Cursor,
 global installation into `$HOME`, remote and community registries, richer optimization advice,
-uninstall and sync cleanup, a plugin system, project auto-detection, codebase memory, npm registry
-integration, an update system, and an init wizard.
+uninstall and sync cleanup, a plugin system, codebase memory, npm registry integration, and an
+update system.
 
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for the development workflow and the architecture rules that
-keep Agnox provider agnostic. By participating you agree to the
+keep Agentyx provider agnostic. By participating you agree to the
 [Code of Conduct](CODE_OF_CONDUCT.md). Security issues go through [SECURITY.md](SECURITY.md), never
 a public issue.
 

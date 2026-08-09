@@ -1,20 +1,20 @@
 import { describe, expect, it } from "vitest";
-import { parseAgnoxConfig } from "../src/config/loader.js";
-import { resolveAgnoxConfig } from "../src/config/resolver.js";
+import { parseAgentyxConfig } from "../src/config/loader.js";
+import { resolveAgentyxConfig } from "../src/config/resolver.js";
 import { UnknownSkillError } from "../src/skill/errors.js";
 import { createSkillRegistry } from "../src/skill/registry.js";
 import { UnknownStackError } from "../src/stack/errors.js";
 import { createStackRegistry } from "../src/stack/registry.js";
 
-describe("resolveAgnoxConfig", () => {
+describe("resolveAgentyxConfig", () => {
   it("composes requested and inherited stacks", () => {
-    const config = parseAgnoxConfig({
+    const config = parseAgentyxConfig({
       extends: ["angular"],
       profile: "balanced",
       targets: ["codex"],
     });
 
-    expect(resolveAgnoxConfig(config)).toEqual({
+    expect(resolveAgentyxConfig(config)).toEqual({
       requestedStacks: ["angular"],
       resolvedStacks: ["core", "typescript", "angular"],
       skills: [
@@ -32,7 +32,7 @@ describe("resolveAgnoxConfig", () => {
   });
 
   it("orders the resolved fields for readable JSON output", () => {
-    const resolved = resolveAgnoxConfig(parseAgnoxConfig({ extends: ["angular"] }));
+    const resolved = resolveAgentyxConfig(parseAgentyxConfig({ extends: ["angular"] }));
 
     expect(Object.keys(resolved)).toEqual([
       "requestedStacks",
@@ -46,7 +46,9 @@ describe("resolveAgnoxConfig", () => {
   });
 
   it("collects skills in resolved stack order without duplicates", () => {
-    const resolved = resolveAgnoxConfig(parseAgnoxConfig({ extends: ["typescript", "angular"] }));
+    const resolved = resolveAgentyxConfig(
+      parseAgentyxConfig({ extends: ["typescript", "angular"] }),
+    );
 
     expect(resolved.skills).toEqual([
       "planning",
@@ -58,14 +60,16 @@ describe("resolveAgnoxConfig", () => {
   });
 
   it("keeps the requested stacks separate from the resolved chain", () => {
-    const resolved = resolveAgnoxConfig(parseAgnoxConfig({ extends: ["typescript", "angular"] }));
+    const resolved = resolveAgentyxConfig(
+      parseAgentyxConfig({ extends: ["typescript", "angular"] }),
+    );
 
     expect(resolved.requestedStacks).toEqual(["typescript", "angular"]);
     expect(resolved.resolvedStacks).toEqual(["core", "typescript", "angular"]);
   });
 
   it("resolves an empty configuration to no stacks", () => {
-    expect(resolveAgnoxConfig(parseAgnoxConfig({}))).toEqual({
+    expect(resolveAgentyxConfig(parseAgentyxConfig({}))).toEqual({
       requestedStacks: [],
       resolvedStacks: [],
       skills: [],
@@ -77,8 +81,8 @@ describe("resolveAgnoxConfig", () => {
   });
 
   it("keeps declared MCP visible when a lean profile filters it out", () => {
-    const resolved = resolveAgnoxConfig(
-      parseAgnoxConfig({ extends: ["angular"], profile: "lean" }),
+    const resolved = resolveAgentyxConfig(
+      parseAgentyxConfig({ extends: ["angular"], profile: "lean" }),
     );
 
     expect(resolved.declaredMcpServers).toEqual([{ name: "context7", level: "recommended" }]);
@@ -86,10 +90,10 @@ describe("resolveAgnoxConfig", () => {
   });
 
   it("does not mutate the input configuration", () => {
-    const config = parseAgnoxConfig({ extends: ["angular"], targets: ["codex"] });
+    const config = parseAgentyxConfig({ extends: ["angular"], targets: ["codex"] });
     const snapshot = structuredClone(config);
 
-    const resolved = resolveAgnoxConfig(config);
+    const resolved = resolveAgentyxConfig(config);
 
     expect(config).toEqual(snapshot);
     expect(resolved.requestedStacks).not.toBe(config.extends);
@@ -100,7 +104,7 @@ describe("resolveAgnoxConfig", () => {
     const registry = createStackRegistry([{ name: "base" }, { name: "app", extends: ["base"] }]);
 
     expect(
-      resolveAgnoxConfig(parseAgnoxConfig({ extends: ["app"] }), registry).resolvedStacks,
+      resolveAgentyxConfig(parseAgentyxConfig({ extends: ["app"] }), registry).resolvedStacks,
     ).toEqual(["base", "app"]);
   });
 
@@ -111,12 +115,12 @@ describe("resolveAgnoxConfig", () => {
     ]);
 
     expect(
-      resolveAgnoxConfig(parseAgnoxConfig({ extends: ["app"] }), stacks, skills).skills,
+      resolveAgentyxConfig(parseAgentyxConfig({ extends: ["app"] }), stacks, skills).skills,
     ).toEqual(["a"]);
   });
 
   it("propagates unknown stacks", () => {
-    expect(() => resolveAgnoxConfig(parseAgnoxConfig({ extends: ["svelte"] }))).toThrow(
+    expect(() => resolveAgentyxConfig(parseAgentyxConfig({ extends: ["svelte"] }))).toThrow(
       UnknownStackError,
     );
   });
@@ -124,7 +128,7 @@ describe("resolveAgnoxConfig", () => {
   it("propagates unknown skills", () => {
     const registry = createStackRegistry([{ name: "app", skills: ["missing"] }]);
 
-    expect(() => resolveAgnoxConfig(parseAgnoxConfig({ extends: ["app"] }), registry)).toThrow(
+    expect(() => resolveAgentyxConfig(parseAgentyxConfig({ extends: ["app"] }), registry)).toThrow(
       UnknownSkillError,
     );
   });

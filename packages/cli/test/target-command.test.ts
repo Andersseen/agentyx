@@ -1,32 +1,32 @@
 import { mkdir, mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { UnknownAdapterError } from "@agnox/adapters";
+import { UnknownAdapterError } from "@agentyx/adapters";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   createTargetCommand,
   runTargetListCommand,
   runTargetShowCommand,
 } from "../src/commands/target.js";
-import { createAgnoxProgram } from "../src/index.js";
+import { createAgentyxProgram } from "../src/index.js";
 
 let projectDir: string;
 
 beforeEach(async () => {
-  projectDir = await mkdtemp(join(tmpdir(), "agnox-target-"));
+  projectDir = await mkdtemp(join(tmpdir(), "agentyx-target-"));
 });
 
 afterEach(async () => {
   await rm(projectDir, { recursive: true, force: true });
 });
 
-describe("agnox target list", () => {
+describe("agentyx target list", () => {
   it("prints the installable target ids", () => {
     expect(runTargetListCommand()).toBe(["codex", "claude", "kimi"].join("\n"));
   });
 });
 
-describe("agnox target show", () => {
+describe("agentyx target show", () => {
   it("prints the id, the provider name and the project destination", async () => {
     expect(await runTargetShowCommand({ target: "codex", json: false, cwd: projectDir })).toBe(
       [
@@ -135,7 +135,7 @@ describe("target command wiring", () => {
     expect(show?.options.map((option) => option.long)).toContain("--json");
   });
 
-  it("is registered on the agnox program", () => {
-    expect(createAgnoxProgram().commands.map((command) => command.name())).toContain("target");
+  it("is registered on the agentyx program", () => {
+    expect(createAgentyxProgram().commands.map((command) => command.name())).toContain("target");
   });
 });

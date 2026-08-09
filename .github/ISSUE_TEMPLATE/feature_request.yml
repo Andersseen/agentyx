@@ -1,14 +1,14 @@
 name: Feature request
-description: Suggest a capability for Agnox
+description: Suggest a capability for Agentyx
 labels: [enhancement]
 
 body:
   - type: markdown
     attributes:
       value: |
-        Agnox is early and deliberately narrow. Skills, MCP integration, provider adapters, project
+        Agentyx is early and deliberately narrow. Skills, MCP integration, provider adapters, project
         auto-detection, remote registries and plugins are already planned — please check
-        [CONTRIBUTING.md](https://github.com/Andersseen/agnox/blob/main/CONTRIBUTING.md#scope) and
+        [CONTRIBUTING.md](https://github.com/Andersseen/agentyx/blob/main/CONTRIBUTING.md#scope) and
         existing issues before opening a new one.
 
   - type: textarea
@@ -23,7 +23,7 @@ body:
     id: proposal
     attributes:
       label: Proposed behaviour
-      description: What should Agnox do? Command output or configuration sketches help.
+      description: What should Agentyx do? Command output or configuration sketches help.
     validations:
       required: true
 
@@ -32,7 +32,7 @@ body:
     attributes:
       label: Provider agnostic
       description: |
-        Agnox stacks describe development environments, never providers. Provider-specific behaviour
+        Agentyx stacks describe development environments, never providers. Provider-specific behaviour
         belongs in adapters.
       options:
         - label: This proposal does not add provider-specific concepts to the stack model.

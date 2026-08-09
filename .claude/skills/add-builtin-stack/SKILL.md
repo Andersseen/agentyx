@@ -1,6 +1,6 @@
 ---
 name: add-builtin-stack
-description: Add a stack to the Agnox built-in registry (packages/core/src/stack/registry.ts) with the registry and resolver tests it needs. Use when asked to add, rename, or re-parent a built-in stack such as core, typescript, angular, or a new one.
+description: Add a stack to the Agentyx built-in registry (packages/core/src/stack/registry.ts) with the registry and resolver tests it needs. Use when asked to add, rename, or re-parent a built-in stack such as core, typescript, angular, or a new one.
 ---
 
 # Add a built-in stack

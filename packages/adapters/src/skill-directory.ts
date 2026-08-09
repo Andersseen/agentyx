@@ -1,6 +1,6 @@
 import { stat } from "node:fs/promises";
 import { join, resolve } from "node:path";
-import { formatSkillMarkdown } from "@agnox/core";
+import { formatSkillMarkdown } from "@agentyx/core";
 import type { AdapterContext, AgentAdapter, PlannedFile } from "./adapter.js";
 import {
   CLAUDE_MCP_CONFIG_SEGMENTS,
@@ -45,16 +45,17 @@ export interface SkillDirectoryAdapterDefinition {
  * Builds an adapter for the providers that read skills as
  * `<skills directory>/<skill name>/SKILL.md`.
  *
- * Codex and Claude Code both work this way, and both consume the canonical
- * `SKILL.md` that `@agnox/core` renders, so the *only* thing that differs
- * between them is the directory. Sharing the mechanism here is what keeps that
- * true: neither provider owns skill content, a serializer, or install logic.
+ * Codex, Claude Code and Kimi Code all work this way, and all consume the
+ * canonical `SKILL.md` that `@agentyx/core` renders, so the *only* thing that
+ * differs between them is the directory. Sharing the mechanism here is what
+ * keeps that true: neither provider owns skill content, a serializer, or
+ * install logic.
  *
  * A provider that genuinely needs a different file layout implements
  * `AgentAdapter` directly instead of using this.
  *
  * Ownership: the generated paths are derived entirely from resolved skill
- * names, so Agnox only ever manages `<skills directory>/<skill name>/SKILL.md`
+ * names, so Agentyx only ever manages `<skills directory>/<skill name>/SKILL.md`
  * for skills it resolved. Anything else in the provider's directory — other
  * skills, settings files — is never read, planned or written.
  */

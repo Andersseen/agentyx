@@ -15,8 +15,8 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "paths": {
-      "@agnox/adapters": ["packages/adapters/src/index.ts"],
-      "@agnox/core": ["packages/core/src/index.ts"]
+      "@agentyx/adapters": ["packages/adapters/src/index.ts"],
+      "@agentyx/core": ["packages/core/src/index.ts"]
     },
     "resolveJsonModule": true,
     "skipLibCheck": true,

@@ -1,21 +1,21 @@
 {
-  "name": "@agnox/adapters",
+  "name": "@agentyx/adapters",
   "version": "0.0.0",
-  "description": "Future provider adapter foundations for Agnox.",
+  "description": "Provider adapters, MCP rendering and safe install planning for Agentyx.",
   "type": "module",
   "license": "MIT",
   "author": "Andersseen",
-  "homepage": "https://github.com/Andersseen/agnox/tree/main/packages/adapters#readme",
+  "homepage": "https://github.com/Andersseen/agentyx/tree/main/packages/adapters#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Andersseen/agnox.git",
+    "url": "git+https://github.com/Andersseen/agentyx.git",
     "directory": "packages/adapters"
   },
   "bugs": {
-    "url": "https://github.com/Andersseen/agnox/issues"
+    "url": "https://github.com/Andersseen/agentyx/issues"
   },
   "keywords": [
-    "agnox",
+    "agentyx",
     "adapters",
     "coding-agents"
   ],
@@ -41,7 +41,7 @@
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
-    "@agnox/core": "workspace:*",
+    "@agentyx/core": "workspace:*",
     "@iarna/toml": "^2.2.5"
   }
 }

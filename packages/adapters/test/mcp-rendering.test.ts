@@ -1,4 +1,4 @@
-import { builtInMcpServerRegistry, mcpServerDefinitionSchema } from "@agnox/core";
+import { builtInMcpServerRegistry, mcpServerDefinitionSchema } from "@agentyx/core";
 import { describe, expect, it } from "vitest";
 import { ProviderConfigParseError } from "../src/errors.js";
 import {

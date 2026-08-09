@@ -1,9 +1,9 @@
 ---
 name: context-efficient-development
-description: Develop Agnox with targeted exploration, narrow iteration commands, concise output, and full verification before handoff.
+description: Develop Agentyx with targeted exploration, narrow iteration commands, concise output, and full verification before handoff.
 ---
 
-# Context-efficient Agnox development
+# Context-efficient Agentyx development
 
 The instructions for this skill are provider-neutral and live in one place, shared by every agent
 that works on this repository:

@@ -1,11 +1,11 @@
-# @agnox/adapters
+# @agentyx/adapters
 
-Provider adapters for [Agnox](https://github.com/Andersseen/agnox): the layer that turns an
-already-resolved, profile-filtered Agnox environment into the files a specific coding agent expects.
+Provider adapters for [Agentyx](https://github.com/Andersseen/agentyx): the layer that turns an
+already-resolved, profile-filtered Agentyx environment into the files a specific coding agent expects.
 
-Agnox stacks and skills describe development environments, never providers, so everything a provider
+Agentyx stacks and skills describe development environments, never providers, so everything a provider
 knows lives here rather than in
-[`@agnox/core`](https://github.com/Andersseen/agnox/tree/main/packages/core). This package depends
+[`@agentyx/core`](https://github.com/Andersseen/agentyx/tree/main/packages/core). This package depends
 on core; core never depends on it.
 
 ## Targets
@@ -26,15 +26,15 @@ Installation is project-local — nothing is written to `$HOME`.
 ## Plan first, then write
 
 ```ts
-import { applyInstallPlans, planInstall } from "@agnox/adapters";
-import { builtInSkillRegistry } from "@agnox/core";
+import { applyInstallPlans, planInstall } from "@agentyx/adapters";
+import { builtInSkillRegistry } from "@agentyx/core";
 
 const skills = ["planning", "angular-modern"].map((name) => builtInSkillRegistry.get(name));
 
 // Reads the destinations to classify each file, and writes nothing.
 const plans = await planInstall({ targets: ["codex", "claude", "kimi"], projectDir, skills });
 
-// The only code in Agnox that mutates a project. Skipping it is a dry run.
+// The only code in Agentyx that mutates a project. Skipping it is a dry run.
 await applyInstallPlans(plans);
 ```
 
@@ -43,7 +43,7 @@ absolute path and the project-relative path used for output. Parent directories 
 executor, so there is no directory operation; there is no operation that runs a command.
 
 Every target is handed the same `SkillDefinition` objects and the canonical `SKILL.md` that
-`@agnox/core` renders, so providers can only ever receive identical instructions. Providers that
+`@agentyx/core` renders, so providers can only ever receive identical instructions. Providers that
 share the same destination and content, such as Codex and Kimi Code, collapse to one physical write
 with shared `usedBy` metadata.
 
@@ -54,7 +54,7 @@ An adapter is a plain object satisfying `AgentAdapter`: an `id`, a `name`, the d
 what is installed and writing them is shared machinery.
 
 ```ts
-import { createAdapterRegistry, createSkillDirectoryAdapter } from "@agnox/adapters";
+import { createAdapterRegistry, createSkillDirectoryAdapter } from "@agentyx/adapters";
 
 const acme = createSkillDirectoryAdapter({
   id: "acme",
@@ -72,7 +72,7 @@ remote registry — an adapter is a value you pass in.
 
 ## Safety
 
-Agnox only manages `<destination>/<skill>/SKILL.md` for skills it resolved. A plan that would write
+Agentyx only manages `<destination>/<skill>/SKILL.md` for skills it resolved. A plan that would write
 outside the directory a target owns is refused with `InstallPathError`, unchanged files are not
 rewritten, writes are UTF-8, and nothing is deleted, executed or fetched.
 

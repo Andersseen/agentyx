@@ -2,7 +2,7 @@
  * What a planned write would do to the destination:
  *
  * - `create` — nothing is there yet;
- * - `update` — an Agnox-managed file is there with different content;
+ * - `update` — an Agentyx-managed file is there with different content;
  * - `unchanged` — the file is already byte-identical, so the executor skips it.
  */
 export type InstallOperationStatus = "create" | "update" | "unchanged";
@@ -43,7 +43,7 @@ export interface McpInstallOperation {
   readonly usedBy: readonly string[];
 }
 
-/** Everything Agnox would change for one target, computed without writing anything. */
+/** Everything Agentyx would change for one target, computed without writing anything. */
 export interface InstallPlan {
   /** The target id, matching the adapter that produced the plan. */
   readonly target: string;
@@ -51,7 +51,7 @@ export interface InstallPlan {
   readonly name: string;
   /** Absolute project root. */
   readonly projectDir: string;
-  /** Absolute directory Agnox owns for this target. Every operation lands inside it. */
+  /** Absolute directory Agentyx owns for this target. Every operation lands inside it. */
   readonly skillsPath: string;
   /** `skillsPath` relative to the project root, with `/` separators. */
   readonly relativeSkillsPath: string;

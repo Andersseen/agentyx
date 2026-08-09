@@ -1,4 +1,4 @@
-import { builtInMcpServerRegistry } from "@agnox/core";
+import { builtInMcpServerRegistry } from "@agentyx/core";
 import { Command } from "commander";
 import { emit, section, toJson } from "../output.js";
 
@@ -48,7 +48,7 @@ export function runMcpShowCommand(input: McpShowCommandInput): string {
 }
 
 export function createMcpCommand(): Command {
-  const mcp = new Command("mcp").description("Inspect MCP servers Agnox ships with.");
+  const mcp = new Command("mcp").description("Inspect MCP servers Agentyx ships with.");
 
   mcp
     .command("list")

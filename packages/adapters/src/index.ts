@@ -1,4 +1,4 @@
-import { agnoxCoreName } from "@agnox/core";
+import { agentyxCoreName } from "@agentyx/core";
 
 export type {
   AdapterCapabilities,
@@ -38,8 +38,8 @@ export { createAdapterRegistry } from "./registry.js";
 export type { SkillDirectoryAdapterDefinition } from "./skill-directory.js";
 export { createSkillDirectoryAdapter, SKILL_FILENAME } from "./skill-directory.js";
 
-export const agnoxAdaptersName = "agnox-adapters";
+export const agentyxAdaptersName = "agentyx-adapters";
 
 export function getAdaptersStatus(): string {
-  return `${agnoxAdaptersName}:${agnoxCoreName}`;
+  return `${agentyxAdaptersName}:${agentyxCoreName}`;
 }

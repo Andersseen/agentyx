@@ -1,4 +1,4 @@
-import { builtInSkillRegistry } from "@agnox/core";
+import { builtInSkillRegistry } from "@agentyx/core";
 import { Command } from "commander";
 import { emit, toJson } from "../output.js";
 
@@ -28,7 +28,7 @@ export function runSkillShowCommand(input: SkillShowCommandInput): string {
 }
 
 export function createSkillCommand(): Command {
-  const skill = new Command("skill").description("Inspect the skills Agnox ships with.");
+  const skill = new Command("skill").description("Inspect the skills Agentyx ships with.");
 
   skill
     .command("list")

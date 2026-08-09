@@ -1,4 +1,4 @@
-export const agnoxCoreName = "agnox-core";
+export const agentyxCoreName = "agentyx-core";
 
 export function getCoreStatus(): string {
   return "ready";

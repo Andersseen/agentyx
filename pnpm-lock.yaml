@@ -29,7 +29,7 @@ importers:
 
   packages/adapters:
     dependencies:
-      '@agnox/core':
+      '@agentyx/core':
         specifier: workspace:*
         version: link:../core
       '@iarna/toml':
@@ -38,10 +38,10 @@ importers:
 
   packages/cli:
     dependencies:
-      '@agnox/adapters':
+      '@agentyx/adapters':
         specifier: workspace:*
         version: link:../adapters
-      '@agnox/core':
+      '@agentyx/core':
         specifier: workspace:*
         version: link:../core
       '@clack/prompts':

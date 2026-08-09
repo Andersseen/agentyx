@@ -1,8 +1,8 @@
-import type { AgnoxProfile } from "../config/schema.js";
+import type { AgentyxProfile } from "../config/schema.js";
 import type { McpCapabilityLevel } from "../mcp/schema.js";
 
 export interface OptimizationProfileDefinition {
-  readonly name: AgnoxProfile;
+  readonly name: AgentyxProfile;
   readonly goal: string;
   readonly mcpLevels: readonly McpCapabilityLevel[];
   readonly notes: readonly string[];
@@ -36,11 +36,11 @@ export const optimizationProfiles: readonly OptimizationProfileDefinition[] = [
   },
 ];
 
-export const optimizationProfileNames: readonly AgnoxProfile[] = optimizationProfiles.map(
+export const optimizationProfileNames: readonly AgentyxProfile[] = optimizationProfiles.map(
   (profile) => profile.name,
 );
 
-export function getOptimizationProfile(name: AgnoxProfile): OptimizationProfileDefinition {
+export function getOptimizationProfile(name: AgentyxProfile): OptimizationProfileDefinition {
   const profile = optimizationProfiles.find((candidate) => candidate.name === name);
 
   if (profile === undefined) {
@@ -50,6 +50,6 @@ export function getOptimizationProfile(name: AgnoxProfile): OptimizationProfileD
   return profile;
 }
 
-export function isMcpLevelEnabled(profile: AgnoxProfile, level: McpCapabilityLevel): boolean {
+export function isMcpLevelEnabled(profile: AgentyxProfile, level: McpCapabilityLevel): boolean {
   return getOptimizationProfile(profile).mcpLevels.includes(level);
 }

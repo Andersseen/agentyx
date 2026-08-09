@@ -1,12 +1,12 @@
-import { AgnoxError } from "@agnox/core";
+import { AgentyxError } from "@agentyx/core";
 
 /**
  * Raised when a target has no adapter.
  *
- * `targets` in `.agnox.json` is an open list of strings, so this is the failure
- * a user sees for a provider Agnox cannot install into yet.
+ * `targets` in `.agentyx.json` is an open list of strings, so this is the failure
+ * a user sees for a provider Agentyx cannot install into yet.
  */
-export class UnknownAdapterError extends AgnoxError {
+export class UnknownAdapterError extends AgentyxError {
   readonly target: string;
   readonly knownTargets: readonly string[];
 
@@ -21,7 +21,7 @@ export class UnknownAdapterError extends AgnoxError {
 }
 
 /** Raised when a registry is built from adapters that reuse an id. */
-export class DuplicateAdapterError extends AgnoxError {
+export class DuplicateAdapterError extends AgentyxError {
   readonly adapterId: string;
 
   constructor(adapterId: string) {
@@ -32,25 +32,25 @@ export class DuplicateAdapterError extends AgnoxError {
 }
 
 /** Raised when an installation is asked for without saying where it should go. */
-export class MissingInstallTargetsError extends AgnoxError {
+export class MissingInstallTargetsError extends AgentyxError {
   constructor() {
     super(
       "missing_install_targets",
-      'No install targets. Add "targets" to .agnox.json, or name one explicitly.',
+      'No install targets. Add "targets" to .agentyx.json, or name one explicitly.',
     );
     this.name = "MissingInstallTargetsError";
   }
 }
 
 /**
- * Raised when a planned write would land outside the directory Agnox owns for a
+ * Raised when a planned write would land outside the directory Agentyx owns for a
  * target.
  *
- * Agnox only ever manages its own skill directories, so this is a hard failure
+ * Agentyx only ever manages its own skill directories, so this is a hard failure
  * rather than something to clamp or repair — it means an adapter produced a
  * path it had no business producing.
  */
-export class InstallPathError extends AgnoxError {
+export class InstallPathError extends AgentyxError {
   readonly path: string;
   readonly root: string;
 
@@ -62,7 +62,7 @@ export class InstallPathError extends AgnoxError {
   }
 }
 
-export class ProviderConfigParseError extends AgnoxError {
+export class ProviderConfigParseError extends AgentyxError {
   readonly path: string;
 
   constructor(path: string, cause: unknown) {
@@ -76,7 +76,7 @@ export class ProviderConfigParseError extends AgnoxError {
   }
 }
 
-export class SharedInstallConflictError extends AgnoxError {
+export class SharedInstallConflictError extends AgentyxError {
   readonly path: string;
   readonly targets: readonly string[];
 
