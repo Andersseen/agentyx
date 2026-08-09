@@ -1,7 +1,7 @@
 {
   "name": "@agnox/adapters",
   "version": "0.0.0",
-  "description": "Future provider adapter foundations for Agnox.",
+  "description": "Provider adapters, MCP rendering and safe install planning for Agnox.",
   "type": "module",
   "license": "MIT",
   "author": "Andersseen",

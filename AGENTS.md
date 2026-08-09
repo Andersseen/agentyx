@@ -6,10 +6,10 @@ configuration — Agnox does not generate or read this file.
 ## What this project is
 
 Agnox is a provider-agnostic CLI for defining reusable development environments for coding agents.
-The current scope is deliberately narrow: a configuration model (`.agnox.json`), a stack definition
-model, a built-in stack registry, stack resolution, skills — provider-agnostic instruction files
-that stacks contribute and Agnox resolves — and provider adapters that install those skills into a
-project for Codex (`.agents/skills`) and Claude Code (`.claude/skills`). Installation is
+The current scope is deliberately narrow: a configuration model (`.agnox.json`), stack and Skill
+registries, provider-agnostic MCP definitions, stack/Skill/MCP resolution, optimization profiles,
+project detection, `init`, `doctor`, and provider adapters that install into Codex
+(`.agents/skills`), Claude Code (`.claude/skills`) and Kimi Code (`.agents/skills`). Installation is
 project-local, plan-first, and covers Skill files plus project MCP configuration.
 
 ## Commands
@@ -23,8 +23,11 @@ pnpm typecheck
 pnpm format                   # biome check --write .
 pnpm build
 
+pnpm agnox init --help
+pnpm agnox doctor --help
 pnpm agnox resolve angular            # run the built CLI (requires pnpm build first)
 pnpm --silent agnox resolve --json    # --silent keeps pnpm's banner out of stdout
+pnpm smoke:pack                       # pack artifacts and smoke-test the packaged CLI externally
 ```
 
 Tests import from source via the `@agnox/core` alias in `vitest.config.ts`, so `pnpm test` does
@@ -84,10 +87,12 @@ Dependencies point one way: `cli → core`, `adapters → core`. Core depends on
 8. **Installation plans and writes stay separate.** Planning reads; only `applyInstallPlan` writes.
    Agnox writes UTF-8 files inside the directory or project config file a target owns and nothing
    else — no deletes, no shell commands, no network and no `$HOME`.
-9. **Do not implement the future roadmap.** OpenCode, Cursor, global installs, project
-   auto-detection, codebase memory, token budgets, remote
-   registries, plugins, npm registry integration, uninstall and sync cleanup, an update system, and
-   an init wizard are all out of scope until asked for.
+   The root `.agnox.json` dogfoods Agnox itself; shared `.agents/skills` is safe because Agnox only
+   manages exact resolved built-in Skill directories and never deletes unrelated repository-development
+   Skills.
+9. **Do not implement the future roadmap.** OpenCode, Cursor, global installs, codebase memory,
+   token budgets, remote registries, plugins, npm registry integration, uninstall and sync cleanup,
+   and an update system are all out of scope until asked for.
 
 ## Code conventions
 

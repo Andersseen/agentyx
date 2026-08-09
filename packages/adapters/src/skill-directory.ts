@@ -45,10 +45,11 @@ export interface SkillDirectoryAdapterDefinition {
  * Builds an adapter for the providers that read skills as
  * `<skills directory>/<skill name>/SKILL.md`.
  *
- * Codex and Claude Code both work this way, and both consume the canonical
- * `SKILL.md` that `@agnox/core` renders, so the *only* thing that differs
- * between them is the directory. Sharing the mechanism here is what keeps that
- * true: neither provider owns skill content, a serializer, or install logic.
+ * Codex, Claude Code and Kimi Code all work this way, and all consume the
+ * canonical `SKILL.md` that `@agnox/core` renders, so the *only* thing that
+ * differs between them is the directory. Sharing the mechanism here is what
+ * keeps that true: neither provider owns skill content, a serializer, or
+ * install logic.
  *
  * A provider that genuinely needs a different file layout implements
  * `AgentAdapter` directly instead of using this.

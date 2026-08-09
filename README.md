@@ -10,8 +10,58 @@
 
 </div>
 
-Agnox lets a project describe its development environment once, in a way that is not tied to any
-single coding agent, and installs it into the agents you actually use:
+Agnox lets an existing project describe its coding-agent environment once, in a way that is not
+tied to any single provider, then install the same resolved Skills and MCP configuration into the
+agents you actually use.
+
+> **Status: early development.** APIs will change. Nothing is published to npm yet. The commands
+> below use this repository checkout until the first public package release.
+
+## Quick Start
+
+From this repository checkout:
+
+```sh
+pnpm install
+pnpm build
+```
+
+In an existing TypeScript or Angular project, run the built CLI:
+
+```sh
+node /path/to/agnox/packages/cli/dist/index.mjs init
+node /path/to/agnox/packages/cli/dist/index.mjs doctor
+node /path/to/agnox/packages/cli/dist/index.mjs install --dry-run
+node /path/to/agnox/packages/cli/dist/index.mjs install
+```
+
+For agents and CI, use non-interactive init:
+
+```sh
+agnox init --stack angular --profile lean --target codex --target kimi --yes
+```
+
+`init` only creates `.agnox.json`; it never installs Skills or MCP. `doctor` is deterministic
+diagnostics, `install --dry-run` shows the exact project-local writes, and `install` performs them.
+
+Future npm usage will look like an installed `agnox` binary, but Agnox is not published to npm yet.
+
+## Local Package Validation
+
+For release-style testing without publishing, pack the workspace artifacts and execute the packaged
+CLI in a temporary external project:
+
+```sh
+pnpm smoke:pack
+```
+
+This validates the package tarballs rather than workspace source imports, including the CLI bin,
+runtime dependencies, built-in Skill assets, JSON Schema packaging, adapters, `init`, `doctor`,
+`resolve`, and `install --dry-run`.
+
+The generated `.agnox.json` intentionally omits `$schema` for now. `@agnox/core` packages
+`schema/agnox.schema.json`, but a relative `node_modules` schema path is fragile before packages are
+installed and Agnox does not yet host a stable public schema URL.
 
 ```
 .agnox.json
@@ -29,8 +79,6 @@ Codex Claude Kimi
 
 Today that runs end to end for Codex, Claude Code and Kimi Code from one set of skill and MCP
 sources.
-
-> **Status: early development.** APIs will change. Nothing is published to npm yet.
 
 ## Concept
 
@@ -124,7 +172,7 @@ pnpm --silent agnox mcp show context7 --json
 - Node.js >=22
 - pnpm 10.30.1 (`corepack enable`)
 
-## Setup
+## Repository Setup
 
 ```sh
 pnpm install
@@ -137,7 +185,6 @@ A project describes itself with `.agnox.json` in its root directory:
 
 ```json
 {
-  "$schema": "./node_modules/@agnox/core/schema/agnox.schema.json",
   "extends": ["angular"],
   "profile": "balanced",
   "targets": ["codex", "claude"]
@@ -167,6 +214,35 @@ external capabilities such as MCP.
 Parent directories are not searched, and an invalid configuration is reported rather than repaired.
 A working example lives in [examples/angular/.agnox.json](examples/angular/.agnox.json) — it is a
 configuration fixture, not an Angular project.
+
+Create one for an existing project:
+
+```sh
+agnox init
+```
+
+Non-interactive mode is deterministic and never chooses providers silently:
+
+```sh
+agnox init --stack typescript --profile lean --target codex --yes
+```
+
+If `.agnox.json` already exists, init refuses to replace it unless `--force` is supplied.
+
+## `agnox doctor`
+
+`doctor` inspects the current project without writing files, contacting providers, starting MCP
+servers, or scanning the whole filesystem:
+
+```sh
+agnox doctor
+agnox doctor --json
+```
+
+It reports project detection, package-manager ambiguity, `.agnox.json` validity, configured and
+resolved stacks, Skill and MCP counts, target adapters, expected Skill and MCP destinations,
+installability, and profile-filtered MCP. Errors such as invalid configuration or unknown targets
+exit non-zero; warnings do not.
 
 ## `agnox resolve`
 
@@ -518,8 +594,11 @@ pnpm --silent agnox install core --target codex --json --dry-run
 
 Agnox only manages `<destination>/<skill>/SKILL.md` for skills it resolved and MCP entries it
 resolved. Other skills, provider settings, and unrelated MCP servers are preserved; a plan that
-would write outside the project is refused, and nothing is ever deleted. A target with no adapter,
-or an installation with no target at all, prints a readable message on stderr and exits with code 1.
+would write outside the project is refused, and nothing is ever deleted. This is why this repository
+can dogfood a root `.agnox.json` while keeping hand-authored repository-development Skills under
+`.agents/skills`: Agnox may share the directory, but it only writes exact resolved Skill
+directories. A target with no adapter, or an installation with no target at all, prints a readable
+message on stderr and exits with code 1.
 
 ## Library use
 
@@ -593,15 +672,15 @@ Resolution and installation failures throw domain errors — `UnknownStackError`
 | ------------------------------------------- | ------------------------------------------------------- |
 | [`@agnox/core`](packages/core)               | Configuration model, stacks, skills, MCP, resolution, JSON Schema |
 | [`@agnox/cli`](packages/cli)                 | The `agnox` command-line interface                         |
-| [`@agnox/adapters`](packages/adapters)       | Adapter contract, Codex and Claude Code adapters, install planning |
+| [`@agnox/adapters`](packages/adapters)       | Adapter contract, Codex, Claude Code and Kimi Code adapters, MCP rendering, install planning |
 
 ## Not implemented yet
 
 Agnox installs skills and profile-filtered MCP configuration into Codex, Claude Code and Kimi Code,
 project-locally, and nothing more. Still to come: further providers such as OpenCode and Cursor,
 global installation into `$HOME`, remote and community registries, richer optimization advice,
-uninstall and sync cleanup, a plugin system, project auto-detection, codebase memory, npm registry
-integration, an update system, and an init wizard.
+uninstall and sync cleanup, a plugin system, codebase memory, npm registry integration, and an
+update system.
 
 ## Contributing
 

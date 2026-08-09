@@ -47,13 +47,15 @@ jobs:
         run: pnpm build
 
       - name: CLI smoke test
-        shell: bash
         run: |
-          node packages/cli/dist/index.mjs resolve core
-          node packages/cli/dist/index.mjs resolve typescript
-          diff <(node packages/cli/dist/index.mjs resolve angular) <(printf 'core\ntypescript\nangular\n')
+          node packages/cli/dist/index.mjs init --help
+          node packages/cli/dist/index.mjs doctor --help
+          node packages/cli/dist/index.mjs resolve angular
           node packages/cli/dist/index.mjs resolve angular --json
 
       - name: CLI project resolution
         run: node ../../packages/cli/dist/index.mjs resolve --json
         working-directory: examples/angular
+
+      - name: Package smoke test
+        run: pnpm smoke:pack

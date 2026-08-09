@@ -5,6 +5,8 @@ import { agnoxAdaptersName } from "@agnox/adapters";
 import { agnoxCoreName } from "@agnox/core";
 import { Command } from "commander";
 import { z } from "zod";
+import { createDoctorCommand } from "./commands/doctor.js";
+import { createInitCommand } from "./commands/init.js";
 import { createInstallCommand } from "./commands/install.js";
 import { createMcpCommand } from "./commands/mcp.js";
 import { createProfileCommand } from "./commands/profile.js";
@@ -29,6 +31,8 @@ export function createAgnoxProgram(): Command {
     .name("agnox")
     .description("Agnox — provider-agnostic tooling for coding agents.")
     .version(cliVersion)
+    .addCommand(createInitCommand())
+    .addCommand(createDoctorCommand())
     .addCommand(createResolveCommand())
     .addCommand(createSkillCommand())
     .addCommand(createMcpCommand())

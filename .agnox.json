@@ -1,0 +1,5 @@
+{
+  "extends": ["typescript"],
+  "profile": "lean",
+  "targets": ["codex", "claude", "kimi"]
+}

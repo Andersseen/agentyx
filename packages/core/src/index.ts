@@ -66,6 +66,18 @@ export {
   optimizationProfileNames,
   optimizationProfiles,
 } from "./optimization/profile.js";
+export type {
+  PackageManagerDetection,
+  PackageManagerName,
+  ProjectDetection,
+  ProjectPackageJsonDetection,
+} from "./project/detector.js";
+export {
+  buildAgnoxConfig,
+  detectProject,
+  formatAgnoxConfig,
+  PACKAGE_MANAGERS,
+} from "./project/detector.js";
 export { builtInSkillNames, builtInSkillRegistry } from "./skill/built-in.js";
 export {
   DuplicateSkillError,
