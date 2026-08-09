@@ -42,9 +42,10 @@ describe("built-in stack registry", () => {
   it("only references MCP servers the built-in MCP registry provides", () => {
     for (const stack of builtInStackRegistry.values()) {
       for (const server of stack.mcpServers) {
-        expect(builtInMcpServerRegistry.has(server), `${stack.name} references ${server}`).toBe(
-          true,
-        );
+        expect(
+          builtInMcpServerRegistry.has(server.name),
+          `${stack.name} references ${server.name}`,
+        ).toBe(true);
       }
     }
   });
@@ -60,6 +61,12 @@ describe("createStackRegistry", () => {
       skills: [],
       mcpServers: [],
     });
+  });
+
+  it("normalizes string MCP references to recommended", () => {
+    const registry = createStackRegistry([{ name: "solo", mcpServers: ["context7"] }]);
+
+    expect(registry.get("solo")?.mcpServers).toEqual([{ name: "context7", level: "recommended" }]);
   });
 
   it("keeps declared skills in order", () => {

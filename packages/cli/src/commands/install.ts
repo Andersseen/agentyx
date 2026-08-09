@@ -5,11 +5,15 @@ import {
   summarizeInstallPlans,
 } from "@agnox/adapters";
 import {
+  AGNOX_PROFILES,
+  type AgnoxProfile,
   builtInMcpServerRegistry,
   builtInSkillRegistry,
+  DEFAULT_AGNOX_PROFILE,
+  filterEffectiveMcpServers,
   loadAgnoxConfig,
   resolveAgnoxConfig,
-  resolveStackMcpServers,
+  resolveStackMcpServerReferences,
   resolveStackSkills,
   resolveStacks,
 } from "@agnox/core";
@@ -25,6 +29,7 @@ export interface InstallCommandInput {
   readonly stacks: readonly string[];
   /** `--target`, repeatable. Overrides the targets in `.agnox.json` for this run only. */
   readonly targets: readonly string[];
+  readonly profile?: AgnoxProfile;
   readonly dryRun: boolean;
   readonly json: boolean;
   readonly skillsOnly?: boolean;
@@ -69,26 +74,37 @@ export async function runInstallCommand(input: InstallCommandInput): Promise<str
 interface ResolvedEnvironment {
   readonly stacks: readonly string[];
   readonly skills: readonly string[];
+  readonly declaredMcpServers: readonly { readonly name: string; readonly level: string }[];
   readonly mcpServers: readonly string[];
+  readonly profile: AgnoxProfile;
   readonly targets: readonly string[];
 }
 
 async function resolveEnvironment(input: InstallCommandInput): Promise<ResolvedEnvironment> {
   if (input.stacks.length > 0) {
+    const profile = input.profile ?? DEFAULT_AGNOX_PROFILE;
+    const declaredMcpServers = resolveStackMcpServerReferences([...input.stacks]);
+
     return {
       stacks: resolveStacks([...input.stacks]),
       skills: resolveStackSkills([...input.stacks]),
-      mcpServers: resolveStackMcpServers([...input.stacks]),
+      declaredMcpServers,
+      mcpServers: filterEffectiveMcpServers(declaredMcpServers, profile),
+      profile,
       targets: input.targets,
     };
   }
 
-  const resolved = resolveAgnoxConfig(await loadAgnoxConfig(input.cwd));
+  const config = await loadAgnoxConfig(input.cwd);
+  const profile = input.profile ?? config.profile;
+  const resolved = resolveAgnoxConfig({ ...config, profile });
 
   return {
     stacks: resolved.resolvedStacks,
     skills: resolved.skills,
+    declaredMcpServers: resolved.declaredMcpServers,
     mcpServers: resolved.mcpServers,
+    profile,
     targets: input.targets.length > 0 ? input.targets : resolved.targets,
   };
 }
@@ -148,8 +164,10 @@ function renderJson(
 ): string {
   return toJson({
     dryRun: input.dryRun,
+    profile: environment.profile,
     stacks: environment.stacks,
     skills: environment.skills,
+    declaredMcpServers: environment.declaredMcpServers,
     mcpServers: environment.mcpServers,
     targets: plans.map((plan) => plan.target),
     plans: plans.map((plan) => ({
@@ -192,6 +210,13 @@ export function createInstallCommand(): Command {
     )
     .option("--dry-run", "report the planned changes without writing anything", false)
     .option("--json", "print machine-readable JSON only", false)
+    .option("--profile <profile>", "override the optimization profile for this run", (value) => {
+      if (!AGNOX_PROFILES.includes(value as AgnoxProfile)) {
+        throw new Error(`Profile must be one of: ${AGNOX_PROFILES.join(", ")}.`);
+      }
+
+      return value as AgnoxProfile;
+    })
     .option("--skills-only", "install skills without MCP configuration", false)
     .option("--mcp-only", "install MCP configuration without skills", false)
     .action(
@@ -199,6 +224,7 @@ export function createInstallCommand(): Command {
         stacks: string[],
         options: {
           target: string[];
+          profile?: AgnoxProfile;
           dryRun: boolean;
           json: boolean;
           skillsOnly: boolean;
@@ -206,15 +232,28 @@ export function createInstallCommand(): Command {
         },
       ) => {
         await emit(() =>
-          runInstallCommand({
-            stacks,
-            targets: options.target,
-            dryRun: options.dryRun,
-            json: options.json,
-            skillsOnly: options.skillsOnly,
-            mcpOnly: options.mcpOnly,
-            cwd: process.cwd(),
-          }),
+          runInstallCommand(
+            options.profile === undefined
+              ? {
+                  stacks,
+                  targets: options.target,
+                  dryRun: options.dryRun,
+                  json: options.json,
+                  skillsOnly: options.skillsOnly,
+                  mcpOnly: options.mcpOnly,
+                  cwd: process.cwd(),
+                }
+              : {
+                  stacks,
+                  targets: options.target,
+                  profile: options.profile,
+                  dryRun: options.dryRun,
+                  json: options.json,
+                  skillsOnly: options.skillsOnly,
+                  mcpOnly: options.mcpOnly,
+                  cwd: process.cwd(),
+                },
+          ),
         );
       },
     );

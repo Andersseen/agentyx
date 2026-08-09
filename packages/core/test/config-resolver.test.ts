@@ -24,6 +24,7 @@ describe("resolveAgnoxConfig", () => {
         "typescript-modern",
         "angular-modern",
       ],
+      declaredMcpServers: [{ name: "context7", level: "recommended" }],
       mcpServers: ["context7"],
       profile: "balanced",
       targets: ["codex"],
@@ -37,6 +38,7 @@ describe("resolveAgnoxConfig", () => {
       "requestedStacks",
       "resolvedStacks",
       "skills",
+      "declaredMcpServers",
       "mcpServers",
       "profile",
       "targets",
@@ -67,10 +69,20 @@ describe("resolveAgnoxConfig", () => {
       requestedStacks: [],
       resolvedStacks: [],
       skills: [],
+      declaredMcpServers: [],
       mcpServers: [],
       profile: "balanced",
       targets: [],
     });
+  });
+
+  it("keeps declared MCP visible when a lean profile filters it out", () => {
+    const resolved = resolveAgnoxConfig(
+      parseAgnoxConfig({ extends: ["angular"], profile: "lean" }),
+    );
+
+    expect(resolved.declaredMcpServers).toEqual([{ name: "context7", level: "recommended" }]);
+    expect(resolved.mcpServers).toEqual([]);
   });
 
   it("does not mutate the input configuration", () => {

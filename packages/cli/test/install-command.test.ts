@@ -88,6 +88,8 @@ describe("agnox install --dry-run --json", () => {
       dryRun: true,
       stacks: ["core"],
       skills: ["planning", "systematic-debugging", "verification"],
+      profile: "balanced",
+      declaredMcpServers: [],
       mcpServers: [],
       targets: ["codex", "claude"],
       plans: [
@@ -264,9 +266,48 @@ describe("agnox install <stack>", () => {
       runInstallCommand({ ...baseInput, stacks: ["core"], dryRun: true, cwd: projectDir }),
     ).rejects.toThrow(MissingInstallTargetsError);
   });
+
+  it("applies a profile override to explicit stack MCP planning", async () => {
+    const output = await runInstallCommand({
+      ...baseInput,
+      stacks: ["angular"],
+      targets: ["codex"],
+      profile: "lean",
+      dryRun: true,
+      cwd: projectDir,
+    });
+
+    expect(output).not.toContain(".codex/config.toml");
+    expect(output).toContain("MCP\n  (none)");
+  });
 });
 
 describe("agnox install", () => {
+  it("uses effective MCP capabilities from the selected profile", async () => {
+    await writeConfig({ extends: ["angular"], profile: "lean", targets: ["codex"] });
+
+    const output = await runInstallCommand({ ...baseInput, dryRun: true, cwd: projectDir });
+
+    expect(output).not.toContain(".codex/config.toml");
+    expect(output).toContain("MCP\n  (none)");
+  });
+
+  it("lets --profile override the configured profile for one install", async () => {
+    await writeConfig({ extends: ["angular"], profile: "lean", targets: ["codex"] });
+
+    const output = await runInstallCommand({
+      ...baseInput,
+      profile: "balanced",
+      dryRun: true,
+      cwd: projectDir,
+    });
+
+    expect(output).toContain(".codex/config.toml (context7)");
+    expect(JSON.parse(await readFile(join(projectDir, ".agnox.json"), "utf8")).profile).toBe(
+      "lean",
+    );
+  });
+
   it("installs the example project for both providers", async () => {
     await cp(exampleProjectPath, projectDir, { recursive: true });
 
@@ -372,6 +413,7 @@ describe("install command wiring", () => {
       "--dry-run",
       "--json",
       "--mcp-only",
+      "--profile",
       "--skills-only",
       "--target",
     ]);

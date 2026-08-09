@@ -32,8 +32,10 @@ Rules for the definition:
 - `skills` also defaults to `[]`. Every name listed must exist in `builtInSkillNames` with a
   matching `packages/core/skills/<name>/SKILL.md`, or resolution throws `UnknownSkillError`. Adding
   a stack does not require adding a skill — reuse the inherited ones when they cover it.
-- MCP tools, agents, optimization rules and adapter configuration do **not** exist in
-  `stackDefinitionSchema`, and `strictObject` will reject them.
+- MCP references are optional stack data. Use `{ name: "<server>", level: "recommended" }` unless
+  the capability is truly essential or optional for that stack. Adapter configuration and
+  provider-specific rules do **not** exist in `stackDefinitionSchema`, and `strictObject` will reject
+  them.
 - Never name a stack after a provider. `codex`, `claude` and `kimi` are *targets*, not stacks.
 
 ## 2. Update the registry test

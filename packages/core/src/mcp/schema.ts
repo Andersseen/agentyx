@@ -1,5 +1,13 @@
 import { z } from "zod";
 
+export const MCP_CAPABILITY_LEVELS = ["essential", "recommended", "optional"] as const;
+
+export const mcpCapabilityLevelSchema = z.enum(MCP_CAPABILITY_LEVELS);
+
+export const MCP_CONTEXT_COSTS = ["low", "medium", "high"] as const;
+
+export const mcpContextCostSchema = z.enum(MCP_CONTEXT_COSTS);
+
 export const mcpServerNameSchema = z
   .string()
   .min(1, "MCP server names must be non-empty strings.")
@@ -20,7 +28,36 @@ const commonMcpServerDefinitionSchema = z.strictObject({
   name: mcpServerNameSchema.describe("Unique MCP server identifier."),
   description: z.string().trim().min(1, "MCP server descriptions must be non-empty strings."),
   transport: z.enum(["stdio", "http"]),
+  contextCost: mcpContextCostSchema
+    .describe("Qualitative context/tool-schema overhead classification; not token accounting.")
+    .optional(),
 });
+
+const explicitMcpServerReferenceSchema = z.strictObject({
+  name: mcpServerNameSchema.describe("MCP server identifier."),
+  level: mcpCapabilityLevelSchema
+    .describe("How important this MCP capability is to the declaring stack.")
+    .default("recommended"),
+});
+
+export const mcpServerReferenceSchema = z
+  .union([mcpServerNameSchema, explicitMcpServerReferenceSchema])
+  .transform((value) =>
+    typeof value === "string"
+      ? {
+          name: value,
+          level: "recommended" as const,
+        }
+      : value,
+  )
+  .pipe(
+    z.strictObject({
+      name: mcpServerNameSchema.describe("MCP server identifier."),
+      level: mcpCapabilityLevelSchema.describe(
+        "How important this MCP capability is to the declaring stack.",
+      ),
+    }),
+  );
 
 export const stdioMcpServerDefinitionSchema = commonMcpServerDefinitionSchema.extend({
   transport: z.literal("stdio"),
@@ -41,5 +78,9 @@ export const mcpServerDefinitionSchema = z.discriminatedUnion("transport", [
 ]);
 
 export type McpEnvReference = z.infer<typeof mcpEnvReferenceSchema>;
+export type McpCapabilityLevel = z.infer<typeof mcpCapabilityLevelSchema>;
+export type McpContextCost = z.infer<typeof mcpContextCostSchema>;
 export type McpServerDefinition = z.infer<typeof mcpServerDefinitionSchema>;
 export type McpServerDefinitionInput = z.input<typeof mcpServerDefinitionSchema>;
+export type McpServerReference = z.infer<typeof mcpServerReferenceSchema>;
+export type McpServerReferenceInput = z.input<typeof mcpServerReferenceSchema>;

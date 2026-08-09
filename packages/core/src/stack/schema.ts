@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { mcpServerNameSchema } from "../mcp/schema.js";
+import { mcpServerReferenceSchema } from "../mcp/schema.js";
 import { skillNameSchema } from "../skill/schema.js";
 
 /**
@@ -28,7 +28,7 @@ export const stackDefinitionSchema = z.strictObject({
     .describe("Skills this stack contributes, in declaration order.")
     .default([]),
   mcpServers: z
-    .array(mcpServerNameSchema)
+    .array(mcpServerReferenceSchema)
     .describe("MCP servers this stack contributes, in declaration order.")
     .default([]),
 });
