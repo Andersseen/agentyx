@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { mcpServerDefinitionSchema } from "../src/mcp/schema.js";
+import { mcpServerDefinitionSchema, mcpServerReferenceSchema } from "../src/mcp/schema.js";
 
 describe("mcpServerDefinitionSchema", () => {
   it("accepts stdio servers", () => {
@@ -59,5 +59,21 @@ describe("mcpServerDefinitionSchema", () => {
         env: { TOKEN: { fromEnv: "1_BAD" } },
       }),
     ).toThrow();
+  });
+});
+
+describe("mcpServerReferenceSchema", () => {
+  it("accepts explicit capability levels", () => {
+    expect(mcpServerReferenceSchema.parse({ name: "context7", level: "essential" })).toEqual({
+      name: "context7",
+      level: "essential",
+    });
+  });
+
+  it("keeps string references backward-compatible as recommended", () => {
+    expect(mcpServerReferenceSchema.parse("context7")).toEqual({
+      name: "context7",
+      level: "recommended",
+    });
   });
 });

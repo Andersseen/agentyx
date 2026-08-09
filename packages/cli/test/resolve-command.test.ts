@@ -19,6 +19,9 @@ describe("agnox resolve <stack>", () => {
 
     expect(output).toBe(
       [
+        "Profile",
+        "  balanced",
+        "",
         "Stacks",
         "  core",
         "  typescript",
@@ -32,9 +35,21 @@ describe("agnox resolve <stack>", () => {
         "  angular-modern",
         "",
         "MCP",
-        "  context7",
+        "  context7    recommended",
       ].join("\n"),
     );
+  });
+
+  it("applies a profile override for explicit stack resolution", async () => {
+    const output = await runResolveCommand({
+      stacks: ["angular"],
+      profile: "lean",
+      json: false,
+      cwd: tmpdir(),
+    });
+
+    expect(output).toContain("Profile\n  lean");
+    expect(output).toContain("MCP\n  context7    skipped (recommended)");
   });
 
   it("resolves core and typescript", async () => {
@@ -42,6 +57,9 @@ describe("agnox resolve <stack>", () => {
 
     expect(await runResolveCommand({ ...base, stacks: ["core"] })).toBe(
       [
+        "Profile",
+        "  balanced",
+        "",
         "Stacks",
         "  core",
         "",
@@ -89,7 +107,9 @@ describe("agnox resolve <stack>", () => {
         "typescript-modern",
         "angular-modern",
       ],
+      declaredMcpServers: [{ name: "context7", level: "recommended" }],
       mcpServers: ["context7"],
+      profile: "balanced",
     });
   });
 
@@ -97,7 +117,7 @@ describe("agnox resolve <stack>", () => {
     const output = await runResolveCommand({ stacks: ["angular"], json: false, cwd: tmpdir() });
 
     expect(output).not.toContain("# Modern Angular");
-    expect(output.split("\n")).toHaveLength(14);
+    expect(output.split("\n")).toHaveLength(17);
   });
 
   it("fails on an unknown stack", async () => {
@@ -151,9 +171,27 @@ describe("agnox resolve", () => {
         "  angular-modern",
         "",
         "MCP",
-        "  context7",
+        "  context7    recommended",
       ].join("\n"),
     );
+  });
+
+  it("applies a project profile override without editing configuration", async () => {
+    await writeFile(
+      join(projectPath, ".agnox.json"),
+      JSON.stringify({ extends: ["angular"], profile: "balanced", targets: ["codex"] }),
+      "utf8",
+    );
+
+    const output = await runResolveCommand({
+      stacks: [],
+      profile: "lean",
+      json: false,
+      cwd: projectPath,
+    });
+
+    expect(output).toContain("Profile\n  lean");
+    expect(output).toContain("MCP\n  context7    skipped (recommended)");
   });
 
   it("marks empty target lists", async () => {
@@ -181,6 +219,7 @@ describe("agnox resolve", () => {
         "typescript-modern",
         "angular-modern",
       ],
+      declaredMcpServers: [{ name: "context7", level: "recommended" }],
       mcpServers: ["context7"],
       profile: "balanced",
       targets: ["codex", "claude"],
@@ -224,6 +263,7 @@ describe("resolve command wiring", () => {
 
     expect(command.name()).toBe("resolve");
     expect(command.options.map((option) => option.long)).toContain("--json");
+    expect(command.options.map((option) => option.long)).toContain("--profile");
     expect(command.registeredArguments.map((argument) => argument.name())).toEqual(["stacks"]);
     expect(command.registeredArguments[0]?.variadic).toBe(true);
   });

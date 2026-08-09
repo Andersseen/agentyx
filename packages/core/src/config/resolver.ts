@@ -1,6 +1,7 @@
 import { builtInMcpServerRegistry } from "../mcp/built-in.js";
 import type { McpServerRegistry } from "../mcp/registry.js";
-import { collectStackMcpServers } from "../mcp/resolver.js";
+import { collectStackMcpServerReferences, filterEffectiveMcpServers } from "../mcp/resolver.js";
+import type { McpServerReference } from "../mcp/schema.js";
 import { builtInSkillRegistry } from "../skill/built-in.js";
 import type { SkillRegistry } from "../skill/registry.js";
 import { collectStackSkills } from "../skill/resolver.js";
@@ -19,6 +20,7 @@ export interface ResolvedAgnoxConfig {
    * Identifiers only — reading the instructions is a separate, explicit step.
    */
   readonly skills: readonly string[];
+  readonly declaredMcpServers: readonly McpServerReference[];
   readonly mcpServers: readonly string[];
   readonly profile: AgnoxProfile;
   readonly targets: readonly string[];
@@ -40,12 +42,14 @@ export function resolveAgnoxConfig(
 ): ResolvedAgnoxConfig {
   const requestedStacks = [...config.extends];
   const resolvedStacks = resolveStacks(requestedStacks, registry);
+  const declaredMcpServers = collectStackMcpServerReferences(resolvedStacks, registry, mcpRegistry);
 
   return {
     requestedStacks,
     resolvedStacks,
     skills: collectStackSkills(resolvedStacks, registry, skillRegistry),
-    mcpServers: collectStackMcpServers(resolvedStacks, registry, mcpRegistry),
+    declaredMcpServers,
+    mcpServers: filterEffectiveMcpServers(declaredMcpServers, config.profile),
     profile: config.profile,
     targets: [...config.targets],
   };

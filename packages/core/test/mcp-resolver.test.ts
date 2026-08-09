@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { UnknownMcpServerError } from "../src/mcp/errors.js";
 import { createMcpServerRegistry } from "../src/mcp/registry.js";
-import { resolveStackMcpServers } from "../src/mcp/resolver.js";
+import {
+  filterEffectiveMcpServers,
+  resolveStackMcpServerReferences,
+  resolveStackMcpServers,
+} from "../src/mcp/resolver.js";
 import { createStackRegistry } from "../src/stack/registry.js";
 
 describe("resolveStackMcpServers", () => {
@@ -16,6 +20,10 @@ describe("resolveStackMcpServers", () => {
     ]);
 
     expect(resolveStackMcpServers(["child"], stacks, mcps)).toEqual(["context7", "playwright"]);
+    expect(resolveStackMcpServerReferences(["child"], stacks, mcps)).toEqual([
+      { name: "context7", level: "recommended" },
+      { name: "playwright", level: "recommended" },
+    ]);
   });
 
   it("fails clearly on unknown MCP references", () => {
@@ -23,6 +31,25 @@ describe("resolveStackMcpServers", () => {
     const mcps = createMcpServerRegistry([]);
 
     expect(() => resolveStackMcpServers(["base"], stacks, mcps)).toThrow(UnknownMcpServerError);
+  });
+
+  it("filters effective MCP servers by optimization profile", () => {
+    const declared = [
+      { name: "essential-server", level: "essential" as const },
+      { name: "recommended-server", level: "recommended" as const },
+      { name: "optional-server", level: "optional" as const },
+    ];
+
+    expect(filterEffectiveMcpServers(declared, "lean")).toEqual(["essential-server"]);
+    expect(filterEffectiveMcpServers(declared, "balanced")).toEqual([
+      "essential-server",
+      "recommended-server",
+    ]);
+    expect(filterEffectiveMcpServers(declared, "autonomous")).toEqual([
+      "essential-server",
+      "recommended-server",
+      "optional-server",
+    ]);
   });
 });
 

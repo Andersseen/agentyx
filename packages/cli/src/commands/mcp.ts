@@ -18,7 +18,12 @@ export function runMcpShowCommand(input: McpShowCommandInput): string {
     return toJson(redactedServer(server));
   }
 
-  const common = [server.name, server.description, `transport: ${server.transport}`];
+  const common = [
+    server.name,
+    server.description,
+    `transport: ${server.transport}`,
+    `context cost: ${server.contextCost ?? "unspecified"}`,
+  ];
 
   if (server.transport === "stdio") {
     return [

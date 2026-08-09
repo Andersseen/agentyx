@@ -1,7 +1,7 @@
 # @agnox/adapters
 
 Provider adapters for [Agnox](https://github.com/Andersseen/agnox): the layer that turns an
-already-resolved Agnox environment into the files a specific coding agent expects.
+already-resolved, profile-filtered Agnox environment into the files a specific coding agent expects.
 
 Agnox stacks and skills describe development environments, never providers, so everything a provider
 knows lives here rather than in
@@ -76,7 +76,8 @@ Agnox only manages `<destination>/<skill>/SKILL.md` for skills it resolved. A pl
 outside the directory a target owns is refused with `InstallPathError`, unchanged files are not
 rewritten, writes are UTF-8, and nothing is deleted, executed or fetched.
 
-Project MCP configuration is planned and written through the same plan-first machinery. Hooks,
+Project MCP configuration is planned and written through the same plan-first machinery. Adapters
+receive only effective MCP definitions; optimization profile logic stays in core. Hooks,
 permissions and user-global configuration are not part of the contract yet.
 
 MIT © Andersseen

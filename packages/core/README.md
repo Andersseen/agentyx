@@ -1,7 +1,8 @@
 # @agnox/core
 
 Domain foundations for [Agnox](https://github.com/Andersseen/agnox): the `.agnox.json` configuration
-model, the stack definition model, the built-in stack and skill registries, and resolution.
+model, stack definitions, built-in stack/skill/MCP registries, optimization profiles, and
+resolution.
 
 This package has no dependency on Commander or any terminal UI — CLI concerns live in
 [`@agnox/cli`](https://github.com/Andersseen/agnox/tree/main/packages/cli).
@@ -12,6 +13,7 @@ import {
   builtInStacks,
   loadAgnoxConfig,
   resolveAgnoxConfig,
+  resolveStackMcpServerReferences,
   resolveStacks,
   resolveStackSkills,
 } from "@agnox/core";
@@ -22,8 +24,11 @@ resolveStacks(["angular"]);
 resolveStackSkills(["angular"]);
 // ["planning", "systematic-debugging", "verification", "typescript-modern", "angular-modern"]
 
+resolveStackMcpServerReferences(["angular"]);
+// [{ name: "context7", level: "recommended" }]
+
 resolveAgnoxConfig(await loadAgnoxConfig(process.cwd()));
-// { requestedStacks, resolvedStacks, skills, profile, targets }
+// { requestedStacks, resolvedStacks, skills, declaredMcpServers, mcpServers, profile, targets }
 ```
 
 ## Skills
@@ -46,6 +51,11 @@ seam an external registry would use later. `parseSkillMarkdown(markdown, origin)
 canonical form every provider installs, which is why it lives here: an adapter decides where a skill
 goes, never what it says.
 
+MCP resolution keeps both declared and effective capabilities visible. Profiles are provider-neutral:
+`lean` enables essential MCP only, `balanced` enables essential and recommended MCP, and
+`autonomous` enables essential, recommended and optional MCP. Skill identifiers are not filtered by
+profile.
+
 The JSON Schema for `.agnox.json` ships with the package:
 
 ```json
@@ -59,9 +69,9 @@ Resolution failures throw domain errors — `UnknownStackError`, `CircularStackD
 `AgnoxConfigParseError`, `AgnoxConfigValidationError` — all extending `AgnoxError` with a stable
 `code`.
 
-Installing skills into an agent is
+Installing skills and effective MCP capabilities into an agent is
 [`@agnox/adapters`](https://github.com/Andersseen/agnox/tree/main/packages/adapters); core knows
-nothing about providers. MCP tools and agents are **not implemented yet**. See the
-[main README](https://github.com/Andersseen/agnox#readme) for the full picture.
+nothing about providers. See the [main README](https://github.com/Andersseen/agnox#readme) for the
+full picture.
 
 MIT © Andersseen

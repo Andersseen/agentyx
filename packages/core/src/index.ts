@@ -33,14 +33,39 @@ export type {
   McpServerSource,
 } from "./mcp/registry.js";
 export { createMcpServerRegistry } from "./mcp/registry.js";
-export { resolveStackMcpServers } from "./mcp/resolver.js";
+export {
+  collectStackMcpServerReferences,
+  collectStackMcpServers,
+  filterEffectiveMcpServers,
+  resolveStackMcpServerReferences,
+  resolveStackMcpServers,
+} from "./mcp/resolver.js";
 export type {
+  McpCapabilityLevel,
+  McpContextCost,
   McpEnvReference,
   McpServerDefinition,
   McpServerDefinitionInput,
+  McpServerReference,
+  McpServerReferenceInput,
 } from "./mcp/schema.js";
-export { mcpEnvReferenceSchema, mcpServerDefinitionSchema } from "./mcp/schema.js";
+export {
+  MCP_CAPABILITY_LEVELS,
+  MCP_CONTEXT_COSTS,
+  mcpCapabilityLevelSchema,
+  mcpContextCostSchema,
+  mcpEnvReferenceSchema,
+  mcpServerDefinitionSchema,
+  mcpServerReferenceSchema,
+} from "./mcp/schema.js";
 export { agnoxCoreName, getCoreStatus } from "./meta.js";
+export type { OptimizationProfileDefinition } from "./optimization/profile.js";
+export {
+  getOptimizationProfile,
+  isMcpLevelEnabled,
+  optimizationProfileNames,
+  optimizationProfiles,
+} from "./optimization/profile.js";
 export { builtInSkillNames, builtInSkillRegistry } from "./skill/built-in.js";
 export {
   DuplicateSkillError,

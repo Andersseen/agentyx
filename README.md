@@ -38,11 +38,11 @@ A **stack** is a composable definition of a development environment. Stacks exte
 contribute **capabilities** such as skills and MCP servers, and Agnox resolves the full inheritance
 chain in dependency-first order.
 
-| Stack        | Extends      | Skills                                             | MCP        |
-| ------------ | ------------ | -------------------------------------------------- | ---------- |
-| `core`       | —            | `planning`, `systematic-debugging`, `verification` | —          |
-| `typescript` | `core`       | `typescript-modern`                                | —          |
-| `angular`    | `typescript` | `angular-modern`                                   | `context7` |
+| Stack        | Extends      | Skills                                             | MCP                              |
+| ------------ | ------------ | -------------------------------------------------- | -------------------------------- |
+| `core`       | —            | `planning`, `systematic-debugging`, `verification` | —                                |
+| `typescript` | `core`       | `typescript-modern`                                | —                                |
+| `angular`    | `typescript` | `angular-modern`                                   | `context7` at `recommended` level |
 
 ```
 resolveStacks(["angular"])       ->  core → typescript → angular
@@ -96,6 +96,11 @@ is deliberately small: `stdio` servers have `command`, `args`, and environment v
 `http` servers have a `url` and optional header environment variable references. Agnox carries
 environment variable names, never committed secret values.
 
+Stack MCP membership has an importance level: `essential`, `recommended`, or `optional`. A plain
+string reference is normalized to `recommended` for compatibility. MCP definitions may also carry a
+qualitative `contextCost` of `low`, `medium`, or `high`; this describes rough schema/context
+overhead for inspection and future recommendations, not measured billing tokens.
+
 Built-ins are intentionally limited to two examples:
 
 - `context7` — remote HTTP at `https://mcp.context7.com/mcp`
@@ -148,6 +153,17 @@ A project describes itself with `.agnox.json` in its root directory:
 `targets` is an open list of strings, not an enum, so third-party adapters can add providers later
 without a schema change.
 
+Profiles are provider-neutral optimization policies:
+
+| Profile      | Effective MCP levels                         |
+| ------------ | -------------------------------------------- |
+| `lean`       | `essential`                                  |
+| `balanced`   | `essential`, `recommended`                   |
+| `autonomous` | `essential`, `recommended`, `optional`       |
+
+All resolved Skills remain available in every profile. Profiles only filter currently expensive
+external capabilities such as MCP.
+
 Parent directories are not searched, and an invalid configuration is reported rather than repaired.
 A working example lives in [examples/angular/.agnox.json](examples/angular/.agnox.json) — it is a
 configuration fixture, not an Angular project.
@@ -161,6 +177,9 @@ pnpm agnox resolve angular
 ```
 
 ```
+Profile
+  balanced
+
 Stacks
   core
   typescript
@@ -174,7 +193,7 @@ Skills
   angular-modern
 
 MCP
-  context7
+  context7    recommended
 ```
 
 Resolve the current project's `.agnox.json`:
@@ -207,7 +226,33 @@ Skills
   angular-modern
 
 MCP
-  context7
+  context7    recommended
+```
+
+Override the profile for one invocation without editing `.agnox.json`:
+
+```sh
+pnpm agnox resolve angular --profile lean
+```
+
+```
+Profile
+  lean
+
+Stacks
+  core
+  typescript
+  angular
+
+Skills
+  planning
+  systematic-debugging
+  verification
+  typescript-modern
+  angular-modern
+
+MCP
+  context7    skipped (recommended)
 ```
 
 Add `--json` for machine-readable output. Use `pnpm --silent` so pnpm's own banner stays out of
@@ -228,12 +273,15 @@ pnpm --silent agnox resolve angular --json
     "typescript-modern",
     "angular-modern"
   ],
-  "mcpServers": ["context7"]
+  "declaredMcpServers": [{ "name": "context7", "level": "recommended" }],
+  "mcpServers": ["context7"],
+  "profile": "balanced"
 }
 ```
 
-`resolve` prints skill and MCP identifiers, never skill contents or provider config, so its output
-stays cheap to hand to an agent.
+`declaredMcpServers` shows what the stacks know about; `mcpServers` is the effective set for the
+selected profile. `resolve` prints skill and MCP identifiers, never skill contents or provider
+config, so its output stays cheap to hand to an agent.
 
 An explicit stack argument takes precedence over `.agnox.json` for stack selection. Unknown stacks,
 unknown skills, circular inheritance, a missing file, malformed JSON, and schema violations all
@@ -276,6 +324,27 @@ pnpm --silent agnox skill show angular-modern --json
 ```
 
 An unknown skill prints a readable message on stderr and exits with code 1.
+
+## `agnox profile`
+
+List optimization profiles:
+
+```sh
+pnpm --silent agnox profile list
+```
+
+```
+lean
+balanced
+autonomous
+```
+
+Inspect one:
+
+```sh
+pnpm --silent agnox profile show lean
+pnpm --silent agnox profile show lean --json
+```
 
 ## `agnox target`
 
@@ -394,7 +463,9 @@ agnox install angular --target codex --dry-run
 ```
 
 For inspection or focused rollout, `--skills-only` skips MCP configuration and `--mcp-only` skips
-skill files.
+skill files. `--profile lean`, `--profile balanced`, and `--profile autonomous` override the
+configured profile for that run only. Install consumes the effective MCP set, so for Angular
+`--profile lean` installs the skills but skips the recommended `context7` MCP server.
 
 `--json` prints the plan and nothing else — identifiers, statuses and project-relative paths, never
 skill bodies:
@@ -406,8 +477,10 @@ pnpm --silent agnox install core --target codex --json --dry-run
 ```json
 {
   "dryRun": true,
+  "profile": "balanced",
   "stacks": ["core"],
   "skills": ["planning", "systematic-debugging", "verification"],
+  "declaredMcpServers": [],
   "mcpServers": [],
   "targets": ["codex"],
   "plans": [
@@ -472,11 +545,11 @@ resolveStackMcpServers(["angular"]);
 // ["context7"]
 
 resolveAgnoxConfig(await loadAgnoxConfig(process.cwd()));
-// { requestedStacks, resolvedStacks, skills, mcpServers, profile, targets }
+// { requestedStacks, resolvedStacks, skills, declaredMcpServers, mcpServers, profile, targets }
 
 builtInSkillRegistry.names; // identifiers, no file is read
 builtInSkillRegistry.get("planning"); // { name, description, content }
-builtInMcpServerRegistry.get("context7"); // { name, description, transport, url }
+builtInMcpServerRegistry.get("context7"); // { name, description, transport, contextCost, url }
 ```
 
 `createSkillRegistry(sources)` builds an independent registry from `{ name, load }` sources, which
@@ -524,11 +597,11 @@ Resolution and installation failures throw domain errors — `UnknownStackError`
 
 ## Not implemented yet
 
-Agnox installs skills and MCP configuration into Codex and Claude Code, project-locally, and
-nothing more. Still to come: further providers (Kimi, OpenCode, Cursor), global installation into
-`$HOME`, remote and community registries, token optimization, uninstall and sync cleanup, a plugin
-system, project auto-detection, codebase memory, npm registry integration, an update system, and an
-init wizard. `profile` is carried through resolution but does not change what is installed yet.
+Agnox installs skills and profile-filtered MCP configuration into Codex, Claude Code and Kimi Code,
+project-locally, and nothing more. Still to come: further providers such as OpenCode and Cursor,
+global installation into `$HOME`, remote and community registries, richer optimization advice,
+uninstall and sync cleanup, a plugin system, project auto-detection, codebase memory, npm registry
+integration, an update system, and an init wizard.
 
 ## Contributing
 

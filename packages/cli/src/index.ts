@@ -7,6 +7,7 @@ import { Command } from "commander";
 import { z } from "zod";
 import { createInstallCommand } from "./commands/install.js";
 import { createMcpCommand } from "./commands/mcp.js";
+import { createProfileCommand } from "./commands/profile.js";
 import { createResolveCommand } from "./commands/resolve.js";
 import { createSkillCommand } from "./commands/skill.js";
 import { createTargetCommand } from "./commands/target.js";
@@ -31,6 +32,7 @@ export function createAgnoxProgram(): Command {
     .addCommand(createResolveCommand())
     .addCommand(createSkillCommand())
     .addCommand(createMcpCommand())
+    .addCommand(createProfileCommand())
     .addCommand(createTargetCommand())
     .addCommand(createInstallCommand());
 }

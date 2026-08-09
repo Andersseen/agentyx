@@ -16,6 +16,7 @@ describe("agnox mcp show", () => {
         "context7",
         "Fetch up-to-date library documentation from Context7.",
         "transport: http",
+        "context cost: medium",
         "url: https://mcp.context7.com/mcp",
         "required environment",
         "  (none)",
@@ -27,6 +28,7 @@ describe("agnox mcp show", () => {
     const output = runMcpShowCommand({ name: "playwright", json: false });
 
     expect(output).toContain("transport: stdio");
+    expect(output).toContain("context cost: high");
     expect(output).toContain("command: npx");
     expect(output).toContain("  @playwright/mcp@latest");
   });
@@ -36,6 +38,7 @@ describe("agnox mcp show", () => {
       name: "context7",
       description: "Fetch up-to-date library documentation from Context7.",
       transport: "http",
+      contextCost: "medium",
       url: "https://mcp.context7.com/mcp",
       headers: {},
     });

@@ -15,17 +15,20 @@ describe("builtInMcpServerRegistry", () => {
     expect(builtInMcpServerRegistry.get("context7")).toMatchObject({
       name: "context7",
       transport: "http",
+      contextCost: "medium",
     });
     expect(builtInMcpServerRegistry.listMetadata()).toEqual([
       {
         name: "context7",
         description: "Fetch up-to-date library documentation from Context7.",
         transport: "http",
+        contextCost: "medium",
       },
       {
         name: "playwright",
         description: "Automate and inspect browsers through Playwright MCP.",
         transport: "stdio",
+        contextCost: "high",
       },
     ]);
   });

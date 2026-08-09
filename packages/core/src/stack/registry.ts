@@ -50,7 +50,7 @@ export const builtInStacks: readonly StackDefinitionInput[] = [
     description: "Modern Angular development environment.",
     extends: ["typescript"],
     skills: ["angular-modern"],
-    mcpServers: ["context7"],
+    mcpServers: [{ name: "context7", level: "recommended" }],
   },
 ];
 

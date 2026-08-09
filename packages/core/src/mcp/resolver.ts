@@ -1,19 +1,25 @@
+import type { AgnoxProfile } from "../config/schema.js";
+import { DEFAULT_AGNOX_PROFILE } from "../config/schema.js";
+import { isMcpLevelEnabled } from "../optimization/profile.js";
 import { builtInStackRegistry, type StackRegistry } from "../stack/registry.js";
 import { resolveStacks } from "../stack/resolver.js";
 import { builtInMcpServerRegistry } from "./built-in.js";
 import { UnknownMcpServerError } from "./errors.js";
 import type { McpServerRegistry } from "./registry.js";
+import type { McpServerReference } from "./schema.js";
 
-export function collectStackMcpServers(
+export function collectStackMcpServerReferences(
   resolvedStacks: readonly string[],
   stackRegistry: StackRegistry,
   mcpRegistry: McpServerRegistry,
-): string[] {
-  const servers: string[] = [];
+): McpServerReference[] {
+  const servers: McpServerReference[] = [];
   const seen = new Set<string>();
 
   for (const stackName of resolvedStacks) {
-    for (const serverName of stackRegistry.get(stackName)?.mcpServers ?? []) {
+    for (const server of stackRegistry.get(stackName)?.mcpServers ?? []) {
+      const serverName = server.name;
+
       if (seen.has(serverName)) {
         continue;
       }
@@ -23,21 +29,56 @@ export function collectStackMcpServers(
       }
 
       seen.add(serverName);
-      servers.push(serverName);
+      servers.push(server);
     }
   }
 
   return servers;
 }
 
+export function filterEffectiveMcpServers(
+  servers: readonly McpServerReference[],
+  profile: AgnoxProfile,
+): string[] {
+  return servers
+    .filter((server) => isMcpLevelEnabled(profile, server.level))
+    .map((server) => server.name);
+}
+
+export function collectStackMcpServers(
+  resolvedStacks: readonly string[],
+  stackRegistry: StackRegistry,
+  mcpRegistry: McpServerRegistry,
+  profile: AgnoxProfile = DEFAULT_AGNOX_PROFILE,
+): string[] {
+  return filterEffectiveMcpServers(
+    collectStackMcpServerReferences(resolvedStacks, stackRegistry, mcpRegistry),
+    profile,
+  );
+}
+
+export function resolveStackMcpServerReferences(
+  requestedStacks: readonly string[],
+  stackRegistry: StackRegistry = builtInStackRegistry,
+  mcpRegistry: McpServerRegistry = builtInMcpServerRegistry,
+): McpServerReference[] {
+  return collectStackMcpServerReferences(
+    resolveStacks(requestedStacks, stackRegistry),
+    stackRegistry,
+    mcpRegistry,
+  );
+}
+
 export function resolveStackMcpServers(
   requestedStacks: readonly string[],
   stackRegistry: StackRegistry = builtInStackRegistry,
   mcpRegistry: McpServerRegistry = builtInMcpServerRegistry,
+  profile: AgnoxProfile = DEFAULT_AGNOX_PROFILE,
 ): string[] {
   return collectStackMcpServers(
     resolveStacks(requestedStacks, stackRegistry),
     stackRegistry,
     mcpRegistry,
+    profile,
   );
 }

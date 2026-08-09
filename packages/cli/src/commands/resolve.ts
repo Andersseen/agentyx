@@ -1,7 +1,11 @@
 import {
+  AGNOX_PROFILES,
+  type AgnoxProfile,
+  DEFAULT_AGNOX_PROFILE,
+  filterEffectiveMcpServers,
   loadAgnoxConfig,
   resolveAgnoxConfig,
-  resolveStackMcpServers,
+  resolveStackMcpServerReferences,
   resolveStackSkills,
   resolveStacks,
 } from "@agnox/core";
@@ -14,6 +18,7 @@ export interface ResolveCommandInput {
    * from `.agnox.json`, and the project configuration is not read at all.
    */
   readonly stacks: readonly string[];
+  readonly profile?: AgnoxProfile;
   readonly json: boolean;
   readonly cwd: string;
 }
@@ -28,20 +33,27 @@ export interface ResolveCommandInput {
 export async function runResolveCommand(input: ResolveCommandInput): Promise<string> {
   if (input.stacks.length > 0) {
     const requestedStacks = [...input.stacks];
+    const profile = input.profile ?? DEFAULT_AGNOX_PROFILE;
     const resolvedStacks = resolveStacks(requestedStacks);
     const skills = resolveStackSkills(requestedStacks);
-    const mcpServers = resolveStackMcpServers(requestedStacks);
+    const declaredMcpServers = resolveStackMcpServerReferences(requestedStacks);
+    const mcpServers = filterEffectiveMcpServers(declaredMcpServers, profile);
 
     return input.json
-      ? toJson({ requestedStacks, resolvedStacks, skills, mcpServers })
+      ? toJson({ requestedStacks, resolvedStacks, skills, declaredMcpServers, mcpServers, profile })
       : [
+          section("Profile", [profile]),
           section("Stacks", resolvedStacks),
           section("Skills", skills),
-          section("MCP", mcpServers),
+          section("MCP", renderMcpLines(declaredMcpServers, mcpServers)),
         ].join("\n\n");
   }
 
-  const resolved = resolveAgnoxConfig(await loadAgnoxConfig(input.cwd));
+  const config = await loadAgnoxConfig(input.cwd);
+  const resolved = resolveAgnoxConfig({
+    ...config,
+    profile: input.profile ?? config.profile,
+  });
 
   if (input.json) {
     return toJson(resolved);
@@ -53,16 +65,51 @@ export async function runResolveCommand(input: ResolveCommandInput): Promise<str
     section("Targets", resolved.targets),
     section("Stacks", resolved.resolvedStacks),
     section("Skills", resolved.skills),
-    section("MCP", resolved.mcpServers),
+    section("MCP", renderMcpLines(resolved.declaredMcpServers, resolved.mcpServers)),
   ].join("\n\n");
+}
+
+function renderMcpLines(
+  declaredMcpServers: readonly { readonly name: string; readonly level: string }[],
+  effectiveMcpServers: readonly string[],
+): string[] {
+  const effective = new Set(effectiveMcpServers);
+
+  return declaredMcpServers.map((server) =>
+    effective.has(server.name)
+      ? `${server.name}    ${server.level}`
+      : `${server.name}    skipped (${server.level})`,
+  );
 }
 
 export function createResolveCommand(): Command {
   return new Command("resolve")
     .description("Resolve the stack and skill composition for this project.")
     .argument("[stacks...]", "resolve these stacks instead of the ones in .agnox.json")
+    .option("--profile <profile>", "override the optimization profile for this run", (value) => {
+      if (!AGNOX_PROFILES.includes(value as AgnoxProfile)) {
+        throw new Error(`Profile must be one of: ${AGNOX_PROFILES.join(", ")}.`);
+      }
+
+      return value as AgnoxProfile;
+    })
     .option("--json", "print machine-readable JSON only", false)
-    .action(async (stacks: string[], options: { json: boolean }) => {
-      await emit(() => runResolveCommand({ stacks, json: options.json, cwd: process.cwd() }));
+    .action(async (stacks: string[], options: { profile?: AgnoxProfile; json: boolean }) => {
+      await emit(() =>
+        runResolveCommand(
+          options.profile === undefined
+            ? {
+                stacks,
+                json: options.json,
+                cwd: process.cwd(),
+              }
+            : {
+                stacks,
+                profile: options.profile,
+                json: options.json,
+                cwd: process.cwd(),
+              },
+        ),
+      );
     });
 }
