@@ -1,5 +1,11 @@
 # @agentyx/adapters
 
+## 0.1.1
+
+### Patch Changes
+
+- @agentyx/core@0.1.1
+
 ## 0.1.0
 
 ### Minor Changes

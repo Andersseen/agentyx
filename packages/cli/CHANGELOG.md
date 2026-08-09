@@ -1,5 +1,14 @@
 # @agentyx/cli
 
+## 0.1.1
+
+### Patch Changes
+
+- 910572c: Add manual install selection with `agentyx install --select`, plus repeatable `--skill` and `--mcp`
+  flags for installing specific built-in skills and MCP servers without a stack configuration.
+  - @agentyx/adapters@0.1.1
+  - @agentyx/core@0.1.1
+
 ## 0.1.0
 
 ### Minor Changes
