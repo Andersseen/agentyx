@@ -1,6 +1,6 @@
 {
   "name": "@agentyx/adapters",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Provider adapters, MCP rendering and safe install planning for Agentyx.",
   "type": "module",
   "license": "MIT",
