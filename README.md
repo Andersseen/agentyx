@@ -2,19 +2,32 @@
 
 # Agentyx
 
-**Provider-agnostic tooling for coding-agent environments.**
+**One project-local coding-agent setup for Codex, Claude Code and Kimi Code.**
 
 [![CI](https://github.com/Andersseen/agentyx/actions/workflows/ci.yml/badge.svg)](https://github.com/Andersseen/agentyx/actions/workflows/ci.yml)
+[![npm](https://img.shields.io/npm/v/@agentyx/cli.svg)](https://www.npmjs.com/package/@agentyx/cli)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Node.js >=22](https://img.shields.io/badge/node-%3E%3D22-green.svg)](.nvmrc)
 
 </div>
 
-Agentyx lets an existing project describe its coding-agent environment once, in a way that is not
-tied to any single provider, then install the same resolved Skills and MCP configuration into the
-agents you actually use.
+Agentyx is a small CLI for keeping coding-agent instructions and MCP setup consistent across the
+tools your team actually uses. A project describes its environment once in `.agentyx.json`; Agentyx
+resolves stack presets, Skills and MCP servers, then writes provider-specific project files for
+Codex, Claude Code and Kimi Code.
 
 > **Status: early development.** APIs will change.
+
+## Why Agentyx
+
+- **Provider agnostic by default.** Stacks, Skills and MCP servers are canonical data; adapters only
+  translate them into each agent's expected project-local files.
+- **Reviewable installs.** `agentyx install --dry-run` shows the exact files and paths before
+  anything is written.
+- **Project-local only.** Agentyx writes inside the current project and never mutates `$HOME`,
+  global agent settings or secret values.
+- **Composable presets, manual escape hatches.** Use stacks such as `typescript` and `angular`, or
+  directly select individual Skills and MCP servers when you want a smaller setup.
 
 ## Quick Start
 
@@ -33,11 +46,41 @@ agentyx install --dry-run
 agentyx install
 ```
 
+For a focused one-off install without a stack preset:
+
+```sh
+agentyx install --select
+agentyx install --target codex --skill planning --skill verification --mcp context7 --dry-run
+```
+
 If you prefer a project-local dependency instead of a global command:
 
 ```sh
 pnpm add -D @agentyx/cli
 pnpm exec agentyx doctor
+```
+
+## What It Writes
+
+| Target   | Agent       | Skills path       | MCP config             |
+| -------- | ----------- | ----------------- | ---------------------- |
+| `codex`  | Codex       | `.agents/skills`  | `.codex/config.toml`   |
+| `claude` | Claude Code | `.claude/skills`  | `.mcp.json`            |
+| `kimi`   | Kimi Code   | `.agents/skills`  | `.kimi-code/mcp.json`  |
+
+Every generated skill comes from the same canonical `SKILL.md`. MCP definitions are also
+provider-neutral; adapters render them as TOML or JSON only at install time.
+
+## Core Commands
+
+```sh
+agentyx init                 # create .agentyx.json
+agentyx doctor               # diagnose config, targets and installability
+agentyx resolve angular      # preview stack, Skill and MCP resolution
+agentyx skill list           # list built-in Skills
+agentyx mcp list             # list built-in MCP servers
+agentyx install --dry-run    # show the exact write plan
+agentyx install              # apply the plan
 ```
 
 From this repository checkout, for local development:
