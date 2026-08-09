@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import { realpathSync } from "node:fs";
+import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 import { agentyxAdaptersName } from "@agentyx/adapters";
 import { agentyxCoreName } from "@agentyx/core";
@@ -14,7 +15,13 @@ import { createResolveCommand } from "./commands/resolve.js";
 import { createSkillCommand } from "./commands/skill.js";
 import { createTargetCommand } from "./commands/target.js";
 
-export const cliVersion = "0.0.0";
+const require = createRequire(import.meta.url);
+
+const cliPackageMetadataSchema = z.object({
+  version: z.string().min(1),
+});
+
+export const cliVersion = cliPackageMetadataSchema.parse(require("../package.json")).version;
 
 const cliMetadataSchema = z.object({
   adaptersPackage: z.literal("agentyx-adapters"),

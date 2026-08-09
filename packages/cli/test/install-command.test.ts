@@ -14,7 +14,15 @@ import { createAgentyxProgram } from "../src/index.js";
 
 const exampleProjectPath = fileURLToPath(new URL("../../../examples/angular", import.meta.url));
 
-const baseInput = { stacks: [], targets: [], dryRun: false, json: false };
+const baseInput = {
+  stacks: [],
+  targets: [],
+  skills: [],
+  mcpServers: [],
+  select: false,
+  dryRun: false,
+  json: false,
+};
 
 let projectDir: string;
 
@@ -286,6 +294,68 @@ describe("agentyx install <stack>", () => {
   });
 });
 
+describe("agentyx install --skill/--mcp", () => {
+  it("installs selected skills and MCP servers without a project configuration", async () => {
+    const output = await runInstallCommand({
+      ...baseInput,
+      targets: ["codex"],
+      skills: ["planning", "verification"],
+      mcpServers: ["context7"],
+      dryRun: true,
+      cwd: projectDir,
+    });
+
+    expect(output).toBe(
+      [
+        "Agentyx install (dry run)",
+        "",
+        "codex -> .agents/skills",
+        "Skills",
+        "  create    .agents/skills/planning/SKILL.md",
+        "  create    .agents/skills/verification/SKILL.md",
+        "MCP",
+        "  create    .codex/config.toml (context7)",
+        "",
+        "Dry run: 3 to create, 0 to update, 0 unchanged. Nothing was written.",
+      ].join("\n"),
+    );
+  });
+
+  it("deduplicates repeated manual selections", async () => {
+    const output = await runInstallCommand({
+      ...baseInput,
+      targets: ["codex"],
+      skills: ["planning", "planning"],
+      mcpServers: ["context7", "context7"],
+      dryRun: true,
+      json: true,
+      cwd: projectDir,
+    });
+
+    expect(JSON.parse(output)).toMatchObject({
+      stacks: [],
+      skills: ["planning"],
+      declaredMcpServers: [{ name: "context7", level: "selected" }],
+      mcpServers: ["context7"],
+      targets: ["codex"],
+      summary: { create: 2, update: 0, unchanged: 0 },
+    });
+  });
+
+  it("does not combine manual selections with stack arguments", async () => {
+    await expect(
+      runInstallCommand({
+        ...baseInput,
+        stacks: ["core"],
+        targets: ["codex"],
+        skills: ["planning"],
+        dryRun: true,
+        cwd: projectDir,
+      }),
+    ).rejects.toThrow("Manual --skill/--mcp selection cannot be combined with stack arguments.");
+  });
+});
+
 describe("agentyx install", () => {
   it("uses effective MCP capabilities from the selected profile", async () => {
     await writeConfig({ extends: ["angular"], profile: "lean", targets: ["codex"] });
@@ -416,8 +486,11 @@ describe("install command wiring", () => {
     expect(command.options.map((option) => option.long).sort()).toEqual([
       "--dry-run",
       "--json",
+      "--mcp",
       "--mcp-only",
       "--profile",
+      "--select",
+      "--skill",
       "--skills-only",
       "--target",
     ]);

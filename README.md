@@ -14,19 +14,40 @@ Agentyx lets an existing project describe its coding-agent environment once, in 
 tied to any single provider, then install the same resolved Skills and MCP configuration into the
 agents you actually use.
 
-> **Status: early development.** APIs will change. Nothing is published to npm yet. The commands
-> below use this repository checkout until the first public package release.
+> **Status: early development.** APIs will change.
 
 ## Quick Start
 
-From this repository checkout:
+Install the published CLI globally if you want to run `agentyx` directly from any project:
+
+```sh
+pnpm add -g @agentyx/cli
+```
+
+Then, in an existing TypeScript or Angular project:
+
+```sh
+agentyx init
+agentyx doctor
+agentyx install --dry-run
+agentyx install
+```
+
+If you prefer a project-local dependency instead of a global command:
+
+```sh
+pnpm add -D @agentyx/cli
+pnpm exec agentyx doctor
+```
+
+From this repository checkout, for local development:
 
 ```sh
 pnpm install
 pnpm build
 ```
 
-In an existing TypeScript or Angular project, run the built CLI:
+Then run the built CLI from another project:
 
 ```sh
 node /path/to/agentyx/packages/cli/dist/index.mjs init
@@ -43,8 +64,6 @@ agentyx init --stack angular --profile lean --target codex --target kimi --yes
 
 `init` only creates `.agentyx.json`; it never installs Skills or MCP. `doctor` is deterministic
 diagnostics, `install --dry-run` shows the exact project-local writes, and `install` performs them.
-
-Future npm usage will look like an installed `agentyx` binary, but Agentyx is not published to npm yet.
 
 ## Local Package Validation
 
@@ -537,6 +556,15 @@ all. The configuration is then not read, so the target has to be explicit:
 ```sh
 agentyx install angular --target codex --dry-run
 ```
+
+For manual selection, skip stacks entirely and choose the built-in skills and MCP servers yourself:
+
+```sh
+agentyx install --select
+agentyx install --target codex --skill planning --skill verification --mcp context7 --dry-run
+```
+
+Manual selection is a one-run install path; it does not rewrite `.agentyx.json`.
 
 For inspection or focused rollout, `--skills-only` skips MCP configuration and `--mcp-only` skips
 skill files. `--profile lean`, `--profile balanced`, and `--profile autonomous` override the
