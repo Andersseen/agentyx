@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { agnoxCoreName, getCoreStatus } from "../src/index.js";
+import { agentyxCoreName, getCoreStatus } from "../src/index.js";
 
-describe("@agnox/core", () => {
+describe("@agentyx/core", () => {
   it("exposes a minimal placeholder API", () => {
-    expect(agnoxCoreName).toBe("agnox-core");
+    expect(agentyxCoreName).toBe("agentyx-core");
     expect(getCoreStatus()).toBe("ready");
   });
 });

@@ -1,6 +1,6 @@
 ---
-"@agnox/adapters": minor
-"@agnox/cli": minor
+"@agentyx/adapters": minor
+"@agentyx/cli": minor
 ---
 
 Add Kimi Code as a built-in target, render project-local Kimi MCP config, and dedupe shared

@@ -1,4 +1,4 @@
-# Contributing to Agnox
+# Contributing to Agentyx
 
 Thanks for taking the time to contribute. This document covers everything you need to make a change.
 
@@ -10,8 +10,8 @@ Thanks for taking the time to contribute. This document covers everything you ne
 ## Getting started
 
 ```sh
-git clone https://github.com/Andersseen/agnox.git
-cd agnox
+git clone https://github.com/Andersseen/agentyx.git
+cd agentyx
 pnpm install
 pnpm build
 pnpm test
@@ -23,31 +23,31 @@ pnpm test
 packages/core        domain layer: config model, stack model, skills, resolution
 packages/cli         Commander CLI, terminal output
 packages/adapters    adapter contract, Codex and Claude Code adapters, install planning
-examples/angular     .agnox.json fixture used by tests and docs
+examples/angular     .agentyx.json fixture used by tests and docs
 .agents/skills       provider-neutral workflow skills for agents working on this repo
 ```
 
 ## Architecture rules
 
-These are the constraints that keep Agnox extensible. A PR that breaks one of them will be asked to
+These are the constraints that keep Agentyx extensible. A PR that breaks one of them will be asked to
 change.
 
-1. **`@agnox/core` never imports Commander, `@clack/prompts`, or anything terminal-related.** All
-   CLI concerns live in `@agnox/cli`.
-2. **Agnox is provider agnostic.** There is no `CodexStack` or `ClaudeStack`. Stacks describe
+1. **`@agentyx/core` never imports Commander, `@clack/prompts`, or anything terminal-related.** All
+   CLI concerns live in `@agentyx/cli`.
+2. **Agentyx is provider agnostic.** There is no `CodexStack` or `ClaudeStack`. Stacks describe
    development environments; provider-specific behaviour belongs in adapters. The stack inheritance
    model must not know that providers exist, and an adapter owns a destination, never skill content
    — every provider installs the canonical `SKILL.md` that `formatSkillMarkdown` renders.
 3. **Zod schemas are the source of truth.** TypeScript types are inferred with `z.infer` /
    `z.input`, never hand-written alongside a schema.
 4. **Stack definitions are data.** New stacks go into the registry array, not into resolver logic.
-5. **Errors are domain errors.** Throw a subclass of `AgnoxError` rather than a generic `Error` or a
+5. **Errors are domain errors.** Throw a subclass of `AgentyxError` rather than a generic `Error` or a
    string, so callers can branch on `error.code`.
 6. **Simple functions and plain objects.** No service containers, dependency injection, factories,
    or plugin abstractions until a concrete need forces one.
 7. **Never silently recover from invalid configuration.** Report it.
 8. **Installation is plan-first.** Planning reads and returns an `InstallPlan`; only the executor
-   writes, only inside the directory a target owns, and only files Agnox generated.
+   writes, only inside the directory a target owns, and only files Agentyx generated.
 
 ## Development workflow
 
@@ -66,8 +66,8 @@ Run the CLI against the built output:
 
 ```sh
 pnpm build
-pnpm agnox resolve angular
-pnpm --silent agnox resolve angular --json
+pnpm agentyx resolve angular
+pnpm --silent agentyx resolve angular --json
 ```
 
 ## Coding conventions
@@ -91,13 +91,13 @@ pnpm --silent agnox resolve angular --json
 
 ## Changing the configuration schema
 
-`packages/core/schema/agnox.schema.json` is generated from the Zod model and committed so it can be
-published with `@agnox/core`. After editing
+`packages/core/schema/agentyx.schema.json` is generated from the Zod model and committed so it can be
+published with `@agentyx/core`. After editing
 [packages/core/src/config/schema.ts](packages/core/src/config/schema.ts):
 
 ```sh
-pnpm --filter @agnox/core run build
-pnpm --filter @agnox/core run schema
+pnpm --filter @agentyx/core run build
+pnpm --filter @agentyx/core run schema
 ```
 
 A test fails if the committed schema drifts from the Zod model, so this is not optional.
@@ -126,7 +126,7 @@ A test fails if the committed schema drifts from the Zod model, so this is not o
 
 ## Scope
 
-Agnox is early. The following are deliberately **not implemented yet**, and PRs adding them will be
+Agentyx is early. The following are deliberately **not implemented yet**, and PRs adding them will be
 declined until the groundwork lands: MCP integration, providers beyond Codex and Claude Code, global
 installation into `$HOME`, project auto-detection, codebase memory, token budgets, remote
 registries, plugins, npm registry integration, uninstall and sync cleanup, an update system, and an

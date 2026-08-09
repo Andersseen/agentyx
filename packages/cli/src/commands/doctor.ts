@@ -5,19 +5,19 @@ import {
   type InstallPlan,
   planInstall,
   summarizeInstallPlans,
-} from "@agnox/adapters";
+} from "@agentyx/adapters";
 import {
-  type AgnoxConfig,
-  AgnoxConfigNotFoundError,
-  AgnoxConfigParseError,
-  AgnoxConfigValidationError,
+  type AgentyxConfig,
+  AgentyxConfigNotFoundError,
+  AgentyxConfigParseError,
+  AgentyxConfigValidationError,
   builtInMcpServerRegistry,
   builtInSkillRegistry,
   detectProject,
   getOptimizationProfile,
-  loadAgnoxConfig,
-  resolveAgnoxConfig,
-} from "@agnox/core";
+  loadAgentyxConfig,
+  resolveAgentyxConfig,
+} from "@agentyx/core";
 import { Command } from "commander";
 import { section, toJson } from "../output.js";
 
@@ -88,7 +88,7 @@ export async function runDoctorCommand(input: DoctorCommandInput): Promise<Docto
   const project = await detectProject(input.cwd);
   const configState = await readConfig(input.cwd);
   const targetReports: Array<DoctorReport["targets"][number]> = [];
-  let resolved: ReturnType<typeof resolveAgnoxConfig> | undefined;
+  let resolved: ReturnType<typeof resolveAgentyxConfig> | undefined;
   let plans: readonly InstallPlan[] | undefined;
 
   if (project.packageManager.ambiguous) {
@@ -119,7 +119,7 @@ export async function runDoctorCommand(input: DoctorCommandInput): Promise<Docto
 
   if (configState.config !== undefined) {
     try {
-      resolved = resolveAgnoxConfig(configState.config);
+      resolved = resolveAgentyxConfig(configState.config);
     } catch (cause) {
       diagnostics.push({
         level: "error",
@@ -214,7 +214,7 @@ export async function runDoctorCommand(input: DoctorCommandInput): Promise<Docto
       detectedStacks: project.detectedStacks,
       recommendedStack: project.recommendedStack,
       config: {
-        path: ".agnox.json",
+        path: ".agentyx.json",
         present: configState.present,
         valid: configState.valid,
       },
@@ -250,7 +250,7 @@ export function renderDoctorReport(report: DoctorReport, json: boolean): string 
   }
 
   return [
-    `Agnox doctor: ${report.status}`,
+    `Agentyx doctor: ${report.status}`,
     "",
     section("Project", [
       `package manager: ${report.project.packageManager ?? "unknown"}${
@@ -258,7 +258,7 @@ export function renderDoctorReport(report: DoctorReport, json: boolean): string 
       }`,
       `detected stacks: ${report.project.detectedStacks.join(", ") || "none"}`,
       `recommended stack: ${report.project.recommendedStack ?? "none"}`,
-      `.agnox.json: ${report.project.config.present ? (report.project.config.valid ? "valid" : "invalid") : "missing"}`,
+      `.agentyx.json: ${report.project.config.present ? (report.project.config.valid ? "valid" : "invalid") : "missing"}`,
     ]),
     section("Configuration", [
       `stacks: ${report.configuration.stacks.join(", ") || "none"}`,
@@ -313,31 +313,31 @@ export function renderDoctorReport(report: DoctorReport, json: boolean): string 
 async function readConfig(projectDir: string): Promise<{
   readonly present: boolean;
   readonly valid: boolean;
-  readonly config: AgnoxConfig | undefined;
+  readonly config: AgentyxConfig | undefined;
   readonly error: DoctorDiagnostic | undefined;
 }> {
   try {
     return {
       present: true,
       valid: true,
-      config: await loadAgnoxConfig(projectDir),
+      config: await loadAgentyxConfig(projectDir),
       error: undefined,
     };
   } catch (cause) {
-    if (cause instanceof AgnoxConfigNotFoundError) {
+    if (cause instanceof AgentyxConfigNotFoundError) {
       return {
         present: false,
         valid: false,
         config: undefined,
         error: {
           level: "warning",
-          code: "agnox_config_missing",
-          message: ".agnox.json is missing. Run agnox init to create it.",
+          code: "agentyx_config_missing",
+          message: ".agentyx.json is missing. Run agentyx init to create it.",
         },
       };
     }
 
-    if (cause instanceof AgnoxConfigParseError || cause instanceof AgnoxConfigValidationError) {
+    if (cause instanceof AgentyxConfigParseError || cause instanceof AgentyxConfigValidationError) {
       return {
         present: true,
         valid: false,
@@ -385,7 +385,7 @@ function displayPath(from: string, to: string): string {
 
 export function createDoctorCommand(): Command {
   return new Command("doctor")
-    .description("Inspect Agnox configuration, resolution, targets and installability.")
+    .description("Inspect Agentyx configuration, resolution, targets and installability.")
     .option("--json", "print machine-readable JSON only", false)
     .action(async (options: { json: boolean }) => {
       const report = await runDoctorCommand({ json: options.json, cwd: process.cwd() });

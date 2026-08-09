@@ -1,26 +1,26 @@
-export type { AgnoxConfigIssue } from "./config/errors.js";
+export type { AgentyxConfigIssue } from "./config/errors.js";
 export {
-  AgnoxConfigNotFoundError,
-  AgnoxConfigParseError,
-  AgnoxConfigValidationError,
+  AgentyxConfigNotFoundError,
+  AgentyxConfigParseError,
+  AgentyxConfigValidationError,
 } from "./config/errors.js";
-export { AGNOX_CONFIG_SCHEMA_ID, buildAgnoxConfigJsonSchema } from "./config/json-schema.js";
+export { AGENTYX_CONFIG_SCHEMA_ID, buildAgentyxConfigJsonSchema } from "./config/json-schema.js";
 export {
-  AGNOX_CONFIG_FILENAME,
-  agnoxConfigPath,
-  loadAgnoxConfig,
-  parseAgnoxConfig,
+  AGENTYX_CONFIG_FILENAME,
+  agentyxConfigPath,
+  loadAgentyxConfig,
+  parseAgentyxConfig,
 } from "./config/loader.js";
-export type { ResolvedAgnoxConfig } from "./config/resolver.js";
-export { resolveAgnoxConfig } from "./config/resolver.js";
-export type { AgnoxConfig, AgnoxConfigInput, AgnoxProfile } from "./config/schema.js";
+export type { ResolvedAgentyxConfig } from "./config/resolver.js";
+export { resolveAgentyxConfig } from "./config/resolver.js";
+export type { AgentyxConfig, AgentyxConfigInput, AgentyxProfile } from "./config/schema.js";
 export {
-  AGNOX_PROFILES,
-  agnoxConfigSchema,
-  agnoxProfileSchema,
-  DEFAULT_AGNOX_PROFILE,
+  AGENTYX_PROFILES,
+  agentyxConfigSchema,
+  agentyxProfileSchema,
+  DEFAULT_AGENTYX_PROFILE,
 } from "./config/schema.js";
-export { AgnoxError } from "./errors.js";
+export { AgentyxError } from "./errors.js";
 export { builtInMcpServerNames, builtInMcpServerRegistry } from "./mcp/built-in.js";
 export {
   DuplicateMcpServerError,
@@ -58,7 +58,7 @@ export {
   mcpServerDefinitionSchema,
   mcpServerReferenceSchema,
 } from "./mcp/schema.js";
-export { agnoxCoreName, getCoreStatus } from "./meta.js";
+export { agentyxCoreName, getCoreStatus } from "./meta.js";
 export type { OptimizationProfileDefinition } from "./optimization/profile.js";
 export {
   getOptimizationProfile,
@@ -73,9 +73,9 @@ export type {
   ProjectPackageJsonDetection,
 } from "./project/detector.js";
 export {
-  buildAgnoxConfig,
+  buildAgentyxConfig,
   detectProject,
-  formatAgnoxConfig,
+  formatAgentyxConfig,
   PACKAGE_MANAGERS,
 } from "./project/detector.js";
 export { builtInSkillNames, builtInSkillRegistry } from "./skill/built-in.js";

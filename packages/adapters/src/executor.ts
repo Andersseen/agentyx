@@ -13,7 +13,7 @@ export interface InstallResult {
 /**
  * Writes a plan to disk.
  *
- * This is the only code in Agnox that mutates a project, and it is deliberately
+ * This is the only code in Agentyx that mutates a project, and it is deliberately
  * dull: it creates missing parent directories, writes UTF-8 text, and does
  * nothing else. There is no command execution, no network, no deletion, and no
  * file is touched that the plan did not name.

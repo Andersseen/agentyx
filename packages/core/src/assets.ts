@@ -1,7 +1,7 @@
 import { fileURLToPath } from "node:url";
 
 /**
- * Location of the non-code assets that ship with `@agnox/core`.
+ * Location of the non-code assets that ship with `@agentyx/core`.
  *
  * **This module must stay directly under `src/`.** The path is derived from
  * `import.meta.url` rather than the working directory, and `src/assets.ts` and

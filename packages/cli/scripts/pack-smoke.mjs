@@ -9,11 +9,11 @@ import { promisify } from "node:util";
 const execFileAsync = promisify(execFile);
 const repoRoot = resolve(fileURLToPath(new URL("../../..", import.meta.url)));
 const packages = ["packages/core", "packages/adapters", "packages/cli"];
-const packageCacheDir = await mkdtemp(join(tmpdir(), "agnox-package-cache-"));
+const packageCacheDir = await mkdtemp(join(tmpdir(), "agentyx-package-cache-"));
 
 await run("pnpm", ["build"], repoRoot);
 
-const packDir = await mkdtemp(join(tmpdir(), "agnox-pack-"));
+const packDir = await mkdtemp(join(tmpdir(), "agentyx-pack-"));
 const tarballs = [];
 
 for (const packageDir of packages) {
@@ -30,23 +30,23 @@ if (tarballs.length !== packages.length) {
   throw new Error(`Expected ${packages.length} tarballs, found ${tarballs.length}.`);
 }
 
-const coreTarball = findTarball(tarballs, "agnox-core-");
-const adaptersTarball = findTarball(tarballs, "agnox-adapters-");
-const cliTarball = findTarball(tarballs, "agnox-cli-");
-const projectDir = await mkdtemp(join(tmpdir(), "agnox-external-"));
+const coreTarball = findTarball(tarballs, "agentyx-core-");
+const adaptersTarball = findTarball(tarballs, "agentyx-adapters-");
+const cliTarball = findTarball(tarballs, "agentyx-cli-");
+const projectDir = await mkdtemp(join(tmpdir(), "agentyx-external-"));
 await writeFile(
   join(projectDir, "package.json"),
   `${JSON.stringify(
     {
-      name: "agnox-pack-smoke",
+      name: "agentyx-pack-smoke",
       private: true,
       dependencies: {
-        "@agnox/cli": `file:${cliTarball}`,
+        "@agentyx/cli": `file:${cliTarball}`,
       },
       pnpm: {
         overrides: {
-          "@agnox/core": `file:${coreTarball}`,
-          "@agnox/adapters": `file:${adaptersTarball}`,
+          "@agentyx/core": `file:${coreTarball}`,
+          "@agentyx/adapters": `file:${adaptersTarball}`,
         },
       },
     },
@@ -58,12 +58,12 @@ await writeFile(join(projectDir, "tsconfig.json"), '{"compilerOptions":{"strict"
 
 await run("pnpm", ["install", "--ignore-scripts"], projectDir);
 
-const agnox = process.platform === "win32" ? "agnox.cmd" : "agnox";
+const agentyx = process.platform === "win32" ? "agentyx.cmd" : "agentyx";
 
-await run(join(projectDir, "node_modules", ".bin", agnox), ["--version"], projectDir);
-await run(join(projectDir, "node_modules", ".bin", agnox), ["--help"], projectDir);
+await run(join(projectDir, "node_modules", ".bin", agentyx), ["--version"], projectDir);
+await run(join(projectDir, "node_modules", ".bin", agentyx), ["--help"], projectDir);
 await run(
-  join(projectDir, "node_modules", ".bin", agnox),
+  join(projectDir, "node_modules", ".bin", agentyx),
   [
     "init",
     "--stack",
@@ -80,27 +80,27 @@ await run(
   ],
   projectDir,
 );
-await run(join(projectDir, "node_modules", ".bin", agnox), ["resolve"], projectDir);
-await run(join(projectDir, "node_modules", ".bin", agnox), ["doctor"], projectDir);
-await run(join(projectDir, "node_modules", ".bin", agnox), ["install", "--dry-run"], projectDir);
+await run(join(projectDir, "node_modules", ".bin", agentyx), ["resolve"], projectDir);
+await run(join(projectDir, "node_modules", ".bin", agentyx), ["doctor"], projectDir);
+await run(join(projectDir, "node_modules", ".bin", agentyx), ["install", "--dry-run"], projectDir);
 
 const projectRequire = createRequire(join(projectDir, "package.json"));
-const cliPackagePath = await findPackageJson(projectRequire.resolve("@agnox/cli"));
+const cliPackagePath = await findPackageJson(projectRequire.resolve("@agentyx/cli"));
 const cliPackageRoot = dirname(cliPackagePath);
 const cliRequire = createRequire(cliPackagePath);
-const adaptersPackagePath = await findPackageJson(cliRequire.resolve("@agnox/adapters"));
+const adaptersPackagePath = await findPackageJson(cliRequire.resolve("@agentyx/adapters"));
 const adaptersPackageRoot = dirname(adaptersPackagePath);
 const adaptersRequire = createRequire(adaptersPackagePath);
-const corePackagePath = await findPackageJson(adaptersRequire.resolve("@agnox/core"));
+const corePackagePath = await findPackageJson(adaptersRequire.resolve("@agentyx/core"));
 const corePackageRoot = dirname(corePackagePath);
 const cliPackage = JSON.parse(await readFile(cliPackagePath, "utf8"));
 const adaptersPackage = JSON.parse(await readFile(adaptersPackagePath, "utf8"));
 
-assertPublishedDependency(cliPackage, "@agnox/core");
-assertPublishedDependency(cliPackage, "@agnox/adapters");
-assertPublishedDependency(adaptersPackage, "@agnox/core");
+assertPublishedDependency(cliPackage, "@agentyx/core");
+assertPublishedDependency(cliPackage, "@agentyx/adapters");
+assertPublishedDependency(adaptersPackage, "@agentyx/core");
 await readFile(join(corePackageRoot, "skills", "planning", "SKILL.md"), "utf8");
-await readFile(join(corePackageRoot, "schema", "agnox.schema.json"), "utf8");
+await readFile(join(corePackageRoot, "schema", "agentyx.schema.json"), "utf8");
 await readFile(join(cliPackageRoot, "dist", "index.mjs"), "utf8");
 await readFile(join(adaptersPackageRoot, "dist", "index.mjs"), "utf8");
 

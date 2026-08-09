@@ -1,26 +1,26 @@
 import { access, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { builtInAdapterRegistry } from "@agnox/adapters";
+import { builtInAdapterRegistry } from "@agentyx/adapters";
 import {
-  AGNOX_CONFIG_FILENAME,
-  AGNOX_PROFILES,
-  AgnoxError,
-  type AgnoxProfile,
-  buildAgnoxConfig,
+  AGENTYX_CONFIG_FILENAME,
+  AGENTYX_PROFILES,
+  AgentyxError,
+  type AgentyxProfile,
+  buildAgentyxConfig,
   detectProject,
-  formatAgnoxConfig,
-  parseAgnoxConfig,
+  formatAgentyxConfig,
+  parseAgentyxConfig,
   resolveStacks,
-} from "@agnox/core";
+} from "@agentyx/core";
 import { confirm, isCancel, multiselect, select } from "@clack/prompts";
 import { Command } from "commander";
 import { emit, section, toJson } from "../output.js";
 
-const DEFAULT_INIT_PROFILE: AgnoxProfile = "lean";
+const DEFAULT_INIT_PROFILE: AgentyxProfile = "lean";
 
 export interface InitCommandInput {
   readonly stack: string | undefined;
-  readonly profile: AgnoxProfile | undefined;
+  readonly profile: AgentyxProfile | undefined;
   readonly targets: readonly string[];
   readonly yes: boolean;
   readonly force: boolean;
@@ -30,14 +30,14 @@ export interface InitCommandInput {
 
 export interface InitPlan {
   readonly stack: string;
-  readonly profile: AgnoxProfile;
+  readonly profile: AgentyxProfile;
   readonly targets: readonly string[];
   readonly path: string;
   readonly content: string;
   readonly replaced: boolean;
 }
 
-export class InitError extends AgnoxError {
+export class InitError extends AgentyxError {
   constructor(code: string, message: string) {
     super(code, message);
     this.name = "InitError";
@@ -54,13 +54,13 @@ export async function runInitCommand(input: InitCommandInput): Promise<string> {
 
 export async function planNonInteractiveInit(input: InitCommandInput): Promise<InitPlan> {
   const detection = await detectProject(input.cwd);
-  const path = join(input.cwd, AGNOX_CONFIG_FILENAME);
+  const path = join(input.cwd, AGENTYX_CONFIG_FILENAME);
   const exists = await fileExists(path);
 
   if (exists && !input.force) {
     throw new InitError(
-      "agnox_config_exists",
-      `${AGNOX_CONFIG_FILENAME} already exists. Re-run with --force to replace it.`,
+      "agentyx_config_exists",
+      `${AGENTYX_CONFIG_FILENAME} already exists. Re-run with --force to replace it.`,
     );
   }
 
@@ -69,7 +69,7 @@ export async function planNonInteractiveInit(input: InitCommandInput): Promise<I
   if (stack === undefined) {
     throw new InitError(
       "init_stack_required",
-      "Could not infer an Agnox stack. Pass --stack typescript or --stack angular.",
+      "Could not infer an Agentyx stack. Pass --stack typescript or --stack angular.",
     );
   }
 
@@ -78,7 +78,7 @@ export async function planNonInteractiveInit(input: InitCommandInput): Promise<I
   if (input.targets.length === 0) {
     throw new InitError(
       "init_targets_required",
-      "No init targets. Pass at least one --target; Agnox never chooses providers silently.",
+      "No init targets. Pass at least one --target; Agentyx never chooses providers silently.",
     );
   }
 
@@ -86,32 +86,32 @@ export async function planNonInteractiveInit(input: InitCommandInput): Promise<I
     builtInAdapterRegistry.get(target);
   }
 
-  const config = buildAgnoxConfig({
+  const config = buildAgentyxConfig({
     stack,
     profile: input.profile ?? DEFAULT_INIT_PROFILE,
     targets: input.targets,
   });
-  const parsed = parseAgnoxConfig(config);
+  const parsed = parseAgentyxConfig(config);
 
   return {
     stack,
     profile: parsed.profile,
     targets: parsed.targets,
     path,
-    content: formatAgnoxConfig(config),
+    content: formatAgentyxConfig(config),
     replaced: exists,
   };
 }
 
 async function planInteractiveInit(input: InitCommandInput): Promise<InitPlan> {
   const detection = await detectProject(input.cwd);
-  const path = join(input.cwd, AGNOX_CONFIG_FILENAME);
+  const path = join(input.cwd, AGENTYX_CONFIG_FILENAME);
   const exists = await fileExists(path);
 
   if (exists && !input.force) {
     throw new InitError(
-      "agnox_config_exists",
-      `${AGNOX_CONFIG_FILENAME} already exists. Agnox will not replace it unless --force is used.`,
+      "agentyx_config_exists",
+      `${AGENTYX_CONFIG_FILENAME} already exists. Agentyx will not replace it unless --force is used.`,
     );
   }
 
@@ -124,7 +124,7 @@ async function planInteractiveInit(input: InitCommandInput): Promise<InitPlan> {
     input.stack ??
     (await promptValue(
       select({
-        message: ["Agnox", "", section("Detected", detected), "", "Stack"].join("\n"),
+        message: ["Agentyx", "", section("Detected", detected), "", "Stack"].join("\n"),
         initialValue: detection.recommendedStack ?? "typescript",
         options: [
           { value: "typescript", label: "TypeScript" },
@@ -138,7 +138,7 @@ async function planInteractiveInit(input: InitCommandInput): Promise<InitPlan> {
       select({
         message: "Profile",
         initialValue: DEFAULT_INIT_PROFILE,
-        options: AGNOX_PROFILES.map((value) => ({ value, label: value })),
+        options: AGENTYX_PROFILES.map((value) => ({ value, label: value })),
       }),
     ));
   const targets =
@@ -161,12 +161,12 @@ async function planInteractiveInit(input: InitCommandInput): Promise<InitPlan> {
     builtInAdapterRegistry.get(target);
   }
 
-  const config = buildAgnoxConfig({ stack, profile, targets });
-  const content = formatAgnoxConfig(config);
+  const config = buildAgentyxConfig({ stack, profile, targets });
+  const content = formatAgentyxConfig(config);
   const shouldCreate = await promptValue(
     confirm({
       message: [
-        exists ? "Replace .agnox.json?" : "Create .agnox.json?",
+        exists ? "Replace .agentyx.json?" : "Create .agentyx.json?",
         "",
         content.trimEnd(),
       ].join("\n"),
@@ -175,7 +175,7 @@ async function planInteractiveInit(input: InitCommandInput): Promise<InitPlan> {
   );
 
   if (!shouldCreate) {
-    throw new InitError("init_cancelled", "Agnox init cancelled. No files were written.");
+    throw new InitError("init_cancelled", "Agentyx init cancelled. No files were written.");
   }
 
   return { stack, profile, targets, path, content, replaced: exists };
@@ -183,18 +183,18 @@ async function planInteractiveInit(input: InitCommandInput): Promise<InitPlan> {
 
 function renderInitText(plan: InitPlan): string {
   return [
-    plan.replaced ? "Replaced .agnox.json" : "Created .agnox.json",
+    plan.replaced ? "Replaced .agentyx.json" : "Created .agentyx.json",
     "",
     section("Stack", [plan.stack]),
     section("Profile", [plan.profile]),
     section("Targets", plan.targets),
-    "Next: agnox doctor",
+    "Next: agentyx doctor",
   ].join("\n");
 }
 
 function renderInitJson(plan: InitPlan): string {
   return toJson({
-    path: AGNOX_CONFIG_FILENAME,
+    path: AGENTYX_CONFIG_FILENAME,
     replaced: plan.replaced,
     stack: plan.stack,
     profile: plan.profile,
@@ -206,7 +206,7 @@ async function promptValue<T>(value: Promise<T | symbol>): Promise<T> {
   const resolved = await value;
 
   if (isCancel(resolved)) {
-    throw new InitError("init_cancelled", "Agnox init cancelled. No files were written.");
+    throw new InitError("init_cancelled", "Agentyx init cancelled. No files were written.");
   }
 
   return resolved;
@@ -229,12 +229,12 @@ function collectTarget(value: string, previous: string[]): string[] {
   return [...previous, value];
 }
 
-function parseProfile(value: string): AgnoxProfile {
-  if (!AGNOX_PROFILES.includes(value as AgnoxProfile)) {
-    throw new Error(`Profile must be one of: ${AGNOX_PROFILES.join(", ")}.`);
+function parseProfile(value: string): AgentyxProfile {
+  if (!AGENTYX_PROFILES.includes(value as AgentyxProfile)) {
+    throw new Error(`Profile must be one of: ${AGENTYX_PROFILES.join(", ")}.`);
   }
 
-  return value as AgnoxProfile;
+  return value as AgentyxProfile;
 }
 
 function formatStackName(stack: string): string {
@@ -243,17 +243,17 @@ function formatStackName(stack: string): string {
 
 export function createInitCommand(): Command {
   return new Command("init")
-    .description("Create .agnox.json for this project.")
+    .description("Create .agentyx.json for this project.")
     .option("--stack <stack>", "stack to write, for example typescript or angular")
     .option("--profile <profile>", "optimization profile to write", parseProfile)
     .option("--target <id>", "target agent to configure; repeatable", collectTarget, [])
     .option("--yes", "accept inferred and explicit choices without prompts", false)
-    .option("--force", "replace an existing .agnox.json", false)
+    .option("--force", "replace an existing .agentyx.json", false)
     .option("--json", "print machine-readable JSON only", false)
     .action(
       async (options: {
         stack?: string;
-        profile?: AgnoxProfile;
+        profile?: AgentyxProfile;
         target: string[];
         yes: boolean;
         force: boolean;

@@ -2,14 +2,14 @@ import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { AgnoxConfigNotFoundError, UnknownStackError } from "@agnox/core";
+import { AgentyxConfigNotFoundError, UnknownStackError } from "@agentyx/core";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { createResolveCommand, runResolveCommand } from "../src/commands/resolve.js";
-import { createAgnoxProgram } from "../src/index.js";
+import { createAgentyxProgram } from "../src/index.js";
 
 const exampleProjectPath = fileURLToPath(new URL("../../../examples/angular", import.meta.url));
 
-describe("agnox resolve <stack>", () => {
+describe("agentyx resolve <stack>", () => {
   it("resolves an explicit stack without a project configuration", async () => {
     const output = await runResolveCommand({
       stacks: ["angular"],
@@ -127,11 +127,11 @@ describe("agnox resolve <stack>", () => {
   });
 });
 
-describe("agnox resolve", () => {
+describe("agentyx resolve", () => {
   let projectPath: string;
 
   beforeEach(async () => {
-    projectPath = await mkdtemp(join(tmpdir(), "agnox-cli-"));
+    projectPath = await mkdtemp(join(tmpdir(), "agentyx-cli-"));
   });
 
   afterEach(async () => {
@@ -140,7 +140,7 @@ describe("agnox resolve", () => {
 
   it("renders the project configuration", async () => {
     await writeFile(
-      join(projectPath, ".agnox.json"),
+      join(projectPath, ".agentyx.json"),
       JSON.stringify({ extends: ["angular"], profile: "balanced", targets: ["codex", "kimi"] }),
       "utf8",
     );
@@ -149,7 +149,7 @@ describe("agnox resolve", () => {
 
     expect(output).toBe(
       [
-        "Agnox configuration",
+        "Agentyx configuration",
         "",
         "Profile",
         "  balanced",
@@ -178,7 +178,7 @@ describe("agnox resolve", () => {
 
   it("applies a project profile override without editing configuration", async () => {
     await writeFile(
-      join(projectPath, ".agnox.json"),
+      join(projectPath, ".agentyx.json"),
       JSON.stringify({ extends: ["angular"], profile: "balanced", targets: ["codex"] }),
       "utf8",
     );
@@ -196,7 +196,7 @@ describe("agnox resolve", () => {
 
   it("marks empty target lists", async () => {
     await writeFile(
-      join(projectPath, ".agnox.json"),
+      join(projectPath, ".agentyx.json"),
       JSON.stringify({ extends: ["core"] }),
       "utf8",
     );
@@ -235,13 +235,13 @@ describe("agnox resolve", () => {
 
   it("fails when the project has no configuration", async () => {
     await expect(runResolveCommand({ stacks: [], json: false, cwd: projectPath })).rejects.toThrow(
-      AgnoxConfigNotFoundError,
+      AgentyxConfigNotFoundError,
     );
   });
 
   it("prefers an explicit stack over the project configuration", async () => {
     await writeFile(
-      join(projectPath, ".agnox.json"),
+      join(projectPath, ".agentyx.json"),
       JSON.stringify({ extends: ["angular"] }),
       "utf8",
     );
@@ -268,8 +268,8 @@ describe("resolve command wiring", () => {
     expect(command.registeredArguments[0]?.variadic).toBe(true);
   });
 
-  it("is registered on the agnox program", () => {
-    const names = createAgnoxProgram().commands.map((command) => command.name());
+  it("is registered on the agentyx program", () => {
+    const names = createAgentyxProgram().commands.map((command) => command.name());
 
     expect(names).toContain("resolve");
   });

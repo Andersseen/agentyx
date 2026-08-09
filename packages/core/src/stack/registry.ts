@@ -30,13 +30,13 @@ export function createStackRegistry(definitions: Iterable<StackDefinitionInput>)
 }
 
 /**
- * The stacks Agnox ships with, expressed as data. Relationships live here, not
+ * The stacks Agentyx ships with, expressed as data. Relationships live here, not
  * in the resolver.
  */
 export const builtInStacks: readonly StackDefinitionInput[] = [
   {
     name: "core",
-    description: "Baseline development environment shared by every Agnox stack.",
+    description: "Baseline development environment shared by every Agentyx stack.",
     skills: ["planning", "systematic-debugging", "verification"],
   },
   {

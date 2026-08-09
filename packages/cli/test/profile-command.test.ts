@@ -4,15 +4,15 @@ import {
   runProfileListCommand,
   runProfileShowCommand,
 } from "../src/commands/profile.js";
-import { createAgnoxProgram } from "../src/index.js";
+import { createAgentyxProgram } from "../src/index.js";
 
-describe("agnox profile list", () => {
+describe("agentyx profile list", () => {
   it("lists optimization profiles", () => {
     expect(runProfileListCommand()).toBe(["lean", "balanced", "autonomous"].join("\n"));
   });
 });
 
-describe("agnox profile show", () => {
+describe("agentyx profile show", () => {
   it("shows a concise text summary", () => {
     expect(runProfileShowCommand({ name: "lean", json: false })).toBe(
       [
@@ -50,7 +50,7 @@ describe("profile command wiring", () => {
     ]);
   });
 
-  it("is registered on the agnox program", () => {
-    expect(createAgnoxProgram().commands.map((command) => command.name())).toContain("profile");
+  it("is registered on the agentyx program", () => {
+    expect(createAgentyxProgram().commands.map((command) => command.name())).toContain("profile");
   });
 });

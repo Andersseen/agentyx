@@ -1,5 +1,5 @@
 import { relative, sep } from "node:path";
-import { builtInAdapterRegistry } from "@agnox/adapters";
+import { builtInAdapterRegistry } from "@agentyx/adapters";
 import { Command } from "commander";
 import { emit, toJson } from "../output.js";
 
@@ -55,7 +55,7 @@ export async function runTargetShowCommand(input: TargetShowCommandInput): Promi
 }
 
 export function createTargetCommand(): Command {
-  const target = new Command("target").description("Inspect the agents Agnox can install into.");
+  const target = new Command("target").description("Inspect the agents Agentyx can install into.");
 
   target
     .command("list")

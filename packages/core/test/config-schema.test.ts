@@ -1,19 +1,19 @@
 import { describe, expect, it } from "vitest";
-import { AgnoxConfigValidationError } from "../src/config/errors.js";
-import { parseAgnoxConfig } from "../src/config/loader.js";
-import { AGNOX_PROFILES, agnoxConfigSchema } from "../src/config/schema.js";
+import { AgentyxConfigValidationError } from "../src/config/errors.js";
+import { parseAgentyxConfig } from "../src/config/loader.js";
+import { AGENTYX_PROFILES, agentyxConfigSchema } from "../src/config/schema.js";
 
-describe("agnoxConfigSchema", () => {
+describe("agentyxConfigSchema", () => {
   it("accepts a full configuration", () => {
-    const config = agnoxConfigSchema.parse({
-      $schema: "./node_modules/@agnox/core/schema/agnox.schema.json",
+    const config = agentyxConfigSchema.parse({
+      $schema: "./node_modules/@agentyx/core/schema/agentyx.schema.json",
       extends: ["angular"],
       profile: "balanced",
       targets: ["codex", "claude", "kimi"],
     });
 
     expect(config).toEqual({
-      $schema: "./node_modules/@agnox/core/schema/agnox.schema.json",
+      $schema: "./node_modules/@agentyx/core/schema/agentyx.schema.json",
       extends: ["angular"],
       profile: "balanced",
       targets: ["codex", "claude", "kimi"],
@@ -21,7 +21,7 @@ describe("agnoxConfigSchema", () => {
   });
 
   it("defaults extends, profile and targets", () => {
-    expect(agnoxConfigSchema.parse({})).toEqual({
+    expect(agentyxConfigSchema.parse({})).toEqual({
       extends: [],
       profile: "balanced",
       targets: [],
@@ -29,14 +29,14 @@ describe("agnoxConfigSchema", () => {
   });
 
   it("accepts every documented profile", () => {
-    for (const profile of AGNOX_PROFILES) {
-      expect(agnoxConfigSchema.parse({ profile }).profile).toBe(profile);
+    for (const profile of AGENTYX_PROFILES) {
+      expect(agentyxConfigSchema.parse({ profile }).profile).toBe(profile);
     }
   });
 
   it("does not mutate the parsed input", () => {
     const input = { extends: ["angular"] };
-    const config = agnoxConfigSchema.parse(input);
+    const config = agentyxConfigSchema.parse(input);
 
     config.extends.push("typescript");
 
@@ -44,15 +44,15 @@ describe("agnoxConfigSchema", () => {
   });
 });
 
-describe("parseAgnoxConfig", () => {
+describe("parseAgentyxConfig", () => {
   it("rejects an unknown profile", () => {
-    expect(() => parseAgnoxConfig({ profile: "yolo" })).toThrow(AgnoxConfigValidationError);
+    expect(() => parseAgentyxConfig({ profile: "yolo" })).toThrow(AgentyxConfigValidationError);
 
     try {
-      parseAgnoxConfig({ profile: "yolo" });
-      expect.unreachable("expected an AgnoxConfigValidationError");
+      parseAgentyxConfig({ profile: "yolo" });
+      expect.unreachable("expected an AgentyxConfigValidationError");
     } catch (error) {
-      const issues = (error as AgnoxConfigValidationError).issues;
+      const issues = (error as AgentyxConfigValidationError).issues;
       expect(issues).toEqual([
         { path: "profile", message: "Profile must be one of: lean, balanced, autonomous." },
       ]);
@@ -61,56 +61,56 @@ describe("parseAgnoxConfig", () => {
 
   it("rejects an empty stack name in extends", () => {
     try {
-      parseAgnoxConfig({ extends: ["angular", ""] });
-      expect.unreachable("expected an AgnoxConfigValidationError");
+      parseAgentyxConfig({ extends: ["angular", ""] });
+      expect.unreachable("expected an AgentyxConfigValidationError");
     } catch (error) {
-      expect((error as AgnoxConfigValidationError).issues).toEqual([
+      expect((error as AgentyxConfigValidationError).issues).toEqual([
         { path: "extends[1]", message: "Stack names must be non-empty strings." },
       ]);
     }
   });
 
   it("rejects non-string values in extends", () => {
-    expect(() => parseAgnoxConfig({ extends: [42] })).toThrow(AgnoxConfigValidationError);
+    expect(() => parseAgentyxConfig({ extends: [42] })).toThrow(AgentyxConfigValidationError);
   });
 
   it("rejects extends that is not an array", () => {
-    expect(() => parseAgnoxConfig({ extends: "angular" })).toThrow(AgnoxConfigValidationError);
+    expect(() => parseAgentyxConfig({ extends: "angular" })).toThrow(AgentyxConfigValidationError);
   });
 
   it("rejects an empty target name", () => {
     try {
-      parseAgnoxConfig({ targets: [""] });
-      expect.unreachable("expected an AgnoxConfigValidationError");
+      parseAgentyxConfig({ targets: [""] });
+      expect.unreachable("expected an AgentyxConfigValidationError");
     } catch (error) {
-      expect((error as AgnoxConfigValidationError).issues).toEqual([
+      expect((error as AgentyxConfigValidationError).issues).toEqual([
         { path: "targets[0]", message: "Targets must be non-empty strings." },
       ]);
     }
   });
 
-  it("accepts targets that are not known to Agnox yet", () => {
-    expect(parseAgnoxConfig({ targets: ["some-third-party-adapter"] }).targets).toEqual([
+  it("accepts targets that are not known to Agentyx yet", () => {
+    expect(parseAgentyxConfig({ targets: ["some-third-party-adapter"] }).targets).toEqual([
       "some-third-party-adapter",
     ]);
   });
 
   it("rejects unknown top-level keys", () => {
-    expect(() => parseAgnoxConfig({ skills: ["angular"] })).toThrow(AgnoxConfigValidationError);
+    expect(() => parseAgentyxConfig({ skills: ["angular"] })).toThrow(AgentyxConfigValidationError);
   });
 
   it("rejects a non-object document", () => {
     try {
-      parseAgnoxConfig([]);
-      expect.unreachable("expected an AgnoxConfigValidationError");
+      parseAgentyxConfig([]);
+      expect.unreachable("expected an AgentyxConfigValidationError");
     } catch (error) {
-      expect((error as AgnoxConfigValidationError).issues[0]?.path).toBe("(root)");
+      expect((error as AgentyxConfigValidationError).issues[0]?.path).toBe("(root)");
     }
   });
 
   it("mentions the source file when one is supplied", () => {
-    expect(() => parseAgnoxConfig({ profile: "yolo" }, "/tmp/.agnox.json")).toThrow(
-      /Invalid Agnox configuration in \/tmp\/\.agnox\.json/,
+    expect(() => parseAgentyxConfig({ profile: "yolo" }, "/tmp/.agentyx.json")).toThrow(
+      /Invalid Agentyx configuration in \/tmp\/\.agentyx\.json/,
     );
   });
 });

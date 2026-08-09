@@ -4,19 +4,23 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
-  AgnoxConfigNotFoundError,
-  AgnoxConfigParseError,
-  AgnoxConfigValidationError,
+  AgentyxConfigNotFoundError,
+  AgentyxConfigParseError,
+  AgentyxConfigValidationError,
 } from "../src/config/errors.js";
-import { AGNOX_CONFIG_FILENAME, agnoxConfigPath, loadAgnoxConfig } from "../src/config/loader.js";
+import {
+  AGENTYX_CONFIG_FILENAME,
+  agentyxConfigPath,
+  loadAgentyxConfig,
+} from "../src/config/loader.js";
 
 const exampleProjectPath = fileURLToPath(new URL("../../../examples/angular", import.meta.url));
 
-describe("loadAgnoxConfig", () => {
+describe("loadAgentyxConfig", () => {
   let projectPath: string;
 
   beforeEach(async () => {
-    projectPath = await mkdtemp(join(tmpdir(), "agnox-config-"));
+    projectPath = await mkdtemp(join(tmpdir(), "agentyx-config-"));
   });
 
   afterEach(async () => {
@@ -24,7 +28,7 @@ describe("loadAgnoxConfig", () => {
   });
 
   async function writeConfig(contents: string): Promise<void> {
-    await writeFile(join(projectPath, AGNOX_CONFIG_FILENAME), contents, "utf8");
+    await writeFile(join(projectPath, AGENTYX_CONFIG_FILENAME), contents, "utf8");
   }
 
   it("loads and validates a configuration file", async () => {
@@ -32,7 +36,7 @@ describe("loadAgnoxConfig", () => {
       JSON.stringify({ extends: ["angular"], profile: "lean", targets: ["codex"] }),
     );
 
-    await expect(loadAgnoxConfig(projectPath)).resolves.toEqual({
+    await expect(loadAgentyxConfig(projectPath)).resolves.toEqual({
       extends: ["angular"],
       profile: "lean",
       targets: ["codex"],
@@ -42,7 +46,7 @@ describe("loadAgnoxConfig", () => {
   it("applies defaults for omitted fields", async () => {
     await writeConfig(JSON.stringify({ extends: ["core"] }));
 
-    await expect(loadAgnoxConfig(projectPath)).resolves.toEqual({
+    await expect(loadAgentyxConfig(projectPath)).resolves.toEqual({
       extends: ["core"],
       profile: "balanced",
       targets: [],
@@ -50,30 +54,30 @@ describe("loadAgnoxConfig", () => {
   });
 
   it("reports a missing file with its path", async () => {
-    const expectedPath = agnoxConfigPath(projectPath);
+    const expectedPath = agentyxConfigPath(projectPath);
 
-    await expect(loadAgnoxConfig(projectPath)).rejects.toThrow(AgnoxConfigNotFoundError);
-    await expect(loadAgnoxConfig(projectPath)).rejects.toThrow(expectedPath);
+    await expect(loadAgentyxConfig(projectPath)).rejects.toThrow(AgentyxConfigNotFoundError);
+    await expect(loadAgentyxConfig(projectPath)).rejects.toThrow(expectedPath);
   });
 
   it("reports a missing project directory as a missing file", async () => {
-    await expect(loadAgnoxConfig(join(projectPath, "nope"))).rejects.toThrow(
-      AgnoxConfigNotFoundError,
+    await expect(loadAgentyxConfig(join(projectPath, "nope"))).rejects.toThrow(
+      AgentyxConfigNotFoundError,
     );
   });
 
   it("reports malformed JSON", async () => {
     await writeConfig("{ not json");
 
-    await expect(loadAgnoxConfig(projectPath)).rejects.toThrow(AgnoxConfigParseError);
-    await expect(loadAgnoxConfig(projectPath)).rejects.toThrow(/is not valid JSON/);
+    await expect(loadAgentyxConfig(projectPath)).rejects.toThrow(AgentyxConfigParseError);
+    await expect(loadAgentyxConfig(projectPath)).rejects.toThrow(/is not valid JSON/);
   });
 
   it("reports schema violations without recovering from them", async () => {
     await writeConfig(JSON.stringify({ profile: "turbo" }));
 
-    await expect(loadAgnoxConfig(projectPath)).rejects.toThrow(AgnoxConfigValidationError);
-    await expect(loadAgnoxConfig(projectPath)).rejects.toThrow(/profile: Profile must be one of/);
+    await expect(loadAgentyxConfig(projectPath)).rejects.toThrow(AgentyxConfigValidationError);
+    await expect(loadAgentyxConfig(projectPath)).rejects.toThrow(/profile: Profile must be one of/);
   });
 
   it("does not search parent directories", async () => {
@@ -81,11 +85,11 @@ describe("loadAgnoxConfig", () => {
     const childPath = join(projectPath, "packages", "app");
     await mkdir(childPath, { recursive: true });
 
-    await expect(loadAgnoxConfig(childPath)).rejects.toThrow(AgnoxConfigNotFoundError);
+    await expect(loadAgentyxConfig(childPath)).rejects.toThrow(AgentyxConfigNotFoundError);
   });
 
   it("loads the repository example project", async () => {
-    await expect(loadAgnoxConfig(exampleProjectPath)).resolves.toEqual({
+    await expect(loadAgentyxConfig(exampleProjectPath)).resolves.toEqual({
       extends: ["angular"],
       profile: "balanced",
       targets: ["codex", "claude"],
@@ -93,8 +97,8 @@ describe("loadAgnoxConfig", () => {
   });
 });
 
-describe("agnoxConfigPath", () => {
+describe("agentyxConfigPath", () => {
   it("appends the configuration filename to the project path", () => {
-    expect(agnoxConfigPath("/projects/app")).toBe(join("/projects/app", ".agnox.json"));
+    expect(agentyxConfigPath("/projects/app")).toBe(join("/projects/app", ".agentyx.json"));
   });
 });

@@ -1,6 +1,6 @@
 import { readFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
-import type { McpServerDefinition, SkillDefinition } from "@agnox/core";
+import type { McpServerDefinition, SkillDefinition } from "@agentyx/core";
 import type { PlannedFile } from "./adapter.js";
 import { builtInAdapterRegistry } from "./built-in.js";
 import { MissingInstallTargetsError, SharedInstallConflictError } from "./errors.js";

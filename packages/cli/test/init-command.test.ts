@@ -2,8 +2,8 @@ import { cp, mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/pr
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { UnknownAdapterError } from "@agnox/adapters";
-import { UnknownStackError } from "@agnox/core";
+import { UnknownAdapterError } from "@agentyx/adapters";
+import { UnknownStackError } from "@agentyx/core";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   createInitCommand,
@@ -11,7 +11,7 @@ import {
   planNonInteractiveInit,
   runInitCommand,
 } from "../src/commands/init.js";
-import { createAgnoxProgram } from "../src/index.js";
+import { createAgentyxProgram } from "../src/index.js";
 
 const fixturesPath = fileURLToPath(
   new URL("../../../packages/core/test/fixtures", import.meta.url),
@@ -20,14 +20,14 @@ const fixturesPath = fileURLToPath(
 let projectDir: string;
 
 beforeEach(async () => {
-  projectDir = await mkdtemp(join(tmpdir(), "agnox-init-"));
+  projectDir = await mkdtemp(join(tmpdir(), "agentyx-init-"));
 });
 
 afterEach(async () => {
   await rm(projectDir, { recursive: true, force: true });
 });
 
-describe("agnox init --yes", () => {
+describe("agentyx init --yes", () => {
   it("creates deterministic config from explicit options and performs no install", async () => {
     await cp(join(fixturesPath, "typescript-project"), projectDir, { recursive: true });
 
@@ -43,7 +43,7 @@ describe("agnox init --yes", () => {
 
     expect(output).toBe(
       [
-        "Created .agnox.json",
+        "Created .agentyx.json",
         "",
         "Stack",
         "  typescript",
@@ -52,10 +52,10 @@ describe("agnox init --yes", () => {
         "Targets",
         "  codex",
         "  kimi",
-        "Next: agnox doctor",
+        "Next: agentyx doctor",
       ].join("\n"),
     );
-    expect(await readFile(join(projectDir, ".agnox.json"), "utf8")).toBe(
+    expect(await readFile(join(projectDir, ".agentyx.json"), "utf8")).toBe(
       [
         "{",
         '  "extends": [',
@@ -116,7 +116,7 @@ describe("agnox init --yes", () => {
       cwd: projectDir,
     });
 
-    expect(JSON.parse(await readFile(join(projectDir, ".agnox.json"), "utf8"))).toEqual({
+    expect(JSON.parse(await readFile(join(projectDir, ".agentyx.json"), "utf8"))).toEqual({
       extends: ["typescript"],
       profile: "autonomous",
       targets: ["claude"],
@@ -125,7 +125,7 @@ describe("agnox init --yes", () => {
 
   it("refuses an existing config unless forced", async () => {
     await writeFile(join(projectDir, "package.json"), '{"devDependencies":{"typescript":"^5"}}\n');
-    await writeFile(join(projectDir, ".agnox.json"), '{"extends":["core"]}\n');
+    await writeFile(join(projectDir, ".agentyx.json"), '{"extends":["core"]}\n');
 
     await expect(
       runInitCommand({
@@ -150,7 +150,7 @@ describe("agnox init --yes", () => {
     });
 
     expect(JSON.parse(output)).toEqual({
-      path: ".agnox.json",
+      path: ".agentyx.json",
       replaced: true,
       stack: "typescript",
       profile: "lean",
@@ -205,7 +205,7 @@ describe("agnox init --yes", () => {
 
 describe("init command wiring", () => {
   it("is part of the top-level program", () => {
-    expect(createAgnoxProgram().commands.map((command) => command.name())).toContain("init");
+    expect(createAgentyxProgram().commands.map((command) => command.name())).toContain("init");
   });
 
   it("keeps prompt UI behind command wiring", () => {

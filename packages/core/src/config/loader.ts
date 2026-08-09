@@ -1,53 +1,55 @@
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import {
-  AgnoxConfigNotFoundError,
-  AgnoxConfigParseError,
-  AgnoxConfigValidationError,
+  AgentyxConfigNotFoundError,
+  AgentyxConfigParseError,
+  AgentyxConfigValidationError,
 } from "./errors.js";
-import { type AgnoxConfig, agnoxConfigSchema } from "./schema.js";
+import { type AgentyxConfig, agentyxConfigSchema } from "./schema.js";
 
-export const AGNOX_CONFIG_FILENAME = ".agnox.json";
+export const AGENTYX_CONFIG_FILENAME = ".agentyx.json";
 
-/** The absolute path `.agnox.json` is read from for a given project. */
-export function agnoxConfigPath(projectPath: string = process.cwd()): string {
-  return resolve(projectPath, AGNOX_CONFIG_FILENAME);
+/** The absolute path `.agentyx.json` is read from for a given project. */
+export function agentyxConfigPath(projectPath: string = process.cwd()): string {
+  return resolve(projectPath, AGENTYX_CONFIG_FILENAME);
 }
 
 /**
  * Validates an already-parsed configuration document.
  *
- * @throws {AgnoxConfigValidationError} when the document violates the schema.
+ * @throws {AgentyxConfigValidationError} when the document violates the schema.
  */
-export function parseAgnoxConfig(value: unknown, filePath?: string): AgnoxConfig {
-  const result = agnoxConfigSchema.safeParse(value);
+export function parseAgentyxConfig(value: unknown, filePath?: string): AgentyxConfig {
+  const result = agentyxConfigSchema.safeParse(value);
 
   if (!result.success) {
-    throw new AgnoxConfigValidationError(result.error, filePath);
+    throw new AgentyxConfigValidationError(result.error, filePath);
   }
 
   return result.data;
 }
 
 /**
- * Reads and validates `.agnox.json` from `projectPath`.
+ * Reads and validates `.agentyx.json` from `projectPath`.
  *
  * Parent directories are not searched, and invalid configurations are never
  * silently repaired.
  *
- * @throws {AgnoxConfigNotFoundError} when the file does not exist.
- * @throws {AgnoxConfigParseError} when the file is not valid JSON.
- * @throws {AgnoxConfigValidationError} when the document violates the schema.
+ * @throws {AgentyxConfigNotFoundError} when the file does not exist.
+ * @throws {AgentyxConfigParseError} when the file is not valid JSON.
+ * @throws {AgentyxConfigValidationError} when the document violates the schema.
  */
-export async function loadAgnoxConfig(projectPath: string = process.cwd()): Promise<AgnoxConfig> {
-  const filePath = agnoxConfigPath(projectPath);
+export async function loadAgentyxConfig(
+  projectPath: string = process.cwd(),
+): Promise<AgentyxConfig> {
+  const filePath = agentyxConfigPath(projectPath);
   let contents: string;
 
   try {
     contents = await readFile(filePath, "utf8");
   } catch (cause) {
     if (isFileNotFound(cause)) {
-      throw new AgnoxConfigNotFoundError(filePath, { cause });
+      throw new AgentyxConfigNotFoundError(filePath, { cause });
     }
 
     throw cause;
@@ -59,10 +61,10 @@ export async function loadAgnoxConfig(projectPath: string = process.cwd()): Prom
     document = JSON.parse(contents);
   } catch (cause) {
     const reason = cause instanceof Error ? cause.message : String(cause);
-    throw new AgnoxConfigParseError(filePath, reason, { cause });
+    throw new AgentyxConfigParseError(filePath, reason, { cause });
   }
 
-  return parseAgnoxConfig(document, filePath);
+  return parseAgentyxConfig(document, filePath);
 }
 
 function isFileNotFound(cause: unknown): boolean {

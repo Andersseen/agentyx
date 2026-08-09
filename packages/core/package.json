@@ -1,21 +1,21 @@
 {
-  "name": "@agnox/core",
+  "name": "@agentyx/core",
   "version": "0.0.0",
-  "description": "Shared domain foundations for Agnox: configuration model, stack resolution and skills.",
+  "description": "Shared domain foundations for Agentyx: configuration model, stack resolution and skills.",
   "type": "module",
   "license": "MIT",
   "author": "Andersseen",
-  "homepage": "https://github.com/Andersseen/agnox/tree/main/packages/core#readme",
+  "homepage": "https://github.com/Andersseen/agentyx/tree/main/packages/core#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Andersseen/agnox.git",
+    "url": "git+https://github.com/Andersseen/agentyx.git",
     "directory": "packages/core"
   },
   "bugs": {
-    "url": "https://github.com/Andersseen/agnox/issues"
+    "url": "https://github.com/Andersseen/agentyx/issues"
   },
   "keywords": [
-    "agnox",
+    "agentyx",
     "coding-agents",
     "configuration",
     "developer-tools",
@@ -28,7 +28,7 @@
       "types": "./dist/index.d.mts",
       "default": "./dist/index.mjs"
     },
-    "./schema/agnox.schema.json": "./schema/agnox.schema.json"
+    "./schema/agentyx.schema.json": "./schema/agentyx.schema.json"
   },
   "files": [
     "dist",

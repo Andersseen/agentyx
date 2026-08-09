@@ -1,5 +1,5 @@
-import type { AgnoxProfile } from "../config/schema.js";
-import { DEFAULT_AGNOX_PROFILE } from "../config/schema.js";
+import type { AgentyxProfile } from "../config/schema.js";
+import { DEFAULT_AGENTYX_PROFILE } from "../config/schema.js";
 import { isMcpLevelEnabled } from "../optimization/profile.js";
 import { builtInStackRegistry, type StackRegistry } from "../stack/registry.js";
 import { resolveStacks } from "../stack/resolver.js";
@@ -38,7 +38,7 @@ export function collectStackMcpServerReferences(
 
 export function filterEffectiveMcpServers(
   servers: readonly McpServerReference[],
-  profile: AgnoxProfile,
+  profile: AgentyxProfile,
 ): string[] {
   return servers
     .filter((server) => isMcpLevelEnabled(profile, server.level))
@@ -49,7 +49,7 @@ export function collectStackMcpServers(
   resolvedStacks: readonly string[],
   stackRegistry: StackRegistry,
   mcpRegistry: McpServerRegistry,
-  profile: AgnoxProfile = DEFAULT_AGNOX_PROFILE,
+  profile: AgentyxProfile = DEFAULT_AGENTYX_PROFILE,
 ): string[] {
   return filterEffectiveMcpServers(
     collectStackMcpServerReferences(resolvedStacks, stackRegistry, mcpRegistry),
@@ -73,7 +73,7 @@ export function resolveStackMcpServers(
   requestedStacks: readonly string[],
   stackRegistry: StackRegistry = builtInStackRegistry,
   mcpRegistry: McpServerRegistry = builtInMcpServerRegistry,
-  profile: AgnoxProfile = DEFAULT_AGNOX_PROFILE,
+  profile: AgentyxProfile = DEFAULT_AGENTYX_PROFILE,
 ): string[] {
   return collectStackMcpServers(
     resolveStacks(requestedStacks, stackRegistry),

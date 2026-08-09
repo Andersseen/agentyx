@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import { buildAgnoxConfig, detectProject, formatAgnoxConfig } from "../src/index.js";
+import { buildAgentyxConfig, detectProject, formatAgentyxConfig } from "../src/index.js";
 
 const fixturesPath = fileURLToPath(new URL("fixtures", import.meta.url));
 
@@ -36,7 +36,7 @@ describe("detectProject", () => {
   });
 
   it("reports ambiguous lockfiles without guessing", async () => {
-    const projectDir = await mkdtemp(join(tmpdir(), "agnox-detect-"));
+    const projectDir = await mkdtemp(join(tmpdir(), "agentyx-detect-"));
 
     try {
       await writeFile(join(projectDir, "package.json"), "{}\n", "utf8");
@@ -57,7 +57,7 @@ describe("detectProject", () => {
   });
 
   it("uses tsconfig.json as a TypeScript signal", async () => {
-    const projectDir = await mkdtemp(join(tmpdir(), "agnox-detect-"));
+    const projectDir = await mkdtemp(join(tmpdir(), "agentyx-detect-"));
 
     try {
       await writeFile(join(projectDir, "package.json"), "{}\n", "utf8");
@@ -73,15 +73,15 @@ describe("detectProject", () => {
   });
 });
 
-describe("formatAgnoxConfig", () => {
+describe("formatAgentyxConfig", () => {
   it("renders deterministic JSON without a fragile schema path", () => {
-    const config = buildAgnoxConfig({
+    const config = buildAgentyxConfig({
       stack: "angular",
       profile: "lean",
       targets: ["codex", "kimi"],
     });
 
-    expect(formatAgnoxConfig(config)).toBe(
+    expect(formatAgentyxConfig(config)).toBe(
       [
         "{",
         '  "extends": [',
@@ -96,17 +96,17 @@ describe("formatAgnoxConfig", () => {
         "",
       ].join("\n"),
     );
-    expect(formatAgnoxConfig(config)).not.toContain("$schema");
+    expect(formatAgentyxConfig(config)).not.toContain("$schema");
   });
 
   it("matches JSON.parse output", () => {
-    const config = buildAgnoxConfig({
+    const config = buildAgentyxConfig({
       stack: "typescript",
       profile: "balanced",
       targets: ["claude"],
     });
 
-    expect(JSON.parse(formatAgnoxConfig(config))).toEqual(config);
+    expect(JSON.parse(formatAgentyxConfig(config))).toEqual(config);
   });
 });
 

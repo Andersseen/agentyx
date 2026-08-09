@@ -1,4 +1,4 @@
-import type { McpServerDefinition, SkillDefinition } from "@agnox/core";
+import type { McpServerDefinition, SkillDefinition } from "@agentyx/core";
 
 export interface AdapterCapabilities {
   readonly skills: boolean;
@@ -44,17 +44,17 @@ export interface PlannedMcpConfig {
   readonly servers: readonly string[];
 }
 
-/** What Agnox can say about a provider in a project without changing anything. */
+/** What Agentyx can say about a provider in a project without changing anything. */
 export interface AdapterDetection {
   readonly target: string;
-  /** Absolute directory Agnox owns for this provider's skills. */
+  /** Absolute directory Agentyx owns for this provider's skills. */
   readonly skillsPath: string;
   /** Whether that directory already exists. */
   readonly present: boolean;
 }
 
 /**
- * Translates a resolved Agnox environment into one provider's filesystem
+ * Translates a resolved Agentyx environment into one provider's filesystem
  * layout.
  *
  * The contract is deliberately narrow, and split so that provider knowledge
@@ -67,7 +67,7 @@ export interface AdapterDetection {
  *   adapter reuses instead of reimplementing.
  *
  * There is no MCP, hook or permission method here on purpose; skills are the
- * only thing Agnox installs today.
+ * only thing Agentyx installs today.
  */
 export interface AgentAdapter {
   /** Stable identifier, matching the value used in `targets`. */
@@ -77,7 +77,7 @@ export interface AgentAdapter {
   readonly capabilities: AdapterCapabilities;
   /** Official provider documentation that explains the locations/formats this adapter uses. */
   readonly references?: readonly string[];
-  /** The absolute directory Agnox owns for this provider in `projectDir`. */
+  /** The absolute directory Agentyx owns for this provider in `projectDir`. */
   skillsPath(projectDir: string): string;
   /** Reads the filesystem to report where and whether the provider is set up. Never writes. */
   detect(projectDir: string): Promise<AdapterDetection>;

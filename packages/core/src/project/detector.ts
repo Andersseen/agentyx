@@ -1,6 +1,6 @@
 import { access, readFile } from "node:fs/promises";
 import { join } from "node:path";
-import type { AgnoxConfigInput, AgnoxProfile } from "../config/schema.js";
+import type { AgentyxConfigInput, AgentyxProfile } from "../config/schema.js";
 
 export const PACKAGE_MANAGERS = ["pnpm", "npm", "yarn", "bun"] as const;
 
@@ -69,11 +69,11 @@ export async function detectProject(projectDir: string): Promise<ProjectDetectio
   };
 }
 
-export function buildAgnoxConfig(input: {
+export function buildAgentyxConfig(input: {
   readonly stack: string;
-  readonly profile: AgnoxProfile;
+  readonly profile: AgentyxProfile;
   readonly targets: readonly string[];
-}): AgnoxConfigInput {
+}): AgentyxConfigInput {
   return {
     extends: [input.stack],
     profile: input.profile,
@@ -81,7 +81,7 @@ export function buildAgnoxConfig(input: {
   };
 }
 
-export function formatAgnoxConfig(config: AgnoxConfigInput): string {
+export function formatAgentyxConfig(config: AgentyxConfigInput): string {
   return `${JSON.stringify(config, null, 2)}\n`;
 }
 

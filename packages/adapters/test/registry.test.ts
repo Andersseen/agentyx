@@ -1,4 +1,4 @@
-import { AgnoxError } from "@agnox/core";
+import { AgentyxError } from "@agentyx/core";
 import { describe, expect, it } from "vitest";
 import type { AgentAdapter } from "../src/adapter.js";
 import { builtInAdapterRegistry, builtInAdapters } from "../src/built-in.js";
@@ -48,7 +48,7 @@ describe("builtInAdapterRegistry", () => {
       builtInAdapterRegistry.get("opencode");
       expect.unreachable("expected an UnknownAdapterError");
     } catch (error) {
-      expect(error).toBeInstanceOf(AgnoxError);
+      expect(error).toBeInstanceOf(AgentyxError);
       expect((error as UnknownAdapterError).code).toBe("unknown_adapter");
       expect((error as UnknownAdapterError).target).toBe("opencode");
     }

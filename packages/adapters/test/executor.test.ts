@@ -1,7 +1,7 @@
 import { mkdtemp, readdir, readFile, rm, stat, utimes, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { builtInSkillRegistry, formatSkillMarkdown, parseSkillMarkdown } from "@agnox/core";
+import { builtInSkillRegistry, formatSkillMarkdown, parseSkillMarkdown } from "@agentyx/core";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { InstallPathError } from "../src/errors.js";
 import { applyInstallPlan, applyInstallPlans } from "../src/executor.js";
@@ -14,7 +14,7 @@ describe("applyInstallPlan", () => {
   let projectDir: string;
 
   beforeEach(async () => {
-    projectDir = await mkdtemp(join(tmpdir(), "agnox-executor-"));
+    projectDir = await mkdtemp(join(tmpdir(), "agentyx-executor-"));
   });
 
   afterEach(async () => {
@@ -137,7 +137,7 @@ describe("applyInstallPlans", () => {
   let projectDir: string;
 
   beforeEach(async () => {
-    projectDir = await mkdtemp(join(tmpdir(), "agnox-executor-"));
+    projectDir = await mkdtemp(join(tmpdir(), "agentyx-executor-"));
   });
 
   afterEach(async () => {

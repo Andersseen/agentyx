@@ -1,38 +1,38 @@
 import type { ZodError } from "zod";
-import { AgnoxError } from "../errors.js";
+import { AgentyxError } from "../errors.js";
 
 /** A single configuration problem, addressed by its location in the document. */
-export interface AgnoxConfigIssue {
+export interface AgentyxConfigIssue {
   /** Dotted path to the offending value, or `(root)` for the document itself. */
   readonly path: string;
   readonly message: string;
 }
 
-/** Raised when the supplied directory has no `.agnox.json`. */
-export class AgnoxConfigNotFoundError extends AgnoxError {
+/** Raised when the supplied directory has no `.agentyx.json`. */
+export class AgentyxConfigNotFoundError extends AgentyxError {
   readonly filePath: string;
 
   constructor(filePath: string, options?: ErrorOptions) {
-    super("agnox_config_not_found", `Agnox configuration file not found: ${filePath}`, options);
-    this.name = "AgnoxConfigNotFoundError";
+    super("agentyx_config_not_found", `Agentyx configuration file not found: ${filePath}`, options);
+    this.name = "AgentyxConfigNotFoundError";
     this.filePath = filePath;
   }
 }
 
-/** Raised when `.agnox.json` is not valid JSON. */
-export class AgnoxConfigParseError extends AgnoxError {
+/** Raised when `.agentyx.json` is not valid JSON. */
+export class AgentyxConfigParseError extends AgentyxError {
   readonly filePath: string;
 
   constructor(filePath: string, reason: string, options?: ErrorOptions) {
-    super("agnox_config_parse_error", `${filePath} is not valid JSON: ${reason}`, options);
-    this.name = "AgnoxConfigParseError";
+    super("agentyx_config_parse_error", `${filePath} is not valid JSON: ${reason}`, options);
+    this.name = "AgentyxConfigParseError";
     this.filePath = filePath;
   }
 }
 
-/** Raised when the document parses as JSON but violates the Agnox schema. */
-export class AgnoxConfigValidationError extends AgnoxError {
-  readonly issues: readonly AgnoxConfigIssue[];
+/** Raised when the document parses as JSON but violates the Agentyx schema. */
+export class AgentyxConfigValidationError extends AgentyxError {
+  readonly issues: readonly AgentyxConfigIssue[];
   /** The file the configuration came from, when it was read from disk. */
   readonly filePath: string | undefined;
 
@@ -41,14 +41,14 @@ export class AgnoxConfigValidationError extends AgnoxError {
     const location = filePath === undefined ? "" : ` in ${filePath}`;
     const details = issues.map((issue) => `  - ${issue.path}: ${issue.message}`).join("\n");
 
-    super("agnox_config_invalid", `Invalid Agnox configuration${location}:\n${details}`);
-    this.name = "AgnoxConfigValidationError";
+    super("agentyx_config_invalid", `Invalid Agentyx configuration${location}:\n${details}`);
+    this.name = "AgentyxConfigValidationError";
     this.issues = issues;
     this.filePath = filePath;
   }
 }
 
-function toConfigIssues(error: ZodError): readonly AgnoxConfigIssue[] {
+function toConfigIssues(error: ZodError): readonly AgentyxConfigIssue[] {
   return error.issues.map((issue) => ({
     path: formatIssuePath(issue.path),
     message: issue.message,

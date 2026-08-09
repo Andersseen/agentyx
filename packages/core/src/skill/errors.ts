@@ -1,5 +1,5 @@
 import type { ZodError } from "zod";
-import { AgnoxError } from "../errors.js";
+import { AgentyxError } from "../errors.js";
 
 /**
  * Raised when a stack references a skill the registry does not know.
@@ -7,7 +7,7 @@ import { AgnoxError } from "../errors.js";
  * The offending name is exposed as `skillName`; `stack` stays the JS stack
  * trace inherited from `Error`.
  */
-export class UnknownSkillError extends AgnoxError {
+export class UnknownSkillError extends AgentyxError {
   readonly skillName: string;
   /** The stack that declared the skill, when the failure came from resolution. */
   readonly requiredBy: string | undefined;
@@ -26,7 +26,7 @@ export class UnknownSkillError extends AgnoxError {
 }
 
 /** Raised when a registry is built from sources that reuse a skill name. */
-export class DuplicateSkillError extends AgnoxError {
+export class DuplicateSkillError extends AgentyxError {
   readonly skillName: string;
 
   constructor(skillName: string) {
@@ -40,10 +40,10 @@ export class DuplicateSkillError extends AgnoxError {
  * Raised when a skill exists but cannot be turned into a valid definition —
  * malformed `SKILL.md` frontmatter, a missing field, an unreadable file.
  *
- * Built-in skills ship with Agnox, so this is a programmer error rather than
+ * Built-in skills ship with Agentyx, so this is a programmer error rather than
  * something a user can fix in their project.
  */
-export class InvalidSkillError extends AgnoxError {
+export class InvalidSkillError extends AgentyxError {
   /** Where the skill came from: a file path, or a label for an in-memory source. */
   readonly origin: string;
   readonly reason: string;

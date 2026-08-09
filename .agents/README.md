@@ -1,7 +1,7 @@
 # Agent workflow skills
 
-Skills for AI coding agents working **on this repository**. They are not Agnox product
-configuration — Agnox does not generate or read anything in this directory.
+Skills for AI coding agents working **on this repository**. They are not Agentyx product
+configuration — Agentyx does not generate or read anything in this directory.
 
 Every skill here is provider-neutral: plain Markdown, no provider names, no tool names, no
 assumption about which agent is reading it. Claude Code, Codex, Cursor, Copilot, Gemini CLI and
@@ -14,17 +14,17 @@ anything else that can read a file all get the same instructions.
 ```
 
 One directory per skill, `SKILL.md` inside it, YAML frontmatter with `name` and `description`, and
-the Markdown body as the instructions — the same shape Agnox itself defines in
+the Markdown body as the instructions — the same shape Agentyx itself defines in
 [packages/core/skills](../packages/core/skills). Nothing else is required to consume one: read the
 file, follow the body.
 
-- [verify-agnox](skills/verify-agnox/SKILL.md) — the full verification pipeline, including the CLI
+- [verify-agentyx](skills/verify-agentyx/SKILL.md) — the full verification pipeline, including the CLI
   and schema checks `pnpm check` does not cover.
 - [add-builtin-stack](skills/add-builtin-stack/SKILL.md) — add a stack to the built-in registry with
   the tests it needs.
-- [context-efficient-development](skills/context-efficient-development/SKILL.md) — keep Agnox
+- [context-efficient-development](skills/context-efficient-development/SKILL.md) — keep Agentyx
   development context, commands and output focused without weakening verification.
-- [navigate-agnox](skills/navigate-agnox/SKILL.md) — quickly choose the right package or directory
+- [navigate-agentyx](skills/navigate-agentyx/SKILL.md) — quickly choose the right package or directory
   for a change.
 
 [AGENTS.md](../AGENTS.md) lists the same skills, so an agent that reads the repository's instruction

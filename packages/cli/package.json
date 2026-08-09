@@ -1,27 +1,27 @@
 {
-  "name": "@agnox/cli",
+  "name": "@agentyx/cli",
   "version": "0.0.0",
-  "description": "Command-line interface for Agnox.",
+  "description": "Command-line interface for Agentyx.",
   "type": "module",
   "license": "MIT",
   "author": "Andersseen",
-  "homepage": "https://github.com/Andersseen/agnox/tree/main/packages/cli#readme",
+  "homepage": "https://github.com/Andersseen/agentyx/tree/main/packages/cli#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Andersseen/agnox.git",
+    "url": "git+https://github.com/Andersseen/agentyx.git",
     "directory": "packages/cli"
   },
   "bugs": {
-    "url": "https://github.com/Andersseen/agnox/issues"
+    "url": "https://github.com/Andersseen/agentyx/issues"
   },
   "keywords": [
-    "agnox",
+    "agentyx",
     "cli",
     "coding-agents",
     "developer-tools"
   ],
   "bin": {
-    "agnox": "./dist/index.mjs"
+    "agentyx": "./dist/index.mjs"
   },
   "exports": {
     ".": {
@@ -39,14 +39,14 @@
     "access": "public"
   },
   "scripts": {
-    "agnox": "node dist/index.mjs",
+    "agentyx": "node dist/index.mjs",
     "build": "tsdown src/index.ts --dts --clean",
     "clean": "rm -rf dist",
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
-    "@agnox/adapters": "workspace:*",
-    "@agnox/core": "workspace:*",
+    "@agentyx/adapters": "workspace:*",
+    "@agentyx/core": "workspace:*",
     "@clack/prompts": "^0.11.0",
     "commander": "^14.0.0",
     "zod": "^4.0.17"

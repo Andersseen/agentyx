@@ -8,7 +8,7 @@ import {
   renderDoctorReport,
   runDoctorCommand,
 } from "../src/commands/doctor.js";
-import { createAgnoxProgram } from "../src/index.js";
+import { createAgentyxProgram } from "../src/index.js";
 
 const fixturesPath = fileURLToPath(
   new URL("../../../packages/core/test/fixtures", import.meta.url),
@@ -17,7 +17,7 @@ const fixturesPath = fileURLToPath(
 let projectDir: string;
 
 beforeEach(async () => {
-  projectDir = await mkdtemp(join(tmpdir(), "agnox-doctor-"));
+  projectDir = await mkdtemp(join(tmpdir(), "agentyx-doctor-"));
 });
 
 afterEach(async () => {
@@ -25,10 +25,14 @@ afterEach(async () => {
 });
 
 async function writeConfig(config: Record<string, unknown>): Promise<void> {
-  await writeFile(join(projectDir, ".agnox.json"), `${JSON.stringify(config, null, 2)}\n`, "utf8");
+  await writeFile(
+    join(projectDir, ".agentyx.json"),
+    `${JSON.stringify(config, null, 2)}\n`,
+    "utf8",
+  );
 }
 
-describe("agnox doctor", () => {
+describe("agentyx doctor", () => {
   it("reports a healthy project", async () => {
     await cp(join(fixturesPath, "typescript-project"), projectDir, { recursive: true });
     await writeConfig({ extends: ["typescript"], profile: "balanced", targets: ["codex"] });
@@ -61,19 +65,19 @@ describe("agnox doctor", () => {
     expect(report.status).toBe("warnings");
     expect(report.diagnostics).toContainEqual({
       level: "warning",
-      code: "agnox_config_missing",
-      message: ".agnox.json is missing. Run agnox init to create it.",
+      code: "agentyx_config_missing",
+      message: ".agentyx.json is missing. Run agentyx init to create it.",
     });
   });
 
   it("reports malformed config as an error", async () => {
-    await writeFile(join(projectDir, ".agnox.json"), "{", "utf8");
+    await writeFile(join(projectDir, ".agentyx.json"), "{", "utf8");
 
     const report = await runDoctorCommand({ json: false, cwd: projectDir });
 
     expect(report.status).toBe("errors");
     expect(
-      report.diagnostics.some((diagnostic) => diagnostic.code === "agnox_config_parse_error"),
+      report.diagnostics.some((diagnostic) => diagnostic.code === "agentyx_config_parse_error"),
     ).toBe(true);
   });
 
@@ -163,13 +167,13 @@ describe("agnox doctor", () => {
 
     await runDoctorCommand({ json: false, cwd: projectDir });
 
-    expect(await readdir(projectDir)).toEqual([".agnox.json"]);
+    expect(await readdir(projectDir)).toEqual([".agentyx.json"]);
   });
 });
 
 describe("doctor command wiring", () => {
   it("is part of the top-level program", () => {
-    expect(createAgnoxProgram().commands.map((command) => command.name())).toContain("doctor");
+    expect(createAgentyxProgram().commands.map((command) => command.name())).toContain("doctor");
   });
 
   it("has only stable output options", () => {

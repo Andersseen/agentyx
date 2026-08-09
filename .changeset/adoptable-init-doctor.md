@@ -1,7 +1,7 @@
 ---
-"@agnox/core": minor
-"@agnox/cli": minor
-"@agnox/adapters": patch
+"@agentyx/core": minor
+"@agentyx/cli": minor
+"@agentyx/adapters": patch
 ---
 
-Add project detection, `agnox init`, `agnox doctor`, root dogfooding config, adoption fixtures and package-artifact smoke validation.
+Add project detection, `agentyx init`, `agentyx doctor`, root dogfooding config, adoption fixtures and package-artifact smoke validation.

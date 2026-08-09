@@ -1,7 +1,7 @@
 import { mkdir, mkdtemp, readdir, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { builtInSkillRegistry, formatSkillMarkdown } from "@agnox/core";
+import { builtInSkillRegistry, formatSkillMarkdown } from "@agentyx/core";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { builtInAdapterRegistry } from "../src/built-in.js";
 import { createSkillDirectoryAdapter } from "../src/skill-directory.js";
@@ -13,7 +13,7 @@ const skills = ["planning", "verification", "angular-modern"].map((name) =>
   builtInSkillRegistry.get(name),
 );
 /** Never created on disk: `skillsPath` and `planFiles` must not touch a filesystem. */
-const projectDir = join(tmpdir(), "agnox-project");
+const projectDir = join(tmpdir(), "agentyx-project");
 
 describe("skill destinations", () => {
   /**
@@ -97,7 +97,7 @@ describe("detect", () => {
   let temporaryProject: string;
 
   beforeEach(async () => {
-    temporaryProject = await mkdtemp(join(tmpdir(), "agnox-adapter-"));
+    temporaryProject = await mkdtemp(join(tmpdir(), "agentyx-adapter-"));
   });
 
   afterEach(async () => {

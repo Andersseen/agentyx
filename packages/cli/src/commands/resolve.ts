@@ -1,39 +1,39 @@
 import {
-  AGNOX_PROFILES,
-  type AgnoxProfile,
-  DEFAULT_AGNOX_PROFILE,
+  AGENTYX_PROFILES,
+  type AgentyxProfile,
+  DEFAULT_AGENTYX_PROFILE,
   filterEffectiveMcpServers,
-  loadAgnoxConfig,
-  resolveAgnoxConfig,
+  loadAgentyxConfig,
+  resolveAgentyxConfig,
   resolveStackMcpServerReferences,
   resolveStackSkills,
   resolveStacks,
-} from "@agnox/core";
+} from "@agentyx/core";
 import { Command } from "commander";
 import { emit, section, toJson } from "../output.js";
 
 export interface ResolveCommandInput {
   /**
    * Stacks passed on the command line. When present they replace the stacks
-   * from `.agnox.json`, and the project configuration is not read at all.
+   * from `.agentyx.json`, and the project configuration is not read at all.
    */
   readonly stacks: readonly string[];
-  readonly profile?: AgnoxProfile;
+  readonly profile?: AgentyxProfile;
   readonly json: boolean;
   readonly cwd: string;
 }
 
 /**
- * Produces the exact text `agnox resolve` writes to stdout. Kept free of
+ * Produces the exact text `agentyx resolve` writes to stdout. Kept free of
  * terminal side effects so the behaviour can be tested directly.
  *
- * Only skill identifiers are printed — `agnox skill show` is what reads the
+ * Only skill identifiers are printed — `agentyx skill show` is what reads the
  * instructions.
  */
 export async function runResolveCommand(input: ResolveCommandInput): Promise<string> {
   if (input.stacks.length > 0) {
     const requestedStacks = [...input.stacks];
-    const profile = input.profile ?? DEFAULT_AGNOX_PROFILE;
+    const profile = input.profile ?? DEFAULT_AGENTYX_PROFILE;
     const resolvedStacks = resolveStacks(requestedStacks);
     const skills = resolveStackSkills(requestedStacks);
     const declaredMcpServers = resolveStackMcpServerReferences(requestedStacks);
@@ -49,8 +49,8 @@ export async function runResolveCommand(input: ResolveCommandInput): Promise<str
         ].join("\n\n");
   }
 
-  const config = await loadAgnoxConfig(input.cwd);
-  const resolved = resolveAgnoxConfig({
+  const config = await loadAgentyxConfig(input.cwd);
+  const resolved = resolveAgentyxConfig({
     ...config,
     profile: input.profile ?? config.profile,
   });
@@ -60,7 +60,7 @@ export async function runResolveCommand(input: ResolveCommandInput): Promise<str
   }
 
   return [
-    "Agnox configuration",
+    "Agentyx configuration",
     section("Profile", [resolved.profile]),
     section("Targets", resolved.targets),
     section("Stacks", resolved.resolvedStacks),
@@ -85,16 +85,16 @@ function renderMcpLines(
 export function createResolveCommand(): Command {
   return new Command("resolve")
     .description("Resolve the stack and skill composition for this project.")
-    .argument("[stacks...]", "resolve these stacks instead of the ones in .agnox.json")
+    .argument("[stacks...]", "resolve these stacks instead of the ones in .agentyx.json")
     .option("--profile <profile>", "override the optimization profile for this run", (value) => {
-      if (!AGNOX_PROFILES.includes(value as AgnoxProfile)) {
-        throw new Error(`Profile must be one of: ${AGNOX_PROFILES.join(", ")}.`);
+      if (!AGENTYX_PROFILES.includes(value as AgentyxProfile)) {
+        throw new Error(`Profile must be one of: ${AGENTYX_PROFILES.join(", ")}.`);
       }
 
-      return value as AgnoxProfile;
+      return value as AgentyxProfile;
     })
     .option("--json", "print machine-readable JSON only", false)
-    .action(async (stacks: string[], options: { profile?: AgnoxProfile; json: boolean }) => {
+    .action(async (stacks: string[], options: { profile?: AgentyxProfile; json: boolean }) => {
       await emit(() =>
         runResolveCommand(
           options.profile === undefined

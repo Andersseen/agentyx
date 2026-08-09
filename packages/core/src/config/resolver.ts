@@ -7,10 +7,10 @@ import type { SkillRegistry } from "../skill/registry.js";
 import { collectStackSkills } from "../skill/resolver.js";
 import { builtInStackRegistry, type StackRegistry } from "../stack/registry.js";
 import { resolveStacks } from "../stack/resolver.js";
-import type { AgnoxConfig, AgnoxProfile } from "./schema.js";
+import type { AgentyxConfig, AgentyxProfile } from "./schema.js";
 
 /** A project configuration with its stack inheritance expanded. */
-export interface ResolvedAgnoxConfig {
+export interface ResolvedAgentyxConfig {
   /** The stacks the project asked for, in configuration order. */
   readonly requestedStacks: readonly string[];
   /** The full inheritance chain, dependency-first and de-duplicated. */
@@ -22,7 +22,7 @@ export interface ResolvedAgnoxConfig {
   readonly skills: readonly string[];
   readonly declaredMcpServers: readonly McpServerReference[];
   readonly mcpServers: readonly string[];
-  readonly profile: AgnoxProfile;
+  readonly profile: AgentyxProfile;
   readonly targets: readonly string[];
 }
 
@@ -34,12 +34,12 @@ export interface ResolvedAgnoxConfig {
  * @throws {CircularStackDependencyError} when inheritance forms a cycle.
  * @throws {UnknownSkillError} when a stack references an unknown skill.
  */
-export function resolveAgnoxConfig(
-  config: AgnoxConfig,
+export function resolveAgentyxConfig(
+  config: AgentyxConfig,
   registry: StackRegistry = builtInStackRegistry,
   skillRegistry: SkillRegistry = builtInSkillRegistry,
   mcpRegistry: McpServerRegistry = builtInMcpServerRegistry,
-): ResolvedAgnoxConfig {
+): ResolvedAgentyxConfig {
   const requestedStacks = [...config.extends];
   const resolvedStacks = resolveStacks(requestedStacks, registry);
   const declaredMcpServers = collectStackMcpServerReferences(resolvedStacks, registry, mcpRegistry);

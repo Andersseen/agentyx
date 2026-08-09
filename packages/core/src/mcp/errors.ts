@@ -1,7 +1,7 @@
 import type { ZodError } from "zod";
-import { AgnoxError } from "../errors.js";
+import { AgentyxError } from "../errors.js";
 
-export class UnknownMcpServerError extends AgnoxError {
+export class UnknownMcpServerError extends AgentyxError {
   readonly serverName: string;
   readonly requiredBy: string | undefined;
   readonly knownServers: readonly string[];
@@ -21,7 +21,7 @@ export class UnknownMcpServerError extends AgnoxError {
   }
 }
 
-export class DuplicateMcpServerError extends AgnoxError {
+export class DuplicateMcpServerError extends AgentyxError {
   readonly serverName: string;
 
   constructor(serverName: string) {
@@ -31,7 +31,7 @@ export class DuplicateMcpServerError extends AgnoxError {
   }
 }
 
-export class InvalidMcpServerError extends AgnoxError {
+export class InvalidMcpServerError extends AgentyxError {
   readonly origin: string;
   readonly reason: string;
 

@@ -7,7 +7,7 @@ import { createSkillRegistry, type SkillRegistry } from "./registry.js";
 import type { SkillDefinition } from "./schema.js";
 
 /**
- * The skills Agnox ships with. The names are the directory names under
+ * The skills Agentyx ships with. The names are the directory names under
  * `packages/core/skills`, and knowing them without touching the filesystem is
  * what lets stack resolution validate references without reading any body.
  */
