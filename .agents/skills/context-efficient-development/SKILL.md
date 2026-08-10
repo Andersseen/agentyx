@@ -8,6 +8,10 @@ description: Develop Agentyx with targeted exploration, narrow iteration command
 Use this skill for non-trivial work on Agentyx itself. It is a repository-development skill, not a
 built-in Agentyx product skill.
 
+For broad exploration, noisy command loops, or MCP-heavy work, also read
+`.agents/skills/repo-ai-tooling/SKILL.md`. For the official website, also read
+`.agents/skills/official-website-development/SKILL.md`.
+
 ## Exploration
 
 Start with targeted discovery. Search for names, commands, schemas, tests or nearby files before
@@ -28,6 +32,8 @@ pnpm typecheck
 
 Do not run `pnpm check` after every small edit. Run focused tests while shaping the change, then run
 the complete required gate before handoff or earlier when cross-package impact makes it useful.
+If `rtk` is available, use it for commands likely to produce noisy output, while preserving raw
+failure details when diagnostics matter.
 
 ## Output
 
@@ -45,6 +51,8 @@ lines.
 
 Do not preload every Skill or MCP definition. Read task-relevant Skills only. Use MCP only when its
 capability is required for the current job.
+Use codebase-memory MCP, when configured, to orient around package ownership and prior decisions
+before opening many files. Treat memory as a map, then verify in source.
 
 ## Verification
 
