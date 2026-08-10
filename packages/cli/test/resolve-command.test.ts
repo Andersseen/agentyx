@@ -2,128 +2,112 @@ import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { AgentyxConfigNotFoundError, UnknownStackError } from "@agentyx/core";
+import {
+  AgentyxConfigNotFoundError,
+  UnknownEnabledCapabilityError,
+  UnknownPackError,
+} from "@agentyx/core";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { createResolveCommand, runResolveCommand } from "../src/commands/resolve.js";
 import { createAgentyxProgram } from "../src/index.js";
 
 const exampleProjectPath = fileURLToPath(new URL("../../../examples/angular", import.meta.url));
 
-describe("agentyx resolve <stack>", () => {
-  it("resolves an explicit stack without a project configuration", async () => {
+describe("agentyx resolve <pack>", () => {
+  it("resolves an explicit pack without hidden inheritance", async () => {
     const output = await runResolveCommand({
-      stacks: ["angular"],
+      packs: ["angular"],
       json: false,
       cwd: tmpdir(),
     });
 
     expect(output).toBe(
       [
-        "Profile",
-        "  balanced",
-        "",
-        "Stacks",
-        "  core",
-        "  typescript",
+        "Packs",
         "  angular",
         "",
         "Skills",
-        "  planning",
-        "  systematic-debugging",
-        "  verification",
-        "  typescript-modern",
         "  angular-modern",
+        "  angular-signals",
+        "  angular-architecture",
+        "  angular-testing",
         "",
         "MCP",
-        "  context7    recommended",
-      ].join("\n"),
-    );
-  });
-
-  it("applies a profile override for explicit stack resolution", async () => {
-    const output = await runResolveCommand({
-      stacks: ["angular"],
-      profile: "lean",
-      json: false,
-      cwd: tmpdir(),
-    });
-
-    expect(output).toContain("Profile\n  lean");
-    expect(output).toContain("MCP\n  context7    skipped (recommended)");
-  });
-
-  it("resolves core and typescript", async () => {
-    const base = { json: false, cwd: tmpdir() };
-
-    expect(await runResolveCommand({ ...base, stacks: ["core"] })).toBe(
-      [
-        "Profile",
-        "  balanced",
+        "  context7    default",
         "",
-        "Stacks",
-        "  core",
-        "",
-        "Skills",
-        "  planning",
-        "  systematic-debugging",
-        "  verification",
-        "",
-        "MCP",
+        "Tools",
         "  (none)",
       ].join("\n"),
     );
-    expect(await runResolveCommand({ ...base, stacks: ["typescript"] })).toContain(
-      "Stacks\n  core\n  typescript\n",
-    );
-    expect(await runResolveCommand({ ...base, stacks: ["typescript"] })).toContain(
-      "Skills\n  planning\n  systematic-debugging\n  verification\n  typescript-modern",
-    );
   });
 
-  it("resolves several explicit stacks", async () => {
+  it("composes several explicit packs in configured order", async () => {
     const output = await runResolveCommand({
-      stacks: ["typescript", "angular"],
+      packs: ["technical", "typescript", "angular"],
       json: false,
       cwd: tmpdir(),
     });
 
-    expect(output).toContain("Stacks\n  core\n  typescript\n  angular");
+    expect(output).toContain("Packs\n  technical\n  typescript\n  angular");
+    expect(output).toContain("Skills\n  engineering-principles");
+    expect(output).toContain("  typescript-strict");
+    expect(output).toContain("  angular-modern");
+  });
+
+  it("keeps optional efficiency capabilities disabled unless enabled", async () => {
+    const disabled = await runResolveCommand({
+      packs: ["efficiency"],
+      json: false,
+      cwd: tmpdir(),
+    });
+    const enabled = await runResolveCommand({
+      packs: ["efficiency"],
+      enable: ["rtk", "codebase-memory"],
+      json: false,
+      cwd: tmpdir(),
+    });
+
+    expect(disabled).toContain("codebase-memory    disabled (optional)");
+    expect(disabled).toContain("rtk    disabled (optional)");
+    expect(enabled).toContain("codebase-memory    optional");
+    expect(enabled).toContain("rtk    optional");
   });
 
   it("prints JSON only in --json mode", async () => {
     const output = await runResolveCommand({
-      stacks: ["angular"],
+      packs: ["efficiency"],
+      enable: ["rtk"],
       json: true,
       cwd: tmpdir(),
     });
 
-    expect(JSON.parse(output)).toEqual({
-      requestedStacks: ["angular"],
-      resolvedStacks: ["core", "typescript", "angular"],
-      skills: [
-        "planning",
-        "systematic-debugging",
-        "verification",
-        "typescript-modern",
-        "angular-modern",
-      ],
-      declaredMcpServers: [{ name: "context7", level: "recommended" }],
-      mcpServers: ["context7"],
-      profile: "balanced",
+    expect(JSON.parse(output)).toMatchObject({
+      requestedPacks: ["efficiency"],
+      resolvedPacks: ["efficiency"],
+      mcpServers: [],
+      tools: ["rtk"],
+      enabled: ["rtk"],
     });
   });
 
   it("never prints skill instructions", async () => {
-    const output = await runResolveCommand({ stacks: ["angular"], json: false, cwd: tmpdir() });
+    const output = await runResolveCommand({ packs: ["angular"], json: false, cwd: tmpdir() });
 
     expect(output).not.toContain("# Modern Angular");
-    expect(output.split("\n")).toHaveLength(17);
   });
 
-  it("fails on an unknown stack", async () => {
+  it("fails on an unknown pack or enabled capability", async () => {
     await expect(
-      runResolveCommand({ stacks: ["svelte"], json: false, cwd: tmpdir() }),
-    ).rejects.toThrow(UnknownStackError);
+      runResolveCommand({ packs: ["svelte"], json: false, cwd: tmpdir() }),
+    ).rejects.toThrow(UnknownPackError);
+    await expect(
+      runResolveCommand({
+        packs: ["typescript"],
+        enable: ["rtk"],
+        json: false,
+        cwd: tmpdir(),
+      }),
+    ).rejects.toThrow(UnknownEnabledCapabilityError);
   });
 });
 
@@ -141,130 +125,62 @@ describe("agentyx resolve", () => {
   it("renders the project configuration", async () => {
     await writeFile(
       join(projectPath, ".agentyx.json"),
-      JSON.stringify({ extends: ["angular"], profile: "balanced", targets: ["codex", "kimi"] }),
+      JSON.stringify({
+        packs: ["technical", "typescript", "angular"],
+        targets: ["codex", "kimi"],
+      }),
       "utf8",
     );
 
-    const output = await runResolveCommand({ stacks: [], json: false, cwd: projectPath });
+    const output = await runResolveCommand({ packs: [], json: false, cwd: projectPath });
 
-    expect(output).toBe(
-      [
-        "Agentyx configuration",
-        "",
-        "Profile",
-        "  balanced",
-        "",
-        "Targets",
-        "  codex",
-        "  kimi",
-        "",
-        "Stacks",
-        "  core",
-        "  typescript",
-        "  angular",
-        "",
-        "Skills",
-        "  planning",
-        "  systematic-debugging",
-        "  verification",
-        "  typescript-modern",
-        "  angular-modern",
-        "",
-        "MCP",
-        "  context7    recommended",
-      ].join("\n"),
-    );
-  });
-
-  it("applies a project profile override without editing configuration", async () => {
-    await writeFile(
-      join(projectPath, ".agentyx.json"),
-      JSON.stringify({ extends: ["angular"], profile: "balanced", targets: ["codex"] }),
-      "utf8",
-    );
-
-    const output = await runResolveCommand({
-      stacks: [],
-      profile: "lean",
-      json: false,
-      cwd: projectPath,
-    });
-
-    expect(output).toContain("Profile\n  lean");
-    expect(output).toContain("MCP\n  context7    skipped (recommended)");
-  });
-
-  it("marks empty target lists", async () => {
-    await writeFile(
-      join(projectPath, ".agentyx.json"),
-      JSON.stringify({ extends: ["core"] }),
-      "utf8",
-    );
-
-    const output = await runResolveCommand({ stacks: [], json: false, cwd: projectPath });
-
-    expect(output).toContain("Targets\n  (none)");
+    expect(output).toContain("Agentyx configuration");
+    expect(output).toContain("Targets\n  codex\n  kimi");
+    expect(output).toContain("Packs\n  technical\n  typescript\n  angular");
+    expect(output).toContain("MCP\n  context7    default");
   });
 
   it("emits the resolved configuration as JSON", async () => {
-    const output = await runResolveCommand({ stacks: [], json: true, cwd: exampleProjectPath });
+    const output = await runResolveCommand({ packs: [], json: true, cwd: exampleProjectPath });
 
-    expect(JSON.parse(output)).toEqual({
-      requestedStacks: ["angular"],
-      resolvedStacks: ["core", "typescript", "angular"],
-      skills: [
-        "planning",
-        "systematic-debugging",
-        "verification",
-        "typescript-modern",
-        "angular-modern",
-      ],
-      declaredMcpServers: [{ name: "context7", level: "recommended" }],
-      mcpServers: ["context7"],
-      profile: "balanced",
+    expect(JSON.parse(output)).toMatchObject({
+      requestedPacks: ["technical", "typescript", "angular"],
+      resolvedPacks: ["technical", "typescript", "angular"],
       targets: ["codex", "claude"],
     });
   });
 
-  it("resolves the example project for humans", async () => {
-    const output = await runResolveCommand({ stacks: [], json: false, cwd: exampleProjectPath });
-
-    expect(output).toContain("Stacks\n  core\n  typescript\n  angular");
-    expect(output).toContain("Skills\n  planning\n  systematic-debugging\n  verification");
-  });
-
   it("fails when the project has no configuration", async () => {
-    await expect(runResolveCommand({ stacks: [], json: false, cwd: projectPath })).rejects.toThrow(
+    await expect(runResolveCommand({ packs: [], json: false, cwd: projectPath })).rejects.toThrow(
       AgentyxConfigNotFoundError,
     );
   });
 
-  it("prefers an explicit stack over the project configuration", async () => {
+  it("prefers explicit packs over the project configuration", async () => {
     await writeFile(
       join(projectPath, ".agentyx.json"),
-      JSON.stringify({ extends: ["angular"] }),
+      JSON.stringify({ packs: ["angular"] }),
       "utf8",
     );
 
     const output = await runResolveCommand({
-      stacks: ["typescript"],
+      packs: ["typescript"],
       json: false,
       cwd: projectPath,
     });
 
-    expect(output).toContain("Stacks\n  core\n  typescript\n");
+    expect(output).toContain("Packs\n  typescript\n");
     expect(output).not.toContain("angular");
   });
 });
 
 describe("resolve command wiring", () => {
-  it("declares the stacks argument and the --json flag", () => {
+  it("declares the packs argument and flags", () => {
     const command = createResolveCommand();
 
     expect(command.name()).toBe("resolve");
-    expect(command.options.map((option) => option.long)).toContain("--json");
-    expect(command.options.map((option) => option.long)).toContain("--profile");
-    expect(command.registeredArguments.map((argument) => argument.name())).toEqual(["stacks"]);
+    expect(command.options.map((option) => option.long)).toEqual(["--enable", "--json"]);
+    expect(command.registeredArguments.map((argument) => argument.name())).toEqual(["packs"]);
     expect(command.registeredArguments[0]?.variadic).toBe(true);
   });
 

@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const MCP_CAPABILITY_LEVELS = ["essential", "recommended", "optional"] as const;
+export const MCP_CAPABILITY_LEVELS = ["default", "optional"] as const;
 
 export const mcpCapabilityLevelSchema = z.enum(MCP_CAPABILITY_LEVELS);
 
@@ -35,9 +35,9 @@ const commonMcpServerDefinitionSchema = z.strictObject({
 
 const explicitMcpServerReferenceSchema = z.strictObject({
   name: mcpServerNameSchema.describe("MCP server identifier."),
-  level: mcpCapabilityLevelSchema
-    .describe("How important this MCP capability is to the declaring stack.")
-    .default("recommended"),
+  activation: mcpCapabilityLevelSchema
+    .describe("Whether this MCP capability is active by default or explicit opt-in.")
+    .default("default"),
 });
 
 export const mcpServerReferenceSchema = z
@@ -46,15 +46,15 @@ export const mcpServerReferenceSchema = z
     typeof value === "string"
       ? {
           name: value,
-          level: "recommended" as const,
+          activation: "default" as const,
         }
       : value,
   )
   .pipe(
     z.strictObject({
       name: mcpServerNameSchema.describe("MCP server identifier."),
-      level: mcpCapabilityLevelSchema.describe(
-        "How important this MCP capability is to the declaring stack.",
+      activation: mcpCapabilityLevelSchema.describe(
+        "Whether this MCP capability is active by default or explicit opt-in.",
       ),
     }),
   );

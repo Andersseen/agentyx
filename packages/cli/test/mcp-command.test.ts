@@ -5,7 +5,7 @@ import { createAgentyxProgram } from "../src/index.js";
 
 describe("agentyx mcp list", () => {
   it("lists built-in MCP server identifiers", () => {
-    expect(runMcpListCommand()).toBe(["context7", "playwright"].join("\n"));
+    expect(runMcpListCommand()).toBe(["context7", "playwright", "codebase-memory"].join("\n"));
   });
 });
 

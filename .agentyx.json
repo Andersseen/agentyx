@@ -1,5 +1,5 @@
 {
-  "extends": ["typescript"],
-  "profile": "lean",
+  "packs": ["technical", "typescript", "efficiency", "agentic"],
+  "enable": [],
   "targets": ["codex", "claude", "kimi"]
 }

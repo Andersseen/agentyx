@@ -18,8 +18,8 @@ describe("buildAgentyxConfigJsonSchema", () => {
     expect(schema.additionalProperties).toBe(false);
     expect(Object.keys(schema.properties as Record<string, unknown>)).toEqual([
       "$schema",
-      "extends",
-      "profile",
+      "packs",
+      "enable",
       "targets",
     ]);
   });
@@ -28,13 +28,13 @@ describe("buildAgentyxConfigJsonSchema", () => {
     expect(buildAgentyxConfigJsonSchema().required).toBeUndefined();
   });
 
-  it("enumerates the profiles", () => {
+  it("describes enabled capability names", () => {
     const properties = buildAgentyxConfigJsonSchema().properties as Record<
       string,
-      { enum?: string[] }
+      { items?: { pattern?: string } }
     >;
 
-    expect(properties.profile?.enum).toEqual(["lean", "balanced", "autonomous"]);
+    expect(properties.enable?.items?.pattern).toBe("^[a-z0-9]+(?:-[a-z0-9]+)*$");
   });
 
   it("is deterministic", () => {

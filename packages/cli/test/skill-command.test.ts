@@ -1,4 +1,4 @@
-import { UnknownSkillError } from "@agentyx/core";
+import { builtInSkillNames, UnknownSkillError } from "@agentyx/core";
 import { describe, expect, it } from "vitest";
 import {
   createSkillCommand,
@@ -9,15 +9,7 @@ import { createAgentyxProgram } from "../src/index.js";
 
 describe("agentyx skill list", () => {
   it("prints the built-in skill identifiers", () => {
-    expect(runSkillListCommand()).toBe(
-      [
-        "planning",
-        "systematic-debugging",
-        "verification",
-        "typescript-modern",
-        "angular-modern",
-      ].join("\n"),
-    );
+    expect(runSkillListCommand()).toBe([...builtInSkillNames].join("\n"));
   });
 });
 
@@ -27,7 +19,7 @@ describe("agentyx skill show", () => {
     const [name, description, blank, ...body] = output.split("\n");
 
     expect(name).toBe("angular-modern");
-    expect(description).toMatch(/^Modern Angular conventions/);
+    expect(description).toMatch(/^Use current Angular APIs/);
     expect(blank).toBe("");
     expect(body.join("\n")).toContain("# Modern Angular");
   });

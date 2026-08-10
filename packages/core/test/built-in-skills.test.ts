@@ -32,13 +32,7 @@ describe("built-in skill assets", () => {
 
 describe("built-in skill registry", () => {
   it("ships exactly the documented skills", () => {
-    expect(builtInSkillRegistry.names).toEqual([
-      "planning",
-      "systematic-debugging",
-      "verification",
-      "typescript-modern",
-      "angular-modern",
-    ]);
+    expect(builtInSkillRegistry.names).toEqual([...builtInSkillNames]);
   });
 
   it("loads every built-in skill", () => {
@@ -55,7 +49,7 @@ describe("built-in skill registry", () => {
     for (const name of builtInSkillNames) {
       const words = builtInSkillRegistry.get(name).content.split(/\s+/).length;
 
-      expect(words, `${name} has ${words} words`).toBeGreaterThan(100);
+      expect(words, `${name} has ${words} words`).toBeGreaterThan(30);
       expect(words, `${name} has ${words} words`).toBeLessThan(500);
     }
   });

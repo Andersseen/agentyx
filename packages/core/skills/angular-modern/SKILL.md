@@ -1,47 +1,29 @@
 ---
 name: angular-modern
-description: Modern Angular conventions - standalone, signals, inject(), OnPush, zoneless.
+description: Use current Angular APIs for standalone components, control flow, inputs, outputs, and DI.
 ---
 
 # Modern Angular
 
-Write new code with the current APIs. Reach for a legacy pattern only when there is no modern
-equivalent.
+Write new Angular code with current APIs. Reach for legacy patterns only when maintaining existing
+code that still depends on them.
 
 ## Components
 
-Components, directives, and pipes are standalone: declare what a template needs in `imports` and do
-not add an `NgModule` for new code. Set `changeDetection: ChangeDetectionStrategy.OnPush` on every
-component.
+Use standalone components, directives, and pipes. Declare template dependencies in `imports` and do
+not introduce an `NgModule` for new feature code.
 
-Keep components small — template, local state, and the wiring between them. Logic worth testing on
-its own belongs in a service or a plain function, not behind a component fixture.
+## Inputs and outputs
 
-## State
-
-Use signals for component state. Derive with `computed()` rather than recomputing in the template
-or syncing fields by hand, and keep `effect()` for genuine side effects — never for writing state
-that a `computed()` could express.
-
-Declare inputs with `input()` and `input.required()`, outputs with `output()`, and two-way bindings
-with `model()`. Query the view with the signal APIs, `viewChild()` and `contentChild()`.
-
-RxJS still fits streams of events over time; bridge with `toSignal()` and `toObservable()` at the
-edges instead of mixing both styles in one component.
+Use `input()`, `input.required()`, `output()`, and `model()` where they fit. Keep inputs explicit
+and outputs event-like.
 
 ## Injection
 
-Call `inject()` in field initialisers instead of taking constructor parameters. It composes inside
-plain functions and reads better with `readonly` fields.
+Use `inject()` in field initializers or framework-supported injection contexts. This keeps
+constructors small and makes dependencies visible near their use.
 
 ## Templates
 
-Use built-in control flow — `@if`, `@for`, `@switch`, `@defer` — not `*ngIf` and `*ngFor`, and give
-every `@for` a `track` expression. Read signals directly in the template; the binding tracks them
-for you.
-
-## Zoneless
-
-Do not rely on `zone.js` patching. Drive updates through signals, avoid reaching for
-`ChangeDetectorRef.detectChanges()` or `NgZone.run()`, and never trigger change detection as a side
-effect.
+Use built-in control flow: `@if`, `@for`, `@switch`, and `@defer`. Give `@for` a stable `track`
+expression. Prefer current migration paths when modernizing existing templates.

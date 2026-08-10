@@ -64,16 +64,16 @@ describe("mcpServerDefinitionSchema", () => {
 
 describe("mcpServerReferenceSchema", () => {
   it("accepts explicit capability levels", () => {
-    expect(mcpServerReferenceSchema.parse({ name: "context7", level: "essential" })).toEqual({
+    expect(mcpServerReferenceSchema.parse({ name: "context7", activation: "default" })).toEqual({
       name: "context7",
-      level: "essential",
+      activation: "default",
     });
   });
 
   it("keeps string references backward-compatible as recommended", () => {
     expect(mcpServerReferenceSchema.parse("context7")).toEqual({
       name: "context7",
-      level: "recommended",
+      activation: "default",
     });
   });
 });

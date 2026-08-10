@@ -1,5 +1,6 @@
+import { constants } from "node:fs";
 import { access } from "node:fs/promises";
-import { relative, sep } from "node:path";
+import { delimiter, relative, sep } from "node:path";
 import {
   builtInAdapterRegistry,
   type InstallPlan,
@@ -13,8 +14,8 @@ import {
   AgentyxConfigValidationError,
   builtInMcpServerRegistry,
   builtInSkillRegistry,
+  builtInToolRegistry,
   detectProject,
-  getOptimizationProfile,
   loadAgentyxConfig,
   resolveAgentyxConfig,
 } from "@agentyx/core";
@@ -36,8 +37,8 @@ export interface DoctorReport {
     readonly packageManager: string | undefined;
     readonly packageManagerAmbiguous: boolean;
     readonly packageManagerLockfiles: readonly string[];
-    readonly detectedStacks: readonly string[];
-    readonly recommendedStack: string | undefined;
+    readonly detectedPacks: readonly string[];
+    readonly recommendedPacks: readonly string[];
     readonly config: {
       readonly path: string;
       readonly present: boolean;
@@ -45,16 +46,24 @@ export interface DoctorReport {
     };
   };
   readonly configuration: {
-    readonly stacks: readonly string[];
-    readonly profile: string | undefined;
+    readonly packs: readonly string[];
+    readonly enable: readonly string[];
     readonly targets: readonly string[];
   };
   readonly resolution: {
-    readonly resolvedStacks: readonly string[];
+    readonly resolvedPacks: readonly string[];
     readonly skillsCount: number;
-    readonly declaredMcpCount: number;
-    readonly activeMcpCount: number;
-    readonly skippedMcpCount: number;
+    readonly mcp: readonly {
+      readonly name: string;
+      readonly activation: string;
+      readonly active: boolean;
+    }[];
+    readonly tools: readonly {
+      readonly name: string;
+      readonly activation: string;
+      readonly active: boolean;
+      readonly available: boolean;
+    }[];
   };
   readonly targets: readonly {
     readonly id: string;
@@ -70,10 +79,11 @@ export interface DoctorReport {
       | { readonly create: number; readonly update: number; readonly unchanged: number }
       | undefined;
   };
-  readonly optimization: {
-    readonly profile: string | undefined;
-    readonly notes: readonly string[];
-    readonly filteredMcp: readonly { readonly name: string; readonly level: string }[];
+  readonly efficiency: {
+    readonly conciseOutput: boolean;
+    readonly targetedExploration: boolean;
+    readonly rtk: "available" | "not installed" | "not selected";
+    readonly codebaseMemory: "enabled" | "disabled" | "not selected";
   };
   readonly diagnostics: readonly DoctorDiagnostic[];
 }
@@ -130,10 +140,9 @@ export async function runDoctorCommand(input: DoctorCommandInput): Promise<Docto
   }
 
   if (
-    project.recommendedStack === "angular" &&
-    resolved !== undefined &&
-    resolved.requestedStacks.includes("typescript") &&
-    !resolved.requestedStacks.includes("angular")
+    project.detectedPacks.includes("angular") &&
+    resolved?.requestedPacks.includes("typescript") === true &&
+    !resolved.requestedPacks.includes("angular")
   ) {
     diagnostics.push({
       level: "warning",
@@ -193,17 +202,23 @@ export async function runDoctorCommand(input: DoctorCommandInput): Promise<Docto
     });
   }
 
-  const filteredMcp =
-    resolved?.declaredMcpServers.filter((server) => !resolved?.mcpServers.includes(server.name)) ??
-    [];
-
-  for (const server of filteredMcp) {
-    diagnostics.push({
-      level: "info",
-      code: "mcp_filtered_by_profile",
-      message: `${resolved?.profile ?? "profile"} profile skips ${server.level} MCP server ${server.name}.`,
-    });
-  }
+  const toolReports =
+    resolved === undefined
+      ? []
+      : await Promise.all(
+          resolved.declaredTools.map(async (tool) => ({
+            name: tool.name,
+            activation: tool.activation,
+            active: resolved.tools.includes(tool.name),
+            available: await executableAvailable(builtInToolRegistry.get(tool.name).command),
+          })),
+        );
+  const mcpReports =
+    resolved?.declaredMcpServers.map((server) => ({
+      name: server.name,
+      activation: server.activation,
+      active: resolved?.mcpServers.includes(server.name) ?? false,
+    })) ?? [];
 
   return {
     status: statusOf(diagnostics),
@@ -211,8 +226,8 @@ export async function runDoctorCommand(input: DoctorCommandInput): Promise<Docto
       packageManager: project.packageManager.name,
       packageManagerAmbiguous: project.packageManager.ambiguous,
       packageManagerLockfiles: project.packageManager.lockfiles,
-      detectedStacks: project.detectedStacks,
-      recommendedStack: project.recommendedStack,
+      detectedPacks: project.detectedPacks,
+      recommendedPacks: project.recommendedPacks,
       config: {
         path: ".agentyx.json",
         present: configState.present,
@@ -220,25 +235,36 @@ export async function runDoctorCommand(input: DoctorCommandInput): Promise<Docto
       },
     },
     configuration: {
-      stacks: configState.config?.extends ?? [],
-      profile: configState.config?.profile,
+      packs: configState.config?.packs ?? [],
+      enable: configState.config?.enable ?? [],
       targets: configState.config?.targets ?? [],
     },
     resolution: {
-      resolvedStacks: resolved?.resolvedStacks ?? [],
+      resolvedPacks: resolved?.resolvedPacks ?? [],
       skillsCount: resolved?.skills.length ?? 0,
-      declaredMcpCount: resolved?.declaredMcpServers.length ?? 0,
-      activeMcpCount: resolved?.mcpServers.length ?? 0,
-      skippedMcpCount: filteredMcp.length,
+      mcp: mcpReports,
+      tools: toolReports,
     },
     targets: targetReports,
     installation: {
       summary: plans === undefined ? undefined : summarizeInstallPlans(plans),
     },
-    optimization: {
-      profile: resolved?.profile,
-      notes: resolved === undefined ? [] : getOptimizationProfile(resolved.profile).notes,
-      filteredMcp,
+    efficiency: {
+      conciseOutput: resolved?.skills.includes("concise-output") ?? false,
+      targetedExploration: resolved?.skills.includes("targeted-exploration") ?? false,
+      rtk:
+        toolReports.find((tool) => tool.name === "rtk")?.available === true
+          ? "available"
+          : resolved?.declaredTools.some((tool) => tool.name === "rtk") === true
+            ? "not installed"
+            : "not selected",
+      codebaseMemory:
+        resolved?.mcpServers.includes("codebase-memory") === true
+          ? "enabled"
+          : resolved?.declaredMcpServers.some((server) => server.name === "codebase-memory") ===
+              true
+            ? "disabled"
+            : "not selected",
     },
     diagnostics,
   };
@@ -256,19 +282,33 @@ export function renderDoctorReport(report: DoctorReport, json: boolean): string 
       `package manager: ${report.project.packageManager ?? "unknown"}${
         report.project.packageManagerAmbiguous ? " (ambiguous)" : ""
       }`,
-      `detected stacks: ${report.project.detectedStacks.join(", ") || "none"}`,
-      `recommended stack: ${report.project.recommendedStack ?? "none"}`,
+      `detected packs: ${report.project.detectedPacks.join(", ") || "none"}`,
+      `recommended packs: ${report.project.recommendedPacks.join(", ") || "none"}`,
       `.agentyx.json: ${report.project.config.present ? (report.project.config.valid ? "valid" : "invalid") : "missing"}`,
     ]),
     section("Configuration", [
-      `stacks: ${report.configuration.stacks.join(", ") || "none"}`,
-      `profile: ${report.configuration.profile ?? "none"}`,
+      `packs: ${report.configuration.packs.join(", ") || "none"}`,
+      `enable: ${report.configuration.enable.join(", ") || "none"}`,
       `targets: ${report.configuration.targets.join(", ") || "none"}`,
     ]),
     section("Resolution", [
-      `resolved stacks: ${report.resolution.resolvedStacks.join(", ") || "none"}`,
+      `resolved packs: ${report.resolution.resolvedPacks.join(", ") || "none"}`,
       `skills: ${report.resolution.skillsCount}`,
-      `MCP declared/active/skipped: ${report.resolution.declaredMcpCount}/${report.resolution.activeMcpCount}/${report.resolution.skippedMcpCount}`,
+      `MCP: ${
+        report.resolution.mcp
+          .map((server) => `${server.name} (${server.active ? "active" : "disabled"})`)
+          .join(", ") || "none"
+      }`,
+      `tools: ${
+        report.resolution.tools
+          .map(
+            (tool) =>
+              `${tool.name} (${tool.active ? "active" : "disabled"}, ${
+                tool.available ? "available" : "not installed"
+              })`,
+          )
+          .join(", ") || "none"
+      }`,
     ]),
     section(
       "Targets",
@@ -293,13 +333,11 @@ export function renderDoctorReport(report: DoctorReport, json: boolean): string 
             `${report.installation.summary.create} to create, ${report.installation.summary.update} to update, ${report.installation.summary.unchanged} unchanged`,
           ],
     ),
-    section("Optimization", [
-      `profile: ${report.optimization.profile ?? "none"}`,
-      `filtered MCP: ${
-        report.optimization.filteredMcp
-          .map((server) => `${server.name} (${server.level})`)
-          .join(", ") || "none"
-      }`,
+    section("Efficiency", [
+      `concise output: ${report.efficiency.conciseOutput ? "enabled" : "disabled"}`,
+      `targeted exploration: ${report.efficiency.targetedExploration ? "enabled" : "disabled"}`,
+      `RTK: ${report.efficiency.rtk}`,
+      `Codebase Memory: ${report.efficiency.codebaseMemory}`,
     ]),
     section(
       "Diagnostics",
@@ -376,6 +414,33 @@ async function fileExists(path: string): Promise<boolean> {
     }
 
     throw cause;
+  }
+}
+
+async function executableAvailable(command: string): Promise<boolean> {
+  if (command.includes("/")) {
+    return fileExecutable(command);
+  }
+
+  for (const directory of (process.env.PATH ?? "").split(delimiter)) {
+    if (directory.length === 0) {
+      continue;
+    }
+
+    if (await fileExecutable(`${directory}/${command}`)) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+async function fileExecutable(path: string): Promise<boolean> {
+  try {
+    await access(path, constants.X_OK);
+    return true;
+  } catch {
+    return false;
   }
 }
 

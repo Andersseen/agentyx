@@ -6,18 +6,11 @@ import {
   summarizeInstallPlans,
 } from "@agentyx/adapters";
 import {
-  AGENTYX_PROFILES,
   AgentyxError,
-  type AgentyxProfile,
   builtInMcpServerRegistry,
   builtInSkillRegistry,
-  DEFAULT_AGENTYX_PROFILE,
-  filterEffectiveMcpServers,
   loadAgentyxConfig,
   resolveAgentyxConfig,
-  resolveStackMcpServerReferences,
-  resolveStackSkills,
-  resolveStacks,
 } from "@agentyx/core";
 import { isCancel, multiselect } from "@clack/prompts";
 import { Command } from "commander";
@@ -25,17 +18,17 @@ import { emit, section, toJson } from "../output.js";
 
 export interface InstallCommandInput {
   /**
-   * Stacks passed on the command line. As with `resolve`, they replace the
-   * stacks from `.agentyx.json` and the project configuration is not read at all
+   * Packs passed on the command line. As with `resolve`, they replace the
+   * packs from `.agentyx.json` and the project configuration is not read at all
    * — which also means the targets must then be explicit.
    */
-  readonly stacks: readonly string[];
+  readonly packs: readonly string[];
+  readonly enable?: readonly string[];
   /** `--target`, repeatable. Overrides the targets in `.agentyx.json` for this run only. */
   readonly targets: readonly string[];
   readonly skills: readonly string[];
   readonly mcpServers: readonly string[];
   readonly select: boolean;
-  readonly profile?: AgentyxProfile;
   readonly dryRun: boolean;
   readonly json: boolean;
   readonly skillsOnly?: boolean;
@@ -58,7 +51,7 @@ export class InstallCommandError extends AgentyxError {
  * cannot receive different instructions; the plans differ only in where the
  * files go. `.agentyx.json` is never modified.
  *
- * @throws {AgentyxConfigNotFoundError} when no stacks were named and the project has no configuration.
+ * @throws {AgentyxConfigNotFoundError} when no packs were named and the project has no configuration.
  * @throws {MissingInstallTargetsError} when neither the configuration nor `--target` names a target.
  * @throws {UnknownAdapterError} when a target has no adapter.
  */
@@ -85,11 +78,13 @@ export async function runInstallCommand(input: InstallCommandInput): Promise<str
 }
 
 interface ResolvedEnvironment {
-  readonly stacks: readonly string[];
+  readonly packs: readonly string[];
   readonly skills: readonly string[];
-  readonly declaredMcpServers: readonly { readonly name: string; readonly level: string }[];
+  readonly declaredMcpServers: readonly { readonly name: string; readonly activation: string }[];
   readonly mcpServers: readonly string[];
-  readonly profile: AgentyxProfile;
+  readonly declaredTools: readonly { readonly name: string; readonly activation: string }[];
+  readonly tools: readonly string[];
+  readonly enabled: readonly string[];
   readonly targets: readonly string[];
 }
 
@@ -98,10 +93,10 @@ async function resolveEnvironment(input: InstallCommandInput): Promise<ResolvedE
   const manual = selected.skills.length > 0 || selected.mcpServers.length > 0;
 
   if (manual) {
-    if (selected.stacks.length > 0) {
+    if (selected.packs.length > 0) {
       throw new InstallCommandError(
-        "manual_install_with_stacks",
-        "Manual --skill/--mcp selection cannot be combined with stack arguments.",
+        "manual_install_with_packs",
+        "Manual --skill/--mcp selection cannot be combined with pack arguments.",
       );
     }
 
@@ -114,39 +109,53 @@ async function resolveEnvironment(input: InstallCommandInput): Promise<ResolvedE
     }
 
     return {
-      stacks: [],
+      packs: [],
       skills: unique(selected.skills),
-      declaredMcpServers: unique(selected.mcpServers).map((name) => ({ name, level: "selected" })),
+      declaredMcpServers: unique(selected.mcpServers).map((name) => ({
+        name,
+        activation: "default",
+      })),
       mcpServers: unique(selected.mcpServers),
-      profile: selected.profile ?? DEFAULT_AGENTYX_PROFILE,
+      declaredTools: [],
+      tools: [],
+      enabled: [],
       targets: selected.targets,
     };
   }
 
-  if (input.stacks.length > 0) {
-    const profile = input.profile ?? DEFAULT_AGENTYX_PROFILE;
-    const declaredMcpServers = resolveStackMcpServerReferences([...input.stacks]);
+  if (input.packs.length > 0) {
+    const resolved = resolveAgentyxConfig({
+      packs: [...input.packs],
+      enable: [...(input.enable ?? [])],
+      targets: [],
+    });
 
     return {
-      stacks: resolveStacks([...input.stacks]),
-      skills: resolveStackSkills([...input.stacks]),
-      declaredMcpServers,
-      mcpServers: filterEffectiveMcpServers(declaredMcpServers, profile),
-      profile,
+      packs: resolved.resolvedPacks,
+      skills: resolved.skills,
+      declaredMcpServers: resolved.declaredMcpServers,
+      mcpServers: resolved.mcpServers,
+      declaredTools: resolved.declaredTools,
+      tools: resolved.tools,
+      enabled: resolved.enabled,
       targets: input.targets,
     };
   }
 
   const config = await loadAgentyxConfig(input.cwd);
-  const profile = input.profile ?? config.profile;
-  const resolved = resolveAgentyxConfig({ ...config, profile });
+  const resolved = resolveAgentyxConfig({
+    ...config,
+    enable: [...unique([...config.enable, ...(input.enable ?? [])])],
+  });
 
   return {
-    stacks: resolved.resolvedStacks,
+    packs: resolved.resolvedPacks,
     skills: resolved.skills,
     declaredMcpServers: resolved.declaredMcpServers,
     mcpServers: resolved.mcpServers,
-    profile,
+    declaredTools: resolved.declaredTools,
+    tools: resolved.tools,
+    enabled: resolved.enabled,
     targets: input.targets.length > 0 ? input.targets : resolved.targets,
   };
 }
@@ -268,11 +277,13 @@ function renderJson(
 ): string {
   return toJson({
     dryRun: input.dryRun,
-    profile: environment.profile,
-    stacks: environment.stacks,
+    packs: environment.packs,
     skills: environment.skills,
     declaredMcpServers: environment.declaredMcpServers,
     mcpServers: environment.mcpServers,
+    declaredTools: environment.declaredTools,
+    tools: environment.tools,
+    enabled: environment.enabled,
     targets: plans.map((plan) => plan.target),
     plans: plans.map((plan) => ({
       target: plan.target,
@@ -313,7 +324,13 @@ function unique(values: readonly string[]): readonly string[] {
 export function createInstallCommand(): Command {
   return new Command("install")
     .description("Install the resolved skills into each target agent.")
-    .argument("[stacks...]", "install these stacks instead of the ones in .agentyx.json")
+    .argument("[packs...]", "install these packs instead of the ones in .agentyx.json")
+    .option(
+      "--enable <id>",
+      "enable an optional capability for this run; repeatable",
+      collectName,
+      [],
+    )
     .option(
       "--target <id>",
       "install into this target instead of the configured ones; repeatable",
@@ -325,24 +342,17 @@ export function createInstallCommand(): Command {
     .option("--select", "choose targets, skills and MCP servers interactively", false)
     .option("--dry-run", "report the planned changes without writing anything", false)
     .option("--json", "print machine-readable JSON only", false)
-    .option("--profile <profile>", "override the optimization profile for this run", (value) => {
-      if (!AGENTYX_PROFILES.includes(value as AgentyxProfile)) {
-        throw new Error(`Profile must be one of: ${AGENTYX_PROFILES.join(", ")}.`);
-      }
-
-      return value as AgentyxProfile;
-    })
     .option("--skills-only", "install skills without MCP configuration", false)
     .option("--mcp-only", "install MCP configuration without skills", false)
     .action(
       async (
-        stacks: string[],
+        packs: string[],
         options: {
           target: string[];
           skill: string[];
           mcp: string[];
+          enable: string[];
           select: boolean;
-          profile?: AgentyxProfile;
           dryRun: boolean;
           json: boolean;
           skillsOnly: boolean;
@@ -350,34 +360,19 @@ export function createInstallCommand(): Command {
         },
       ) => {
         await emit(() =>
-          runInstallCommand(
-            options.profile === undefined
-              ? {
-                  stacks,
-                  targets: options.target,
-                  skills: options.skill,
-                  mcpServers: options.mcp,
-                  select: options.select,
-                  dryRun: options.dryRun,
-                  json: options.json,
-                  skillsOnly: options.skillsOnly,
-                  mcpOnly: options.mcpOnly,
-                  cwd: process.cwd(),
-                }
-              : {
-                  stacks,
-                  targets: options.target,
-                  skills: options.skill,
-                  mcpServers: options.mcp,
-                  select: options.select,
-                  profile: options.profile,
-                  dryRun: options.dryRun,
-                  json: options.json,
-                  skillsOnly: options.skillsOnly,
-                  mcpOnly: options.mcpOnly,
-                  cwd: process.cwd(),
-                },
-          ),
+          runInstallCommand({
+            packs,
+            enable: options.enable,
+            targets: options.target,
+            skills: options.skill,
+            mcpServers: options.mcp,
+            select: options.select,
+            dryRun: options.dryRun,
+            json: options.json,
+            skillsOnly: options.skillsOnly,
+            mcpOnly: options.mcpOnly,
+            cwd: process.cwd(),
+          }),
         );
       },
     );

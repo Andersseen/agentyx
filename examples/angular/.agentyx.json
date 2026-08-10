@@ -1,5 +1,5 @@
 {
-  "extends": ["angular"],
-  "profile": "balanced",
+  "packs": ["technical", "typescript", "angular"],
+  "enable": [],
   "targets": ["codex", "claude"]
 }

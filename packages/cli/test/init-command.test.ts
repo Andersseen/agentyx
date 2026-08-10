@@ -1,9 +1,9 @@
-import { cp, mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
+import { cp, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { UnknownAdapterError } from "@agentyx/adapters";
-import { UnknownStackError } from "@agentyx/core";
+import { UnknownPackError } from "@agentyx/core";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   createInitCommand,
@@ -28,12 +28,12 @@ afterEach(async () => {
 });
 
 describe("agentyx init --yes", () => {
-  it("creates deterministic config from explicit options and performs no install", async () => {
+  it("creates deterministic config from explicit packs and performs no install", async () => {
     await cp(join(fixturesPath, "typescript-project"), projectDir, { recursive: true });
 
     const output = await runInitCommand({
-      stack: "typescript",
-      profile: "lean",
+      packs: ["technical", "typescript", "efficiency"],
+      enable: ["rtk"],
       targets: ["codex", "kimi"],
       yes: true,
       force: false,
@@ -45,42 +45,34 @@ describe("agentyx init --yes", () => {
       [
         "Created .agentyx.json",
         "",
-        "Stack",
+        "Packs",
+        "  technical",
         "  typescript",
-        "Profile",
-        "  lean",
+        "  efficiency",
+        "Enabled",
+        "  rtk",
         "Targets",
         "  codex",
         "  kimi",
         "Next: agentyx doctor",
       ].join("\n"),
     );
-    expect(await readFile(join(projectDir, ".agentyx.json"), "utf8")).toBe(
-      [
-        "{",
-        '  "extends": [',
-        '    "typescript"',
-        "  ],",
-        '  "profile": "lean",',
-        '  "targets": [',
-        '    "codex",',
-        '    "kimi"',
-        "  ]",
-        "}",
-        "",
-      ].join("\n"),
-    );
+    expect(JSON.parse(await readFile(join(projectDir, ".agentyx.json"), "utf8"))).toEqual({
+      packs: ["technical", "typescript", "efficiency"],
+      enable: ["rtk"],
+      targets: ["codex", "kimi"],
+    });
     expect(await readdir(projectDir)).not.toContain(".agents");
     expect(await readdir(projectDir)).not.toContain(".claude");
   });
 
-  it("infers Angular safely but still requires explicit targets", async () => {
+  it("infers Angular packs safely but still requires explicit targets", async () => {
     await cp(join(fixturesPath, "angular-project"), projectDir, { recursive: true });
 
     await expect(
       planNonInteractiveInit({
-        stack: undefined,
-        profile: undefined,
+        packs: [],
+        enable: [],
         targets: [],
         yes: true,
         force: false,
@@ -90,8 +82,8 @@ describe("agentyx init --yes", () => {
     ).rejects.toThrow(/Pass at least one --target/);
 
     const plan = await planNonInteractiveInit({
-      stack: undefined,
-      profile: undefined,
+      packs: [],
+      enable: [],
       targets: ["codex"],
       yes: true,
       force: false,
@@ -99,38 +91,17 @@ describe("agentyx init --yes", () => {
       cwd: projectDir,
     });
 
-    expect(plan.stack).toBe("angular");
-    expect(plan.profile).toBe("lean");
-  });
-
-  it("uses the selected profile", async () => {
-    await cp(join(fixturesPath, "typescript-project"), projectDir, { recursive: true });
-
-    await runInitCommand({
-      stack: undefined,
-      profile: "autonomous",
-      targets: ["claude"],
-      yes: true,
-      force: false,
-      json: false,
-      cwd: projectDir,
-    });
-
-    expect(JSON.parse(await readFile(join(projectDir, ".agentyx.json"), "utf8"))).toEqual({
-      extends: ["typescript"],
-      profile: "autonomous",
-      targets: ["claude"],
-    });
+    expect(plan.packs).toEqual(["technical", "typescript", "angular"]);
   });
 
   it("refuses an existing config unless forced", async () => {
     await writeFile(join(projectDir, "package.json"), '{"devDependencies":{"typescript":"^5"}}\n');
-    await writeFile(join(projectDir, ".agentyx.json"), '{"extends":["core"]}\n');
+    await writeFile(join(projectDir, ".agentyx.json"), '{"packs":["technical"]}\n');
 
     await expect(
       runInitCommand({
-        stack: "typescript",
-        profile: "lean",
+        packs: ["typescript"],
+        enable: [],
         targets: ["codex"],
         yes: true,
         force: false,
@@ -140,8 +111,8 @@ describe("agentyx init --yes", () => {
     ).rejects.toThrow(InitError);
 
     const output = await runInitCommand({
-      stack: "typescript",
-      profile: "lean",
+      packs: ["typescript"],
+      enable: [],
       targets: ["codex"],
       yes: true,
       force: true,
@@ -152,31 +123,31 @@ describe("agentyx init --yes", () => {
     expect(JSON.parse(output)).toEqual({
       path: ".agentyx.json",
       replaced: true,
-      stack: "typescript",
-      profile: "lean",
+      packs: ["typescript"],
+      enable: [],
       targets: ["codex"],
     });
   });
 
-  it("rejects invalid stacks and targets", async () => {
+  it("rejects invalid packs and targets", async () => {
     await writeFile(join(projectDir, "package.json"), "{}\n");
 
     await expect(
       planNonInteractiveInit({
-        stack: "react",
-        profile: "lean",
+        packs: ["react"],
+        enable: [],
         targets: ["codex"],
         yes: true,
         force: false,
         json: false,
         cwd: projectDir,
       }),
-    ).rejects.toThrow(UnknownStackError);
+    ).rejects.toThrow(UnknownPackError);
 
     await expect(
       planNonInteractiveInit({
-        stack: "typescript",
-        profile: "lean",
+        packs: ["typescript"],
+        enable: [],
         targets: ["opencode"],
         yes: true,
         force: false,
@@ -184,22 +155,6 @@ describe("agentyx init --yes", () => {
         cwd: projectDir,
       }),
     ).rejects.toThrow(UnknownAdapterError);
-  });
-
-  it("errors when no stack can be inferred", async () => {
-    await mkdir(join(projectDir, "src"));
-
-    await expect(
-      planNonInteractiveInit({
-        stack: undefined,
-        profile: undefined,
-        targets: ["codex"],
-        yes: true,
-        force: false,
-        json: false,
-        cwd: projectDir,
-      }),
-    ).rejects.toThrow(/Could not infer/);
   });
 });
 
@@ -210,8 +165,8 @@ describe("init command wiring", () => {
 
   it("keeps prompt UI behind command wiring", () => {
     expect(createInitCommand().options.map((option) => option.long)).toEqual([
-      "--stack",
-      "--profile",
+      "--pack",
+      "--enable",
       "--target",
       "--yes",
       "--force",
