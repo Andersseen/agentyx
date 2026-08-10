@@ -36,11 +36,14 @@ interface Stat {
   template: `
     <section
       id="hero"
-      class="relative isolate overflow-hidden border-b border-border px-4 py-16 sm:px-6 sm:py-20 lg:py-24"
+      class="relative isolate overflow-hidden border-b border-border px-4 py-16 sm:px-6 sm:py-20 lg:py-28"
       moveInView="fade-up"
       [moveInViewMargin]="'0px'"
     >
       <div class="hero-grid" aria-hidden="true"></div>
+
+      <div class="absolute inset-0 -z-10 bg-gradient-to-b from-primary/5 via-transparent to-transparent" aria-hidden="true"></div>
+
       <div class="mx-auto grid max-w-6xl items-center gap-12 lg:grid-cols-[1.02fr_0.98fr]">
         <div class="text-center lg:text-left">
           <div
@@ -97,14 +100,14 @@ interface Stat {
           </div>
 
           <dl
-            class="mt-10 grid grid-cols-3 gap-3 text-left"
+            class="mt-12 grid grid-cols-3 gap-3 text-left"
             moveInView="fade-up"
             moveStagger
             [moveStaggerStep]="0.07"
           >
             @for (stat of stats; track stat.label) {
               <div class="rounded-md border border-border bg-surface/70 p-3 shadow-sm backdrop-blur">
-                <dt class="text-xs uppercase text-muted-foreground">{{ stat.label }}</dt>
+                <dt class="text-xs uppercase tracking-wider text-muted-foreground">{{ stat.label }}</dt>
                 <dd class="mt-1 text-lg font-semibold text-foreground sm:text-xl">{{ stat.value }}</dd>
               </div>
             }
@@ -124,6 +127,7 @@ interface Stat {
             <lmn-sparkles class="mr-2 h-4 w-4 text-warning" aria-hidden="true" />
             plan first
           </div>
+
           <div class="terminal-card overflow-hidden rounded-lg border border-border bg-surface shadow-2xl">
             <div class="flex items-center justify-between border-b border-border px-4 py-3">
               <div class="flex gap-2" aria-hidden="true">
@@ -131,21 +135,21 @@ interface Stat {
                 <span class="h-3 w-3 rounded-full bg-warning"></span>
                 <span class="h-3 w-3 rounded-full bg-success"></span>
               </div>
-              <span class="text-xs text-muted-foreground">agentyx resolve angular --json</span>
+              <span class="text-xs text-muted-foreground">terminal</span>
             </div>
-            <pre class="overflow-x-auto p-4 text-left text-sm leading-7 text-foreground sm:p-6"><code><span class="text-success">$</span> pnpm agentyx resolve angular
+            <pre class="overflow-x-auto p-4 text-left text-sm leading-7 text-foreground sm:p-6"><code><span class="text-info">$</span> pnpm agentyx resolve angular
 
-Stacks
+<span class="text-warning">Stacks</span>
   core
   typescript
   angular
 
-Skills
+<span class="text-info">Skills</span>
   angular-modern
   angular-signals
   angular-testing
 
-Targets
+<span class="text-secondary">Targets</span>
   codex
   claude
   kimi</code></pre>
