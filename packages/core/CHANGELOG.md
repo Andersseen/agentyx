@@ -1,5 +1,12 @@
 # @agentyx/core
 
+## 0.2.0
+
+### Minor Changes
+
+- e51669d: Replace the previous preset model with composable packs, explicit optional capability
+  enablement, and provider-neutral tool definitions.
+
 ## 0.1.1
 
 ## 0.1.0

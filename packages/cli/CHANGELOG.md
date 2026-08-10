@@ -1,5 +1,18 @@
 # @agentyx/cli
 
+## 0.2.0
+
+### Minor Changes
+
+- e51669d: Replace the previous preset model with composable packs, explicit optional capability
+  enablement, and provider-neutral tool definitions.
+
+### Patch Changes
+
+- Updated dependencies [e51669d]
+  - @agentyx/core@0.2.0
+  - @agentyx/adapters@0.2.0
+
 ## 0.1.1
 
 ### Patch Changes
