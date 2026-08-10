@@ -15,5 +15,7 @@
   - `/add-builtin-stack` — add a stack to the built-in registry with the tests it needs.
   - `/context-efficient-development` — keep exploration, iteration commands and output concise.
   - `/navigate-agentyx` — choose the right package or directory before changing code.
+  - `/repo-ai-tooling` — use RTK, codebase memory and MCP tools without wasting context.
+  - `/official-website-development` — build the official website with grounded copy and visual checks.
 - Prefer editing source and running `pnpm test` (which aliases `@agentyx/core` to source) over
   rebuilding. The only work that needs a build is the CLI binary and the JSON Schema generator.

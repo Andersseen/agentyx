@@ -1,5 +1,5 @@
 {
   "packs": ["technical", "typescript", "efficiency", "agentic"],
-  "enable": [],
+  "enable": ["rtk", "codebase-memory"],
   "targets": ["codex", "claude", "kimi"]
 }

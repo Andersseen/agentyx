@@ -19,6 +19,8 @@
       "Bash(pnpm vitest:*)",
       "Bash(pnpm changeset:*)",
       "Bash(node packages/cli/dist/index.mjs:*)",
+      "Bash(rtk:*)",
+      "Bash(which rtk)",
       "Bash(git status:*)",
       "Bash(git diff:*)",
       "Bash(git log:*)",

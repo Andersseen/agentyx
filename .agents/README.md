@@ -3,9 +3,10 @@
 Skills for AI coding agents working **on this repository**. They are not Agentyx product
 configuration — Agentyx does not generate or read anything in this directory.
 
-Every skill here is provider-neutral: plain Markdown, no provider names, no tool names, no
-assumption about which agent is reading it. Claude Code, Codex, Cursor, Copilot, Gemini CLI and
-anything else that can read a file all get the same instructions.
+Every skill here is provider-neutral: plain Markdown with no assumption about which agent is reading
+it. A skill may mention repository tools such as RTK or codebase memory, but it must describe how to
+use them generically and how to continue when they are unavailable. Claude Code, Codex, Cursor,
+Copilot, Gemini CLI and anything else that can read a file all get the same instructions.
 
 ## Layout
 
@@ -26,6 +27,10 @@ file, follow the body.
   development context, commands and output focused without weakening verification.
 - [navigate-agentyx](skills/navigate-agentyx/SKILL.md) — quickly choose the right package or directory
   for a change.
+- [repo-ai-tooling](skills/repo-ai-tooling/SKILL.md) — use repository AI tooling such as RTK and
+  codebase memory in a provider-neutral, token-frugal way.
+- [official-website-development](skills/official-website-development/SKILL.md) — build the official
+  Agentyx website with grounded copy, bounded exploration and visual verification.
 
 [AGENTS.md](../AGENTS.md) lists the same skills, so an agent that reads the repository's instruction
 file finds the skills without knowing this directory exists.

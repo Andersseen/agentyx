@@ -46,10 +46,24 @@ Markdown and provider-neutral — read the file and follow it, whichever agent y
   non-trivial Agentyx work to keep exploration, commands and output focused.
 - [navigate-agentyx](.agents/skills/navigate-agentyx/SKILL.md) — read when you need the repository map
   before deciding where a change belongs.
+- [repo-ai-tooling](.agents/skills/repo-ai-tooling/SKILL.md) — read before broad exploration or noisy
+  command loops; it covers RTK, codebase memory and MCP context discipline.
+- [official-website-development](.agents/skills/official-website-development/SKILL.md) — read before
+  building the official Agentyx website; it keeps product copy grounded and visual checks explicit.
 
 Agents with a native skill mechanism reach the same files through a thin bridge in their own
 directory; [.agents/README.md](.agents/README.md) explains how to add one for a provider that is
 not wired up yet.
+
+## Token-frugal tooling
+
+This repository is expected to be workable by any coding agent without burning the full context
+window on orientation. Prefer the shared Skills above over provider-specific memory. If `rtk` is on
+PATH, use it for noisy commands such as tests, builds, diffs and searches, then fall back to the raw
+command only when exact output is required. Use codebase-memory MCP, when configured, as a map for
+package ownership and prior decisions; verify important claims in files before editing. Keep heavy
+MCP tools scoped to the task, especially during website work where browser inspection can otherwise
+swallow the conversation.
 
 ## Layering
 

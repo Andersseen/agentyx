@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "codebase-memory": {
+      "args": [],
+      "command": "codebase-memory-mcp",
+      "env": {}
+    }
+  }
+}
