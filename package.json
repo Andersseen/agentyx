@@ -24,6 +24,7 @@
     "changeset": "changeset",
     "check": "biome check . && pnpm typecheck && pnpm test && pnpm build",
     "clean": "pnpm -r --parallel run clean",
+    "dev": "pnpm --filter @agentyx/web dev",
     "format": "biome check --write .",
     "lint": "biome lint .",
     "release": "pnpm build && changeset publish",
@@ -39,5 +40,10 @@
     "tsdown": "^0.22.14",
     "typescript": "^5.9.2",
     "vitest": "^3.2.4"
+  },
+  "pnpm": {
+    "overrides": {
+      "@angular/cdk": "21.2.14"
+    }
   }
 }

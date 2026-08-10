@@ -1,0 +1,9 @@
+# AnalogJS / Angular build artifacts
+.analog
+.angular
+dist
+.vite
+
+# Vite
+node_modules
+*.log
