@@ -6,11 +6,7 @@ import {
   VoltCardHeader,
   VoltCardTitle,
 } from "@voltui/components";
-import {
-  MoveHoverDirective,
-  MoveInViewDirective,
-  MoveStaggerDirective,
-} from "angular-movement";
+import { MoveHoverDirective, MoveInViewDirective, MoveStaggerDirective } from "angular-movement";
 import { LmnArrowRightIcon } from "lumen-icons/arrow-right";
 import { LmnDocumentTextIcon } from "lumen-icons/document-text";
 import { LmnGlobeAltIcon } from "lumen-icons/globe-alt";
@@ -230,14 +226,12 @@ export class AboutComponent {
     {
       step: "2. Resolve",
       command: "agentyx resolve --json",
-      description:
-        "Preview the full capability plan before any file is touched.",
+      description: "Preview the full capability plan before any file is touched.",
     },
     {
       step: "3. Install",
       command: "agentyx install --dry-run",
-      description:
-        "Apply resolved skills and MCP config into provider-native directories.",
+      description: "Apply resolved skills and MCP config into provider-native directories.",
     },
   ];
 

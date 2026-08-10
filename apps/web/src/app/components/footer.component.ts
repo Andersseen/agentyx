@@ -1,8 +1,8 @@
 import { Component } from "@angular/core";
 import { VoltButton } from "@voltui/components";
 import { LmnArrowTopRightOnSquareIcon } from "lumen-icons/arrow-top-right-on-square";
-import { LmnGlobeAltIcon } from "lumen-icons/globe-alt";
 import { LmnGithubIcon } from "lumen-icons/github";
+import { LmnGlobeAltIcon } from "lumen-icons/globe-alt";
 
 @Component({
   selector: "app-footer",
