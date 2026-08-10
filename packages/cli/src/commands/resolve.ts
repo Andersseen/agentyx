@@ -1,24 +1,10 @@
-import {
-  AGENTYX_PROFILES,
-  type AgentyxProfile,
-  DEFAULT_AGENTYX_PROFILE,
-  filterEffectiveMcpServers,
-  loadAgentyxConfig,
-  resolveAgentyxConfig,
-  resolveStackMcpServerReferences,
-  resolveStackSkills,
-  resolveStacks,
-} from "@agentyx/core";
+import { loadAgentyxConfig, resolveAgentyxConfig } from "@agentyx/core";
 import { Command } from "commander";
 import { emit, section, toJson } from "../output.js";
 
 export interface ResolveCommandInput {
-  /**
-   * Stacks passed on the command line. When present they replace the stacks
-   * from `.agentyx.json`, and the project configuration is not read at all.
-   */
-  readonly stacks: readonly string[];
-  readonly profile?: AgentyxProfile;
+  readonly packs: readonly string[];
+  readonly enable?: readonly string[];
   readonly json: boolean;
   readonly cwd: string;
 }
@@ -31,28 +17,27 @@ export interface ResolveCommandInput {
  * instructions.
  */
 export async function runResolveCommand(input: ResolveCommandInput): Promise<string> {
-  if (input.stacks.length > 0) {
-    const requestedStacks = [...input.stacks];
-    const profile = input.profile ?? DEFAULT_AGENTYX_PROFILE;
-    const resolvedStacks = resolveStacks(requestedStacks);
-    const skills = resolveStackSkills(requestedStacks);
-    const declaredMcpServers = resolveStackMcpServerReferences(requestedStacks);
-    const mcpServers = filterEffectiveMcpServers(declaredMcpServers, profile);
+  if (input.packs.length > 0) {
+    const resolved = resolveAgentyxConfig({
+      packs: [...input.packs],
+      enable: [...(input.enable ?? [])],
+      targets: [],
+    });
 
     return input.json
-      ? toJson({ requestedStacks, resolvedStacks, skills, declaredMcpServers, mcpServers, profile })
+      ? toJson(resolved)
       : [
-          section("Profile", [profile]),
-          section("Stacks", resolvedStacks),
-          section("Skills", skills),
-          section("MCP", renderMcpLines(declaredMcpServers, mcpServers)),
+          section("Packs", resolved.resolvedPacks),
+          section("Skills", resolved.skills),
+          section("MCP", renderMcpLines(resolved.declaredMcpServers, resolved.mcpServers)),
+          section("Tools", renderToolLines(resolved.declaredTools, resolved.tools)),
         ].join("\n\n");
   }
 
   const config = await loadAgentyxConfig(input.cwd);
   const resolved = resolveAgentyxConfig({
     ...config,
-    profile: input.profile ?? config.profile,
+    enable: [...unique([...config.enable, ...(input.enable ?? [])])],
   });
 
   if (input.json) {
@@ -61,55 +46,67 @@ export async function runResolveCommand(input: ResolveCommandInput): Promise<str
 
   return [
     "Agentyx configuration",
-    section("Profile", [resolved.profile]),
     section("Targets", resolved.targets),
-    section("Stacks", resolved.resolvedStacks),
+    section("Packs", resolved.resolvedPacks),
     section("Skills", resolved.skills),
     section("MCP", renderMcpLines(resolved.declaredMcpServers, resolved.mcpServers)),
+    section("Tools", renderToolLines(resolved.declaredTools, resolved.tools)),
   ].join("\n\n");
 }
 
 function renderMcpLines(
-  declaredMcpServers: readonly { readonly name: string; readonly level: string }[],
+  declaredMcpServers: readonly { readonly name: string; readonly activation: string }[],
   effectiveMcpServers: readonly string[],
 ): string[] {
   const effective = new Set(effectiveMcpServers);
 
   return declaredMcpServers.map((server) =>
     effective.has(server.name)
-      ? `${server.name}    ${server.level}`
-      : `${server.name}    skipped (${server.level})`,
+      ? `${server.name}    ${server.activation}`
+      : `${server.name}    disabled (${server.activation})`,
   );
+}
+
+function renderToolLines(
+  declaredTools: readonly { readonly name: string; readonly activation: string }[],
+  effectiveTools: readonly string[],
+): string[] {
+  const effective = new Set(effectiveTools);
+
+  return declaredTools.map((tool) =>
+    effective.has(tool.name)
+      ? `${tool.name}    ${tool.activation}`
+      : `${tool.name}    disabled (${tool.activation})`,
+  );
+}
+
+function collectName(value: string, previous: string[]): string[] {
+  return [...previous, value];
+}
+
+function unique(values: readonly string[]): readonly string[] {
+  return [...new Set(values)];
 }
 
 export function createResolveCommand(): Command {
   return new Command("resolve")
-    .description("Resolve the stack and skill composition for this project.")
-    .argument("[stacks...]", "resolve these stacks instead of the ones in .agentyx.json")
-    .option("--profile <profile>", "override the optimization profile for this run", (value) => {
-      if (!AGENTYX_PROFILES.includes(value as AgentyxProfile)) {
-        throw new Error(`Profile must be one of: ${AGENTYX_PROFILES.join(", ")}.`);
-      }
-
-      return value as AgentyxProfile;
-    })
+    .description("Resolve the pack and capability composition for this project.")
+    .argument("[packs...]", "resolve these packs instead of the ones in .agentyx.json")
+    .option(
+      "--enable <id>",
+      "enable an optional capability for this run; repeatable",
+      collectName,
+      [],
+    )
     .option("--json", "print machine-readable JSON only", false)
-    .action(async (stacks: string[], options: { profile?: AgentyxProfile; json: boolean }) => {
+    .action(async (packs: string[], options: { enable: string[]; json: boolean }) => {
       await emit(() =>
-        runResolveCommand(
-          options.profile === undefined
-            ? {
-                stacks,
-                json: options.json,
-                cwd: process.cwd(),
-              }
-            : {
-                stacks,
-                profile: options.profile,
-                json: options.json,
-                cwd: process.cwd(),
-              },
-        ),
+        runResolveCommand({
+          packs,
+          enable: options.enable,
+          json: options.json,
+          cwd: process.cwd(),
+        }),
       );
     });
 }

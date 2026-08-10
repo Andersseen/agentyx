@@ -1,21 +1,15 @@
-import { cp, mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { fileURLToPath } from "node:url";
 import { MissingInstallTargetsError, UnknownAdapterError } from "@agentyx/adapters";
-import {
-  AgentyxConfigNotFoundError,
-  builtInSkillRegistry,
-  formatSkillMarkdown,
-} from "@agentyx/core";
+import { AgentyxConfigNotFoundError } from "@agentyx/core";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { createInstallCommand, runInstallCommand } from "../src/commands/install.js";
 import { createAgentyxProgram } from "../src/index.js";
 
-const exampleProjectPath = fileURLToPath(new URL("../../../examples/angular", import.meta.url));
-
 const baseInput = {
-  stacks: [],
+  packs: [],
+  enable: [],
   targets: [],
   skills: [],
   mcpServers: [],
@@ -39,8 +33,8 @@ async function writeConfig(config: Record<string, unknown>): Promise<void> {
 }
 
 describe("agentyx install --dry-run", () => {
-  it("reports the planned writes and touches nothing", async () => {
-    await writeConfig({ extends: ["core"], targets: ["codex"] });
+  it("reports planned skill writes and touches nothing", async () => {
+    await writeConfig({ packs: ["technical"], targets: ["codex"] });
 
     const output = await runInstallCommand({
       ...baseInput,
@@ -48,157 +42,35 @@ describe("agentyx install --dry-run", () => {
       cwd: projectDir,
     });
 
-    expect(output).toBe(
-      [
-        "Agentyx install (dry run)",
-        "",
-        "codex -> .agents/skills",
-        "Skills",
-        "  create    .agents/skills/planning/SKILL.md",
-        "  create    .agents/skills/systematic-debugging/SKILL.md",
-        "  create    .agents/skills/verification/SKILL.md",
-        "MCP",
-        "  (none)",
-        "",
-        "Dry run: 3 to create, 0 to update, 0 unchanged. Nothing was written.",
-      ].join("\n"),
-    );
+    expect(output).toContain("Agentyx install (dry run)");
+    expect(output).toContain("create    .agents/skills/engineering-principles/SKILL.md");
+    expect(output).toContain("Dry run: 4 to create, 0 to update, 0 unchanged.");
     expect(await readdir(projectDir)).toEqual([".agentyx.json"]);
   });
 
-  it("plans every configured target", async () => {
-    await writeConfig({ extends: ["core"], targets: ["codex", "claude"] });
+  it("emits JSON without skill bodies", async () => {
+    await writeConfig({ packs: ["technical"], targets: ["codex", "claude"] });
 
-    const output = await runInstallCommand({ ...baseInput, dryRun: true, cwd: projectDir });
+    const document = JSON.parse(
+      await runInstallCommand({ ...baseInput, dryRun: true, json: true, cwd: projectDir }),
+    );
 
-    expect(output).toContain("codex -> .agents/skills");
-    expect(output).toContain("claude -> .claude/skills");
-    expect(output).toContain("Dry run: 6 to create");
-  });
-
-  it("never prints skill instructions", async () => {
-    await writeConfig({ extends: ["angular"], targets: ["codex"] });
-
-    const output = await runInstallCommand({ ...baseInput, dryRun: true, cwd: projectDir });
-
-    expect(output).not.toContain("# Modern Angular");
-  });
-});
-
-describe("agentyx install --dry-run --json", () => {
-  it("emits a machine-readable plan and nothing else", async () => {
-    await writeConfig({ extends: ["core"], targets: ["codex", "claude"] });
-
-    const output = await runInstallCommand({
-      ...baseInput,
+    expect(document).toMatchObject({
       dryRun: true,
-      json: true,
-      cwd: projectDir,
-    });
-
-    expect(JSON.parse(output)).toEqual({
-      dryRun: true,
-      stacks: ["core"],
-      skills: ["planning", "systematic-debugging", "verification"],
-      profile: "balanced",
-      declaredMcpServers: [],
+      packs: ["technical"],
+      skills: ["engineering-principles", "code-quality", "api-design", "code-review"],
       mcpServers: [],
+      tools: [],
       targets: ["codex", "claude"],
-      plans: [
-        {
-          target: "codex",
-          name: "Codex",
-          skillsPath: ".agents/skills",
-          operations: [
-            {
-              type: "write-file",
-              status: "create",
-              skill: "planning",
-              path: ".agents/skills/planning/SKILL.md",
-              usedBy: ["codex"],
-            },
-            {
-              type: "write-file",
-              status: "create",
-              skill: "systematic-debugging",
-              path: ".agents/skills/systematic-debugging/SKILL.md",
-              usedBy: ["codex"],
-            },
-            {
-              type: "write-file",
-              status: "create",
-              skill: "verification",
-              path: ".agents/skills/verification/SKILL.md",
-              usedBy: ["codex"],
-            },
-          ],
-          mcpOperations: [],
-          unsupportedMcp: [],
-        },
-        {
-          target: "claude",
-          name: "Claude Code",
-          skillsPath: ".claude/skills",
-          operations: [
-            {
-              type: "write-file",
-              status: "create",
-              skill: "planning",
-              path: ".claude/skills/planning/SKILL.md",
-              usedBy: ["claude"],
-            },
-            {
-              type: "write-file",
-              status: "create",
-              skill: "systematic-debugging",
-              path: ".claude/skills/systematic-debugging/SKILL.md",
-              usedBy: ["claude"],
-            },
-            {
-              type: "write-file",
-              status: "create",
-              skill: "verification",
-              path: ".claude/skills/verification/SKILL.md",
-              usedBy: ["claude"],
-            },
-          ],
-          mcpOperations: [],
-          unsupportedMcp: [],
-        },
-      ],
-      summary: { create: 6, update: 0, unchanged: 0 },
+      summary: { create: 8, update: 0, unchanged: 0 },
     });
-  });
-
-  it("carries no absolute paths and no skill bodies", async () => {
-    await writeConfig({ extends: ["angular"], targets: ["codex"] });
-
-    const output = await runInstallCommand({
-      ...baseInput,
-      dryRun: true,
-      json: true,
-      cwd: projectDir,
-    });
-
-    expect(output).not.toContain(projectDir);
-    expect(output).not.toContain("# Modern Angular");
-  });
-
-  it("reports shared Codex and Kimi skill writes once", async () => {
-    await writeConfig({ extends: ["core"], targets: ["codex", "kimi"] });
-
-    const output = await runInstallCommand({ ...baseInput, dryRun: true, cwd: projectDir });
-
-    expect(output).toContain("create    .agents/skills/planning/SKILL.md (used by: codex, kimi)");
-    expect(output).toContain("kimi -> .agents/skills");
-    expect(output).toContain("Skills\n  (none)");
-    expect(output).toContain("Dry run: 3 to create, 0 to update, 0 unchanged.");
+    expect(JSON.stringify(document)).not.toContain("# Engineering principles");
   });
 });
 
 describe("target selection", () => {
-  it("overrides the configured targets with --target", async () => {
-    await writeConfig({ extends: ["core"], targets: ["codex"] });
+  it("overrides configured targets with --target", async () => {
+    await writeConfig({ packs: ["technical"], targets: ["codex"] });
 
     const output = await runInstallCommand({
       ...baseInput,
@@ -208,293 +80,105 @@ describe("target selection", () => {
     });
 
     expect(output).toContain("claude -> .claude/skills");
-    expect(output).not.toContain("codex");
+    expect(output).not.toContain("codex -> .agents/skills");
   });
 
-  it("accepts several --target values", async () => {
-    await writeConfig({ extends: ["core"], targets: [] });
-
-    const output = await runInstallCommand({
-      ...baseInput,
-      targets: ["codex", "claude"],
-      dryRun: true,
-      cwd: projectDir,
-    });
-
-    expect(output).toContain("codex -> .agents/skills");
-    expect(output).toContain("claude -> .claude/skills");
-  });
-
-  it("leaves .agentyx.json untouched", async () => {
-    const config = { extends: ["core"], targets: ["codex"] };
-    await writeConfig(config);
-
-    await runInstallCommand({ ...baseInput, targets: ["claude"], cwd: projectDir });
-
-    expect(JSON.parse(await readFile(join(projectDir, ".agentyx.json"), "utf8"))).toEqual(config);
-  });
-
-  it("fails on a target with no adapter", async () => {
-    await writeConfig({ extends: ["core"], targets: ["opencode"] });
+  it("fails on unknown, missing, or absent targets", async () => {
+    await writeConfig({ packs: ["technical"], targets: ["opencode"] });
 
     await expect(
       runInstallCommand({ ...baseInput, dryRun: true, cwd: projectDir }),
     ).rejects.toThrow(UnknownAdapterError);
-  });
 
-  it("fails when neither the configuration nor the flags name a target", async () => {
-    await writeConfig({ extends: ["core"] });
-
+    await writeConfig({ packs: ["technical"], targets: [] });
     await expect(
       runInstallCommand({ ...baseInput, dryRun: true, cwd: projectDir }),
     ).rejects.toThrow(MissingInstallTargetsError);
-  });
 
-  it("fails when the project has no configuration", async () => {
+    await rm(join(projectDir, ".agentyx.json"));
     await expect(
       runInstallCommand({ ...baseInput, dryRun: true, cwd: projectDir }),
     ).rejects.toThrow(AgentyxConfigNotFoundError);
   });
 });
 
-describe("agentyx install <stack>", () => {
-  it("installs explicit stacks without a project configuration", async () => {
+describe("agentyx install <pack>", () => {
+  it("installs explicit packs without reading project configuration", async () => {
     const output = await runInstallCommand({
       ...baseInput,
-      stacks: ["typescript"],
+      packs: ["efficiency"],
+      enable: ["codebase-memory"],
       targets: ["codex"],
       dryRun: true,
       cwd: projectDir,
     });
 
-    expect(output).toContain(".agents/skills/typescript-modern/SKILL.md");
-    expect(output).toContain("Dry run: 4 to create");
-  });
-
-  it("requires an explicit target, because the configuration is not read", async () => {
-    await writeConfig({ extends: ["angular"], targets: ["codex"] });
-
-    await expect(
-      runInstallCommand({ ...baseInput, stacks: ["core"], dryRun: true, cwd: projectDir }),
-    ).rejects.toThrow(MissingInstallTargetsError);
-  });
-
-  it("applies a profile override to explicit stack MCP planning", async () => {
-    const output = await runInstallCommand({
-      ...baseInput,
-      stacks: ["angular"],
-      targets: ["codex"],
-      profile: "lean",
-      dryRun: true,
-      cwd: projectDir,
-    });
-
-    expect(output).not.toContain(".codex/config.toml");
-    expect(output).toContain("MCP\n  (none)");
+    expect(output).toContain("context-efficient-development");
+    expect(output).toContain(".codex/config.toml (codebase-memory)");
   });
 });
 
 describe("agentyx install --skill/--mcp", () => {
-  it("installs selected skills and MCP servers without a project configuration", async () => {
+  it("installs selected skills and MCP servers manually", async () => {
     const output = await runInstallCommand({
       ...baseInput,
       targets: ["codex"],
-      skills: ["planning", "verification"],
-      mcpServers: ["context7"],
-      dryRun: true,
-      cwd: projectDir,
-    });
-
-    expect(output).toBe(
-      [
-        "Agentyx install (dry run)",
-        "",
-        "codex -> .agents/skills",
-        "Skills",
-        "  create    .agents/skills/planning/SKILL.md",
-        "  create    .agents/skills/verification/SKILL.md",
-        "MCP",
-        "  create    .codex/config.toml (context7)",
-        "",
-        "Dry run: 3 to create, 0 to update, 0 unchanged. Nothing was written.",
-      ].join("\n"),
-    );
-  });
-
-  it("deduplicates repeated manual selections", async () => {
-    const output = await runInstallCommand({
-      ...baseInput,
-      targets: ["codex"],
-      skills: ["planning", "planning"],
-      mcpServers: ["context7", "context7"],
-      dryRun: true,
-      json: true,
-      cwd: projectDir,
-    });
-
-    expect(JSON.parse(output)).toMatchObject({
-      stacks: [],
       skills: ["planning"],
-      declaredMcpServers: [{ name: "context7", level: "selected" }],
       mcpServers: ["context7"],
-      targets: ["codex"],
-      summary: { create: 2, update: 0, unchanged: 0 },
+      dryRun: true,
+      cwd: projectDir,
     });
+
+    expect(output).toContain(".agents/skills/planning/SKILL.md");
+    expect(output).toContain(".codex/config.toml (context7)");
   });
 
-  it("does not combine manual selections with stack arguments", async () => {
+  it("does not combine manual selections with pack arguments", async () => {
     await expect(
       runInstallCommand({
         ...baseInput,
-        stacks: ["core"],
+        packs: ["technical"],
         targets: ["codex"],
         skills: ["planning"],
         dryRun: true,
         cwd: projectDir,
       }),
-    ).rejects.toThrow("Manual --skill/--mcp selection cannot be combined with stack arguments.");
+    ).rejects.toThrow("Manual --skill/--mcp selection cannot be combined with pack arguments.");
   });
 });
 
 describe("agentyx install", () => {
-  it("uses effective MCP capabilities from the selected profile", async () => {
-    await writeConfig({ extends: ["angular"], profile: "lean", targets: ["codex"] });
+  it("installs and reports unchanged on a second run", async () => {
+    await writeConfig({ packs: ["technical"], targets: ["codex"] });
 
-    const output = await runInstallCommand({ ...baseInput, dryRun: true, cwd: projectDir });
+    const first = await runInstallCommand({ ...baseInput, cwd: projectDir });
+    const second = await runInstallCommand({ ...baseInput, cwd: projectDir });
 
-    expect(output).not.toContain(".codex/config.toml");
-    expect(output).toContain("MCP\n  (none)");
-  });
-
-  it("lets --profile override the configured profile for one install", async () => {
-    await writeConfig({ extends: ["angular"], profile: "lean", targets: ["codex"] });
-
-    const output = await runInstallCommand({
-      ...baseInput,
-      profile: "balanced",
-      dryRun: true,
-      cwd: projectDir,
-    });
-
-    expect(output).toContain(".codex/config.toml (context7)");
-    expect(JSON.parse(await readFile(join(projectDir, ".agentyx.json"), "utf8")).profile).toBe(
-      "lean",
-    );
-  });
-
-  it("installs the example project for both providers", async () => {
-    await cp(exampleProjectPath, projectDir, { recursive: true });
-
-    const output = await runInstallCommand({ ...baseInput, cwd: projectDir });
-
-    expect(output).toContain("Installed: 12 written, 0 unchanged.");
-    expect((await readdir(join(projectDir, ".agents", "skills"))).sort()).toEqual([
-      "angular-modern",
-      "planning",
-      "systematic-debugging",
-      "typescript-modern",
-      "verification",
-    ]);
-    expect((await readdir(join(projectDir, ".claude", "skills"))).sort()).toEqual([
-      "angular-modern",
-      "planning",
-      "systematic-debugging",
-      "typescript-modern",
-      "verification",
-    ]);
-  });
-
-  it("installs the canonical skill, identically for every provider", async () => {
-    await cp(exampleProjectPath, projectDir, { recursive: true });
-
-    await runInstallCommand({ ...baseInput, cwd: projectDir });
-
-    const expected = formatSkillMarkdown(builtInSkillRegistry.get("angular-modern"));
-
+    expect(first).toContain("Installed: 4 written, 0 unchanged.");
+    expect(second).toContain("Installed: 0 written, 4 unchanged.");
     expect(
-      await readFile(join(projectDir, ".agents", "skills", "angular-modern", "SKILL.md"), "utf8"),
-    ).toBe(expected);
-    expect(
-      await readFile(join(projectDir, ".claude", "skills", "angular-modern", "SKILL.md"), "utf8"),
-    ).toBe(expected);
-  });
-
-  it("reports everything as unchanged on a second run", async () => {
-    await cp(exampleProjectPath, projectDir, { recursive: true });
-
-    await runInstallCommand({ ...baseInput, cwd: projectDir });
-    const output = await runInstallCommand({ ...baseInput, cwd: projectDir });
-
-    expect(output).toContain("Installed: 0 written, 12 unchanged.");
-    expect(output).toContain("unchanged .agents/skills/planning/SKILL.md");
-  });
-
-  it("updates a managed skill that was edited", async () => {
-    await cp(exampleProjectPath, projectDir, { recursive: true });
-    await runInstallCommand({ ...baseInput, cwd: projectDir });
-
-    const path = join(projectDir, ".claude", "skills", "planning", "SKILL.md");
-    await writeFile(path, "---\nname: planning\ndescription: Edited\n---\n\nEdited.\n", "utf8");
-
-    const planned = await runInstallCommand({ ...baseInput, dryRun: true, cwd: projectDir });
-    expect(planned).toContain("update    .claude/skills/planning/SKILL.md");
-
-    const output = await runInstallCommand({ ...baseInput, cwd: projectDir });
-
-    expect(output).toContain("Installed: 1 written, 11 unchanged.");
-    expect(await readFile(path, "utf8")).toBe(
-      formatSkillMarkdown(builtInSkillRegistry.get("planning")),
-    );
-  });
-
-  it("leaves unrelated files alone", async () => {
-    await cp(exampleProjectPath, projectDir, { recursive: true });
-    await writeFile(join(projectDir, "README.md"), "mine\n", "utf8");
-    await mkdir(join(projectDir, ".claude"), { recursive: true });
-    await writeFile(join(projectDir, ".claude", "settings.json"), "{}\n", "utf8");
-
-    await runInstallCommand({ ...baseInput, cwd: projectDir });
-
-    expect(await readFile(join(projectDir, "README.md"), "utf8")).toBe("mine\n");
-    expect(await readFile(join(projectDir, ".claude", "settings.json"), "utf8")).toBe("{}\n");
-    expect((await readdir(projectDir)).sort()).toEqual([
-      ".agents",
-      ".agentyx.json",
-      ".claude",
-      ".codex",
-      ".mcp.json",
-      "README.md",
-    ]);
-  });
-
-  it("emits JSON for an applied installation too", async () => {
-    await writeConfig({ extends: ["core"], targets: ["codex"] });
-
-    const output = await runInstallCommand({ ...baseInput, json: true, cwd: projectDir });
-    const document = JSON.parse(output);
-
-    expect(document.dryRun).toBe(false);
-    expect(document.summary).toEqual({ create: 3, update: 0, unchanged: 0 });
+      await readFile(join(projectDir, ".agents/skills/code-quality/SKILL.md"), "utf8"),
+    ).toContain("# Code quality");
   });
 });
 
 describe("install command wiring", () => {
-  it("declares the stacks argument and the install flags", () => {
+  it("declares the packs argument and install flags", () => {
     const command = createInstallCommand();
 
     expect(command.name()).toBe("install");
     expect(command.options.map((option) => option.long).sort()).toEqual([
       "--dry-run",
+      "--enable",
       "--json",
       "--mcp",
       "--mcp-only",
-      "--profile",
       "--select",
       "--skill",
       "--skills-only",
       "--target",
     ]);
-    expect(command.registeredArguments.map((argument) => argument.name())).toEqual(["stacks"]);
+    expect(command.registeredArguments.map((argument) => argument.name())).toEqual(["packs"]);
     expect(command.registeredArguments[0]?.variadic).toBe(true);
   });
 

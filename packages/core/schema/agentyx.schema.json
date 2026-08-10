@@ -10,20 +10,24 @@
       "minLength": 1,
       "description": "Optional path or URL to the Agentyx JSON Schema."
     },
-    "extends": {
+    "packs": {
       "default": [],
       "type": "array",
       "items": {
         "type": "string",
         "minLength": 1
       },
-      "description": "Stacks this project builds on."
+      "description": "Capability packs this project selects."
     },
-    "profile": {
-      "default": "balanced",
-      "type": "string",
-      "enum": ["lean", "balanced", "autonomous"],
-      "description": "How much autonomy the generated environment grants."
+    "enable": {
+      "default": [],
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+      },
+      "description": "Optional capabilities to activate by explicit identifier."
     },
     "targets": {
       "default": [],

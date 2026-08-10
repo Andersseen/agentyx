@@ -3,51 +3,48 @@ import { UnknownMcpServerError } from "../src/mcp/errors.js";
 import { createMcpServerRegistry } from "../src/mcp/registry.js";
 import {
   filterEffectiveMcpServers,
-  resolveStackMcpServerReferences,
-  resolveStackMcpServers,
+  resolvePackMcpServerReferences,
+  resolvePackMcpServers,
 } from "../src/mcp/resolver.js";
-import { createStackRegistry } from "../src/stack/registry.js";
+import { createPackRegistry } from "../src/pack/registry.js";
 
-describe("resolveStackMcpServers", () => {
-  it("collects inherited MCP servers in deterministic dependency-first order", () => {
-    const stacks = createStackRegistry([
+describe("resolvePackMcpServers", () => {
+  it("collects MCP servers in selected pack order", () => {
+    const packs = createPackRegistry([
       { name: "base", mcpServers: ["context7", "playwright"] },
-      { name: "child", extends: ["base"], mcpServers: ["context7"] },
+      { name: "child", mcpServers: ["context7"] },
     ]);
     const mcps = createMcpServerRegistry([
       { name: "context7", load: () => valid("context7") },
       { name: "playwright", load: () => valid("playwright") },
     ]);
 
-    expect(resolveStackMcpServers(["child"], stacks, mcps)).toEqual(["context7", "playwright"]);
-    expect(resolveStackMcpServerReferences(["child"], stacks, mcps)).toEqual([
-      { name: "context7", level: "recommended" },
-      { name: "playwright", level: "recommended" },
+    expect(resolvePackMcpServers(["base", "child"], packs, mcps)).toEqual([
+      "context7",
+      "playwright",
+    ]);
+    expect(resolvePackMcpServerReferences(["base", "child"], packs, mcps)).toEqual([
+      { name: "context7", activation: "default" },
+      { name: "playwright", activation: "default" },
     ]);
   });
 
   it("fails clearly on unknown MCP references", () => {
-    const stacks = createStackRegistry([{ name: "base", mcpServers: ["missing"] }]);
+    const packs = createPackRegistry([{ name: "base", mcpServers: ["missing"] }]);
     const mcps = createMcpServerRegistry([]);
 
-    expect(() => resolveStackMcpServers(["base"], stacks, mcps)).toThrow(UnknownMcpServerError);
+    expect(() => resolvePackMcpServers(["base"], packs, mcps)).toThrow(UnknownMcpServerError);
   });
 
-  it("filters effective MCP servers by optimization profile", () => {
+  it("filters effective MCP servers by enabled optional capabilities", () => {
     const declared = [
-      { name: "essential-server", level: "essential" as const },
-      { name: "recommended-server", level: "recommended" as const },
-      { name: "optional-server", level: "optional" as const },
+      { name: "default-server", activation: "default" as const },
+      { name: "optional-server", activation: "optional" as const },
     ];
 
-    expect(filterEffectiveMcpServers(declared, "lean")).toEqual(["essential-server"]);
-    expect(filterEffectiveMcpServers(declared, "balanced")).toEqual([
-      "essential-server",
-      "recommended-server",
-    ]);
-    expect(filterEffectiveMcpServers(declared, "autonomous")).toEqual([
-      "essential-server",
-      "recommended-server",
+    expect(filterEffectiveMcpServers(declared, [])).toEqual(["default-server"]);
+    expect(filterEffectiveMcpServers(declared, ["optional-server"])).toEqual([
+      "default-server",
       "optional-server",
     ]);
   });

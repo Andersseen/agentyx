@@ -3,24 +3,21 @@ import { join } from "node:path";
 import { builtInAdapterRegistry } from "@agentyx/adapters";
 import {
   AGENTYX_CONFIG_FILENAME,
-  AGENTYX_PROFILES,
   AgentyxError,
-  type AgentyxProfile,
   buildAgentyxConfig,
+  builtInPacks,
   detectProject,
   formatAgentyxConfig,
   parseAgentyxConfig,
-  resolveStacks,
+  resolveAgentyxConfig,
 } from "@agentyx/core";
-import { confirm, isCancel, multiselect, select } from "@clack/prompts";
+import { confirm, isCancel, multiselect } from "@clack/prompts";
 import { Command } from "commander";
 import { emit, section, toJson } from "../output.js";
 
-const DEFAULT_INIT_PROFILE: AgentyxProfile = "lean";
-
 export interface InitCommandInput {
-  readonly stack: string | undefined;
-  readonly profile: AgentyxProfile | undefined;
+  readonly packs: readonly string[];
+  readonly enable: readonly string[];
   readonly targets: readonly string[];
   readonly yes: boolean;
   readonly force: boolean;
@@ -29,8 +26,8 @@ export interface InitCommandInput {
 }
 
 export interface InitPlan {
-  readonly stack: string;
-  readonly profile: AgentyxProfile;
+  readonly packs: readonly string[];
+  readonly enable: readonly string[];
   readonly targets: readonly string[];
   readonly path: string;
   readonly content: string;
@@ -64,16 +61,11 @@ export async function planNonInteractiveInit(input: InitCommandInput): Promise<I
     );
   }
 
-  const stack = input.stack ?? detection.recommendedStack;
+  const packs = input.packs.length > 0 ? [...input.packs] : [...detection.recommendedPacks];
 
-  if (stack === undefined) {
-    throw new InitError(
-      "init_stack_required",
-      "Could not infer an Agentyx stack. Pass --stack typescript or --stack angular.",
-    );
+  if (packs.length === 0) {
+    throw new InitError("init_pack_required", "Pass at least one --pack.");
   }
-
-  resolveStacks([stack]);
 
   if (input.targets.length === 0) {
     throw new InitError(
@@ -86,16 +78,13 @@ export async function planNonInteractiveInit(input: InitCommandInput): Promise<I
     builtInAdapterRegistry.get(target);
   }
 
-  const config = buildAgentyxConfig({
-    stack,
-    profile: input.profile ?? DEFAULT_INIT_PROFILE,
-    targets: input.targets,
-  });
+  const config = buildAgentyxConfig({ packs, enable: input.enable, targets: input.targets });
   const parsed = parseAgentyxConfig(config);
+  resolveAgentyxConfig(parsed);
 
   return {
-    stack,
-    profile: parsed.profile,
+    packs: parsed.packs,
+    enable: parsed.enable,
     targets: parsed.targets,
     path,
     content: formatAgentyxConfig(config),
@@ -116,31 +105,24 @@ async function planInteractiveInit(input: InitCommandInput): Promise<InitPlan> {
   }
 
   const detected = [
-    ...detection.detectedStacks.map(formatStackName),
+    ...detection.detectedPacks.map(formatPackName),
     detection.packageManager.name ??
       (detection.packageManager.ambiguous ? "ambiguous package manager" : undefined),
   ].filter((value): value is string => value !== undefined);
-  const stack =
-    input.stack ??
-    (await promptValue(
-      select({
-        message: ["Agentyx", "", section("Detected", detected), "", "Stack"].join("\n"),
-        initialValue: detection.recommendedStack ?? "typescript",
-        options: [
-          { value: "typescript", label: "TypeScript" },
-          { value: "angular", label: "Angular" },
-        ],
-      }),
-    ));
-  const profile =
-    input.profile ??
-    (await promptValue(
-      select({
-        message: "Profile",
-        initialValue: DEFAULT_INIT_PROFILE,
-        options: AGENTYX_PROFILES.map((value) => ({ value, label: value })),
-      }),
-    ));
+  const packs =
+    input.packs.length > 0
+      ? [...input.packs]
+      : await promptValue(
+          multiselect({
+            message: ["Agentyx", "", section("Detected", detected), "", "Packs"].join("\n"),
+            initialValues: [...detection.recommendedPacks],
+            required: true,
+            options: builtInPacks.map((pack) => ({
+              value: pack.name,
+              label: `${formatPackName(pack.name)} (${pack.category})`,
+            })),
+          }),
+        );
   const targets =
     input.targets.length > 0
       ? [...input.targets]
@@ -156,12 +138,27 @@ async function planInteractiveInit(input: InitCommandInput): Promise<InitPlan> {
           }),
         );
 
-  resolveStacks([stack]);
   for (const target of targets) {
     builtInAdapterRegistry.get(target);
   }
 
-  const config = buildAgentyxConfig({ stack, profile, targets });
+  const optionalCapabilities = optionalCapabilitiesFor(packs);
+  const enable =
+    input.enable.length > 0 || optionalCapabilities.length === 0
+      ? [...input.enable]
+      : await promptValue(
+          multiselect({
+            message: "Optional capabilities",
+            options: optionalCapabilities.map((capability) => ({
+              value: capability.name,
+              label: capability.name,
+              hint: capability.kind,
+            })),
+          }),
+        );
+  const config = buildAgentyxConfig({ packs, enable, targets });
+  const parsed = parseAgentyxConfig(config);
+  resolveAgentyxConfig(parsed);
   const content = formatAgentyxConfig(config);
   const shouldCreate = await promptValue(
     confirm({
@@ -178,15 +175,15 @@ async function planInteractiveInit(input: InitCommandInput): Promise<InitPlan> {
     throw new InitError("init_cancelled", "Agentyx init cancelled. No files were written.");
   }
 
-  return { stack, profile, targets, path, content, replaced: exists };
+  return { packs: parsed.packs, enable: parsed.enable, targets, path, content, replaced: exists };
 }
 
 function renderInitText(plan: InitPlan): string {
   return [
     plan.replaced ? "Replaced .agentyx.json" : "Created .agentyx.json",
     "",
-    section("Stack", [plan.stack]),
-    section("Profile", [plan.profile]),
+    section("Packs", plan.packs),
+    section("Enabled", plan.enable),
     section("Targets", plan.targets),
     "Next: agentyx doctor",
   ].join("\n");
@@ -196,8 +193,8 @@ function renderInitJson(plan: InitPlan): string {
   return toJson({
     path: AGENTYX_CONFIG_FILENAME,
     replaced: plan.replaced,
-    stack: plan.stack,
-    profile: plan.profile,
+    packs: plan.packs,
+    enable: plan.enable,
     targets: plan.targets,
   });
 }
@@ -225,35 +222,66 @@ async function fileExists(path: string): Promise<boolean> {
   }
 }
 
+function collectName(value: string, previous: string[]): string[] {
+  return [...previous, value];
+}
+
 function collectTarget(value: string, previous: string[]): string[] {
   return [...previous, value];
 }
 
-function parseProfile(value: string): AgentyxProfile {
-  if (!AGENTYX_PROFILES.includes(value as AgentyxProfile)) {
-    throw new Error(`Profile must be one of: ${AGENTYX_PROFILES.join(", ")}.`);
-  }
-
-  return value as AgentyxProfile;
+function formatPackName(pack: string): string {
+  return pack === "typescript" ? "TypeScript" : pack === "angular" ? "Angular" : pack;
 }
 
-function formatStackName(stack: string): string {
-  return stack === "typescript" ? "TypeScript" : stack === "angular" ? "Angular" : stack;
+function optionalCapabilitiesFor(packs: readonly string[]): readonly {
+  readonly name: string;
+  readonly kind: string;
+}[] {
+  const selected = new Set(packs);
+  const capabilities: Array<{ name: string; kind: string }> = [];
+  const seen = new Set<string>();
+
+  for (const pack of builtInPacks) {
+    if (!selected.has(pack.name)) {
+      continue;
+    }
+
+    for (const server of pack.mcpServers ?? []) {
+      if (
+        typeof server === "object" &&
+        server.activation === "optional" &&
+        !seen.has(server.name)
+      ) {
+        seen.add(server.name);
+        capabilities.push({ name: server.name, kind: "MCP" });
+      }
+    }
+
+    for (const tool of pack.tools ?? []) {
+      if (typeof tool === "object" && tool.activation === "optional" && !seen.has(tool.name)) {
+        seen.add(tool.name);
+        capabilities.push({ name: tool.name, kind: "tool" });
+      }
+    }
+  }
+
+  return capabilities;
 }
 
 export function createInitCommand(): Command {
   return new Command("init")
     .description("Create .agentyx.json for this project.")
-    .option("--stack <stack>", "stack to write, for example typescript or angular")
-    .option("--profile <profile>", "optimization profile to write", parseProfile)
+    .option("--pack <pack>", "pack to write; repeatable", collectName, [])
+    .option("--enable <id>", "optional capability to enable; repeatable", collectName, [])
     .option("--target <id>", "target agent to configure; repeatable", collectTarget, [])
     .option("--yes", "accept inferred and explicit choices without prompts", false)
     .option("--force", "replace an existing .agentyx.json", false)
     .option("--json", "print machine-readable JSON only", false)
     .action(
       async (options: {
-        stack?: string;
-        profile?: AgentyxProfile;
+        pack: string[];
+        enable: string[];
         target: string[];
         yes: boolean;
         force: boolean;
@@ -261,8 +289,8 @@ export function createInitCommand(): Command {
       }) => {
         await emit(() =>
           runInitCommand({
-            stack: options.stack,
-            profile: options.profile,
+            packs: options.pack,
+            enable: options.enable,
             targets: options.target,
             yes: options.yes,
             force: options.force,

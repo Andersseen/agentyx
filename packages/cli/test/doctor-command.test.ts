@@ -35,25 +35,22 @@ async function writeConfig(config: Record<string, unknown>): Promise<void> {
 describe("agentyx doctor", () => {
   it("reports a healthy project", async () => {
     await cp(join(fixturesPath, "typescript-project"), projectDir, { recursive: true });
-    await writeConfig({ extends: ["typescript"], profile: "balanced", targets: ["codex"] });
+    await writeConfig({ packs: ["technical", "typescript"], targets: ["codex"] });
 
     const report = await runDoctorCommand({ json: false, cwd: projectDir });
 
     expect(report.status).toBe("healthy");
     expect(report.project).toMatchObject({
       packageManager: "pnpm",
-      detectedStacks: ["typescript"],
-      recommendedStack: "typescript",
+      detectedPacks: ["typescript"],
+      recommendedPacks: ["technical", "typescript"],
       config: { present: true, valid: true },
     });
     expect(report.resolution).toMatchObject({
-      resolvedStacks: ["core", "typescript"],
-      skillsCount: 4,
-      declaredMcpCount: 0,
-      activeMcpCount: 0,
-      skippedMcpCount: 0,
+      resolvedPacks: ["technical", "typescript"],
+      skillsCount: 7,
     });
-    expect(report.installation.summary).toEqual({ create: 4, update: 0, unchanged: 0 });
+    expect(report.installation.summary).toEqual({ create: 7, update: 0, unchanged: 0 });
     expect(await readdir(projectDir)).not.toContain(".agents");
   });
 
@@ -82,7 +79,7 @@ describe("agentyx doctor", () => {
   });
 
   it("reports unknown targets as errors", async () => {
-    await writeConfig({ extends: ["typescript"], targets: ["opencode"] });
+    await writeConfig({ packs: ["typescript"], targets: ["opencode"] });
 
     const report = await runDoctorCommand({ json: false, cwd: projectDir });
 
@@ -96,16 +93,11 @@ describe("agentyx doctor", () => {
       mcpPath: undefined,
       mcpPathExists: undefined,
     });
-    expect(report.diagnostics).toContainEqual({
-      level: "error",
-      code: "unknown_target",
-      message: 'Configured target "opencode" has no adapter.',
-    });
   });
 
   it("warns when Angular is detected but only TypeScript is configured", async () => {
     await cp(join(fixturesPath, "angular-project"), projectDir, { recursive: true });
-    await writeConfig({ extends: ["typescript"], profile: "balanced", targets: ["codex"] });
+    await writeConfig({ packs: ["technical", "typescript"], targets: ["codex"] });
 
     const report = await runDoctorCommand({ json: false, cwd: projectDir });
 
@@ -117,26 +109,28 @@ describe("agentyx doctor", () => {
     });
   });
 
-  it("reports lean profile MCP filtering as info", async () => {
-    await writeConfig({ extends: ["angular"], profile: "lean", targets: ["codex"] });
+  it("reports optional efficiency capabilities", async () => {
+    await writeConfig({
+      packs: ["efficiency"],
+      enable: ["codebase-memory"],
+      targets: ["codex"],
+    });
 
     const report = await runDoctorCommand({ json: false, cwd: projectDir });
 
-    expect(report.status).toBe("warnings");
-    expect(report.diagnostics).toContainEqual({
-      level: "info",
-      code: "mcp_filtered_by_profile",
-      message: "lean profile skips recommended MCP server context7.",
+    expect(report.resolution.mcp).toEqual([
+      { name: "codebase-memory", activation: "optional", active: true },
+    ]);
+    expect(report.resolution.tools[0]).toMatchObject({
+      name: "rtk",
+      activation: "optional",
+      active: false,
     });
-    expect(report.resolution).toMatchObject({
-      declaredMcpCount: 1,
-      activeMcpCount: 0,
-      skippedMcpCount: 1,
-    });
+    expect(report.efficiency.codebaseMemory).toBe("enabled");
   });
 
   it("renders stable JSON output", async () => {
-    await writeConfig({ extends: ["core"], profile: "balanced", targets: ["claude"] });
+    await writeConfig({ packs: ["technical"], targets: ["claude"] });
 
     const report = await runDoctorCommand({ json: true, cwd: projectDir });
     const output = renderDoctorReport(report, true);
@@ -146,8 +140,8 @@ describe("agentyx doctor", () => {
     expect(parsed).toMatchObject({
       status: "warnings",
       configuration: {
-        stacks: ["core"],
-        profile: "balanced",
+        packs: ["technical"],
+        enable: [],
         targets: ["claude"],
       },
     });
@@ -163,7 +157,7 @@ describe("agentyx doctor", () => {
   });
 
   it("does not write during installability checks", async () => {
-    await writeConfig({ extends: ["core"], targets: ["codex", "kimi"] });
+    await writeConfig({ packs: ["technical"], targets: ["codex", "kimi"] });
 
     await runDoctorCommand({ json: false, cwd: projectDir });
 

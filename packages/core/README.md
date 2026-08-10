@@ -1,60 +1,47 @@
 # @agentyx/core
 
-Domain foundations for [Agentyx](https://github.com/Andersseen/agentyx): the `.agentyx.json` configuration
-model, stack definitions, built-in stack/skill/MCP registries, optimization profiles, and
-resolution.
+Domain foundations for Agentyx: `.agentyx.json` parsing, pack definitions, built-in Skill/MCP/tool
+registries, project detection, JSON Schema generation, and provider-neutral resolution.
 
-This package has no dependency on Commander or any terminal UI — CLI concerns live in
-[`@agentyx/cli`](https://github.com/Andersseen/agentyx/tree/main/packages/cli).
+This package has no dependency on Commander or terminal UI. CLI concerns live in `@agentyx/cli`, and
+provider filesystem writes live in `@agentyx/adapters`.
 
 ```ts
 import {
-  builtInSkillRegistry,
-  builtInStacks,
+  builtInPacks,
   loadAgentyxConfig,
   resolveAgentyxConfig,
-  resolveStackMcpServerReferences,
-  resolveStacks,
-  resolveStackSkills,
+  resolvePackSkills,
+  resolvePacks,
 } from "@agentyx/core";
 
-resolveStacks(["angular"]);
-// ["core", "typescript", "angular"]
+builtInPacks.map((pack) => pack.name);
+// ["technical", "typescript", "angular", "efficiency", "agentic"]
 
-resolveStackSkills(["angular"]);
-// ["planning", "systematic-debugging", "verification", "typescript-modern", "angular-modern"]
+resolvePacks(["technical", "typescript", "angular"]);
+// ["technical", "typescript", "angular"]
 
-resolveStackMcpServerReferences(["angular"]);
-// [{ name: "context7", level: "recommended" }]
+resolvePackSkills(["typescript"]);
+// ["typescript-strict", "typescript-modeling", "typescript-modern"]
 
 resolveAgentyxConfig(await loadAgentyxConfig(process.cwd()));
-// { requestedStacks, resolvedStacks, skills, declaredMcpServers, mcpServers, profile, targets }
+// { requestedPacks, resolvedPacks, skills, declaredMcpServers, mcpServers, declaredTools, tools, enabled, targets }
 ```
 
-## Skills
+Packs are composable capability bundles. They can contribute default Skills, default MCP servers, and
+optional MCP/tool capabilities. Optional capabilities are active only when their identifier appears
+in `enable`.
 
-A skill is provider-independent instruction text: `{ name, description, content }` and nothing else.
-The built-in skills ship as `SKILL.md` files under `skills/`, with YAML frontmatter for the metadata
-and the Markdown body as the content, and are published alongside `dist/`.
-
-Resolution works on identifiers, and `SkillRegistry.get(name)` is what reads a body:
-
-```ts
-builtInSkillRegistry.names; // identifiers, no file is read
-builtInSkillRegistry.has("planning"); // no file is read
-builtInSkillRegistry.get("planning"); // reads, validates and caches SKILL.md
+```json
+{
+  "packs": ["technical", "typescript", "efficiency"],
+  "enable": ["rtk"],
+  "targets": ["codex"]
+}
 ```
 
-`createSkillRegistry(sources)` builds an independent registry from `{ name, load }` sources — the
-seam an external registry would use later. `parseSkillMarkdown(markdown, origin)` parses one
-`SKILL.md`, and `formatSkillMarkdown(skill)` renders one deterministically. That serializer is the
-canonical form every provider installs, which is why it lives here: an adapter decides where a skill
-goes, never what it says.
-
-MCP resolution keeps both declared and effective capabilities visible. Profiles are provider-neutral:
-`lean` enables essential MCP only, `balanced` enables essential and recommended MCP, and
-`autonomous` enables essential, recommended and optional MCP. Skill identifiers are not filtered by
-profile.
+Skills ship as `SKILL.md` assets under `skills/`. Resolution returns identifiers only; a Skill body
+is read only when `SkillRegistry.get(name)` is called.
 
 The JSON Schema for `.agentyx.json` ships with the package:
 
@@ -64,14 +51,8 @@ The JSON Schema for `.agentyx.json` ships with the package:
 }
 ```
 
-Resolution failures throw domain errors — `UnknownStackError`, `CircularStackDependencyError`,
-`UnknownSkillError`, `DuplicateSkillError`, `InvalidSkillError`, `AgentyxConfigNotFoundError`,
-`AgentyxConfigParseError`, `AgentyxConfigValidationError` — all extending `AgentyxError` with a stable
-`code`.
-
-Installing skills and effective MCP capabilities into an agent is
-[`@agentyx/adapters`](https://github.com/Andersseen/agentyx/tree/main/packages/adapters); core knows
-nothing about providers. See the [main README](https://github.com/Andersseen/agentyx#readme) for the
-full picture.
+Resolution failures throw domain errors extending `AgentyxError`, including `UnknownPackError`,
+`UnknownEnabledCapabilityError`, `UnknownSkillError`, `UnknownMcpServerError`, and
+`UnknownToolError`.
 
 MIT © Andersseen

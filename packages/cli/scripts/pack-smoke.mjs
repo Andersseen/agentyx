@@ -66,10 +66,10 @@ await run(
   join(projectDir, "node_modules", ".bin", agentyx),
   [
     "init",
-    "--stack",
+    "--pack",
+    "technical",
+    "--pack",
     "typescript",
-    "--profile",
-    "lean",
     "--target",
     "codex",
     "--target",

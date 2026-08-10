@@ -48,6 +48,23 @@ export class AgentyxConfigValidationError extends AgentyxError {
   }
 }
 
+export class UnknownEnabledCapabilityError extends AgentyxError {
+  readonly capabilityName: string;
+  readonly knownCapabilities: readonly string[];
+
+  constructor(capabilityName: string, knownCapabilities: readonly string[]) {
+    const known = knownCapabilities.length > 0 ? [...knownCapabilities].sort().join(", ") : "none";
+
+    super(
+      "unknown_enabled_capability",
+      `Unknown enabled capability "${capabilityName}". Known optional capabilities: ${known}.`,
+    );
+    this.name = "UnknownEnabledCapabilityError";
+    this.capabilityName = capabilityName;
+    this.knownCapabilities = knownCapabilities;
+  }
+}
+
 function toConfigIssues(error: ZodError): readonly AgentyxConfigIssue[] {
   return error.issues.map((issue) => ({
     path: formatIssuePath(issue.path),

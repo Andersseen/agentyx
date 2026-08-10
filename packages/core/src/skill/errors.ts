@@ -2,19 +2,19 @@ import type { ZodError } from "zod";
 import { AgentyxError } from "../errors.js";
 
 /**
- * Raised when a stack references a skill the registry does not know.
+ * Raised when a pack references a skill the registry does not know.
  *
- * The offending name is exposed as `skillName`; `stack` stays the JS stack
+ * The offending name is exposed as `skillName`; `pack` stays the JS pack
  * trace inherited from `Error`.
  */
 export class UnknownSkillError extends AgentyxError {
   readonly skillName: string;
-  /** The stack that declared the skill, when the failure came from resolution. */
+  /** The pack that declared the skill, when the failure came from resolution. */
   readonly requiredBy: string | undefined;
   readonly knownSkills: readonly string[];
 
   constructor(skillName: string, requiredBy: string | undefined, knownSkills: readonly string[]) {
-    const origin = requiredBy === undefined ? "" : ` (required by stack "${requiredBy}")`;
+    const origin = requiredBy === undefined ? "" : ` (required by pack "${requiredBy}")`;
     const known = knownSkills.length > 0 ? [...knownSkills].sort().join(", ") : "none";
 
     super("unknown_skill", `Unknown skill "${skillName}"${origin}. Known skills: ${known}.`);

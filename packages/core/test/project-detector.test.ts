@@ -8,7 +8,7 @@ import { buildAgentyxConfig, detectProject, formatAgentyxConfig } from "../src/i
 const fixturesPath = fileURLToPath(new URL("fixtures", import.meta.url));
 
 describe("detectProject", () => {
-  it("detects a TypeScript project and recommends the TypeScript stack", async () => {
+  it("detects a TypeScript project and recommends the TypeScript pack", async () => {
     const detection = await detectProject(join(fixturesPath, "typescript-project"));
 
     expect(detection.packageJson.present).toBe(true);
@@ -18,11 +18,11 @@ describe("detectProject", () => {
       ambiguous: false,
       lockfiles: ["pnpm-lock.yaml"],
     });
-    expect(detection.detectedStacks).toEqual(["typescript"]);
-    expect(detection.recommendedStack).toBe("typescript");
+    expect(detection.detectedPacks).toEqual(["typescript"]);
+    expect(detection.recommendedPacks).toEqual(["technical", "typescript"]);
   });
 
-  it("detects Angular from package metadata and recommends the Angular stack", async () => {
+  it("detects Angular from package metadata and recommends the Angular pack", async () => {
     const detection = await detectProject(join(fixturesPath, "angular-project"));
 
     expect(detection.packageManager).toMatchObject({
@@ -31,8 +31,8 @@ describe("detectProject", () => {
       ambiguous: false,
       lockfiles: ["package-lock.json"],
     });
-    expect(detection.detectedStacks).toEqual(["typescript", "angular"]);
-    expect(detection.recommendedStack).toBe("angular");
+    expect(detection.detectedPacks).toEqual(["typescript", "angular"]);
+    expect(detection.recommendedPacks).toEqual(["technical", "typescript", "angular"]);
   });
 
   it("reports ambiguous lockfiles without guessing", async () => {
@@ -65,8 +65,8 @@ describe("detectProject", () => {
 
       const detection = await detectProject(projectDir);
 
-      expect(detection.detectedStacks).toEqual(["typescript"]);
-      expect(detection.recommendedStack).toBe("typescript");
+      expect(detection.detectedPacks).toEqual(["typescript"]);
+      expect(detection.recommendedPacks).toEqual(["technical", "typescript"]);
     } finally {
       await rm(projectDir, { recursive: true, force: true });
     }
@@ -76,18 +76,22 @@ describe("detectProject", () => {
 describe("formatAgentyxConfig", () => {
   it("renders deterministic JSON without a fragile schema path", () => {
     const config = buildAgentyxConfig({
-      stack: "angular",
-      profile: "lean",
+      packs: ["technical", "typescript", "angular"],
+      enable: ["rtk"],
       targets: ["codex", "kimi"],
     });
 
     expect(formatAgentyxConfig(config)).toBe(
       [
         "{",
-        '  "extends": [',
+        '  "packs": [',
+        '    "technical",',
+        '    "typescript",',
         '    "angular"',
         "  ],",
-        '  "profile": "lean",',
+        '  "enable": [',
+        '    "rtk"',
+        "  ],",
         '  "targets": [',
         '    "codex",',
         '    "kimi"',
@@ -101,8 +105,7 @@ describe("formatAgentyxConfig", () => {
 
   it("matches JSON.parse output", () => {
     const config = buildAgentyxConfig({
-      stack: "typescript",
-      profile: "balanced",
+      packs: ["typescript"],
       targets: ["claude"],
     });
 

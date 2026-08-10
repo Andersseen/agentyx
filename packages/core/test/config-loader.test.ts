@@ -33,22 +33,26 @@ describe("loadAgentyxConfig", () => {
 
   it("loads and validates a configuration file", async () => {
     await writeConfig(
-      JSON.stringify({ extends: ["angular"], profile: "lean", targets: ["codex"] }),
+      JSON.stringify({
+        packs: ["technical", "typescript", "angular"],
+        enable: [],
+        targets: ["codex"],
+      }),
     );
 
     await expect(loadAgentyxConfig(projectPath)).resolves.toEqual({
-      extends: ["angular"],
-      profile: "lean",
+      packs: ["technical", "typescript", "angular"],
+      enable: [],
       targets: ["codex"],
     });
   });
 
   it("applies defaults for omitted fields", async () => {
-    await writeConfig(JSON.stringify({ extends: ["core"] }));
+    await writeConfig(JSON.stringify({ packs: ["technical"] }));
 
     await expect(loadAgentyxConfig(projectPath)).resolves.toEqual({
-      extends: ["core"],
-      profile: "balanced",
+      packs: ["technical"],
+      enable: [],
       targets: [],
     });
   });
@@ -74,14 +78,14 @@ describe("loadAgentyxConfig", () => {
   });
 
   it("reports schema violations without recovering from them", async () => {
-    await writeConfig(JSON.stringify({ profile: "turbo" }));
+    await writeConfig(JSON.stringify({ enable: ["RTK"] }));
 
     await expect(loadAgentyxConfig(projectPath)).rejects.toThrow(AgentyxConfigValidationError);
-    await expect(loadAgentyxConfig(projectPath)).rejects.toThrow(/profile: Profile must be one of/);
+    await expect(loadAgentyxConfig(projectPath)).rejects.toThrow(/enable\[0\]/);
   });
 
   it("does not search parent directories", async () => {
-    await writeConfig(JSON.stringify({ extends: ["core"] }));
+    await writeConfig(JSON.stringify({ packs: ["technical"] }));
     const childPath = join(projectPath, "packages", "app");
     await mkdir(childPath, { recursive: true });
 
@@ -90,8 +94,8 @@ describe("loadAgentyxConfig", () => {
 
   it("loads the repository example project", async () => {
     await expect(loadAgentyxConfig(exampleProjectPath)).resolves.toEqual({
-      extends: ["angular"],
-      profile: "balanced",
+      packs: ["technical", "typescript", "angular"],
+      enable: [],
       targets: ["codex", "claude"],
     });
   });

@@ -8,7 +8,7 @@ import {
 
 describe("builtInMcpServerRegistry", () => {
   it("lists the built-in MCP servers", () => {
-    expect(builtInMcpServerRegistry.names).toEqual(["context7", "playwright"]);
+    expect(builtInMcpServerRegistry.names).toEqual(["context7", "playwright", "codebase-memory"]);
   });
 
   it("retrieves known MCP servers and metadata", () => {
@@ -27,6 +27,13 @@ describe("builtInMcpServerRegistry", () => {
       {
         name: "playwright",
         description: "Automate and inspect browsers through Playwright MCP.",
+        transport: "stdio",
+        contextCost: "high",
+      },
+      {
+        name: "codebase-memory",
+        description:
+          "Structural code-intelligence MCP backed by a persistent code knowledge graph.",
         transport: "stdio",
         contextCost: "high",
       },

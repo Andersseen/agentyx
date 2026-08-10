@@ -7,7 +7,7 @@ export class UnknownMcpServerError extends AgentyxError {
   readonly knownServers: readonly string[];
 
   constructor(serverName: string, requiredBy: string | undefined, knownServers: readonly string[]) {
-    const origin = requiredBy === undefined ? "" : ` (required by stack "${requiredBy}")`;
+    const origin = requiredBy === undefined ? "" : ` (required by "${requiredBy}")`;
     const known = knownServers.length > 0 ? [...knownServers].sort().join(", ") : "none";
 
     super(

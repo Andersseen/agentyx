@@ -1,6 +1,6 @@
 import { access, readFile } from "node:fs/promises";
 import { join } from "node:path";
-import type { AgentyxConfigInput, AgentyxProfile } from "../config/schema.js";
+import type { AgentyxConfigInput } from "../config/schema.js";
 
 export const PACKAGE_MANAGERS = ["pnpm", "npm", "yarn", "bun"] as const;
 
@@ -26,8 +26,8 @@ export interface ProjectDetection {
   readonly projectDir: string;
   readonly packageJson: ProjectPackageJsonDetection;
   readonly packageManager: PackageManagerDetection;
-  readonly detectedStacks: readonly string[];
-  readonly recommendedStack: string | undefined;
+  readonly detectedPacks: readonly string[];
+  readonly recommendedPacks: readonly string[];
 }
 
 interface PackageJson {
@@ -51,7 +51,7 @@ export async function detectProject(projectDir: string): Promise<ProjectDetectio
   const packageJsonPath = join(projectDir, "package.json");
   const packageJson = await readPackageJson(packageJsonPath);
   const packageManager = await detectPackageManager(projectDir, packageJson.data);
-  const detectedStacks = await detectStacks(projectDir, packageJson.data);
+  const detectedPacks = await detectPacks(projectDir, packageJson.data);
 
   return {
     projectDir,
@@ -64,19 +64,19 @@ export async function detectProject(projectDir: string): Promise<ProjectDetectio
       error: packageJson.error,
     },
     packageManager,
-    detectedStacks,
-    recommendedStack: recommendStack(detectedStacks),
+    detectedPacks,
+    recommendedPacks: recommendPacks(detectedPacks),
   };
 }
 
 export function buildAgentyxConfig(input: {
-  readonly stack: string;
-  readonly profile: AgentyxProfile;
+  readonly packs: readonly string[];
+  readonly enable?: readonly string[];
   readonly targets: readonly string[];
 }): AgentyxConfigInput {
   return {
-    extends: [input.stack],
-    profile: input.profile,
+    packs: [...input.packs],
+    enable: [...(input.enable ?? [])],
     targets: [...input.targets],
   };
 }
@@ -85,37 +85,37 @@ export function formatAgentyxConfig(config: AgentyxConfigInput): string {
   return `${JSON.stringify(config, null, 2)}\n`;
 }
 
-function recommendStack(detectedStacks: readonly string[]): string | undefined {
-  if (detectedStacks.includes("angular")) {
-    return "angular";
+function recommendPacks(detectedPacks: readonly string[]): readonly string[] {
+  if (detectedPacks.includes("angular")) {
+    return ["technical", "typescript", "angular"];
   }
 
-  if (detectedStacks.includes("typescript")) {
-    return "typescript";
+  if (detectedPacks.includes("typescript")) {
+    return ["technical", "typescript"];
   }
 
-  return undefined;
+  return ["technical"];
 }
 
-async function detectStacks(
+async function detectPacks(
   projectDir: string,
   packageJson: PackageJson | undefined,
 ): Promise<readonly string[]> {
-  const stacks: string[] = [];
+  const packs: string[] = [];
   const dependencies = collectDependencies(packageJson);
   const hasAngular = dependencies.has("@angular/core");
   const hasTypeScript =
     dependencies.has("typescript") || (await exists(join(projectDir, "tsconfig.json")));
 
   if (hasTypeScript || hasAngular) {
-    stacks.push("typescript");
+    packs.push("typescript");
   }
 
   if (hasAngular) {
-    stacks.push("angular");
+    packs.push("angular");
   }
 
-  return stacks;
+  return packs;
 }
 
 async function detectPackageManager(

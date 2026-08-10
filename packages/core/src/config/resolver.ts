@@ -1,56 +1,79 @@
 import { builtInMcpServerRegistry } from "../mcp/built-in.js";
 import type { McpServerRegistry } from "../mcp/registry.js";
-import { collectStackMcpServerReferences, filterEffectiveMcpServers } from "../mcp/resolver.js";
+import { collectPackMcpServerReferences, filterEffectiveMcpServers } from "../mcp/resolver.js";
 import type { McpServerReference } from "../mcp/schema.js";
+import { builtInPackRegistry, type PackRegistry } from "../pack/registry.js";
+import { resolvePacks } from "../pack/resolver.js";
 import { builtInSkillRegistry } from "../skill/built-in.js";
 import type { SkillRegistry } from "../skill/registry.js";
-import { collectStackSkills } from "../skill/resolver.js";
-import { builtInStackRegistry, type StackRegistry } from "../stack/registry.js";
-import { resolveStacks } from "../stack/resolver.js";
-import type { AgentyxConfig, AgentyxProfile } from "./schema.js";
+import { collectPackSkills } from "../skill/resolver.js";
+import { builtInToolRegistry } from "../tool/built-in.js";
+import type { ToolRegistry } from "../tool/registry.js";
+import { collectPackToolReferences, filterEffectiveTools } from "../tool/resolver.js";
+import type { ToolReference } from "../tool/schema.js";
+import { UnknownEnabledCapabilityError } from "./errors.js";
+import type { AgentyxConfig } from "./schema.js";
 
-/** A project configuration with its stack inheritance expanded. */
+/** A project configuration with its pack inheritance expanded. */
 export interface ResolvedAgentyxConfig {
-  /** The stacks the project asked for, in configuration order. */
-  readonly requestedStacks: readonly string[];
-  /** The full inheritance chain, dependency-first and de-duplicated. */
-  readonly resolvedStacks: readonly string[];
+  /** The packs the project asked for, in configuration order. */
+  readonly requestedPacks: readonly string[];
+  /** Selected packs, de-duplicated while preserving configuration order. */
+  readonly resolvedPacks: readonly string[];
   /**
-   * Skill identifiers contributed by the resolved stacks, in resolution order.
+   * Skill identifiers contributed by the resolved packs, in resolution order.
    * Identifiers only — reading the instructions is a separate, explicit step.
    */
   readonly skills: readonly string[];
   readonly declaredMcpServers: readonly McpServerReference[];
   readonly mcpServers: readonly string[];
-  readonly profile: AgentyxProfile;
+  readonly declaredTools: readonly ToolReference[];
+  readonly tools: readonly string[];
+  readonly enabled: readonly string[];
   readonly targets: readonly string[];
 }
 
 /**
- * Combines a validated project configuration with stack and skill resolution.
+ * Combines a validated project configuration with pack and skill resolution.
  * The input is never mutated.
  *
- * @throws {UnknownStackError} when a configured stack is missing.
- * @throws {CircularStackDependencyError} when inheritance forms a cycle.
- * @throws {UnknownSkillError} when a stack references an unknown skill.
+ * @throws {UnknownPackError} when a configured pack is missing.
+ * @throws {CircularPackDependencyError} when inheritance forms a cycle.
+ * @throws {UnknownSkillError} when a pack references an unknown skill.
  */
 export function resolveAgentyxConfig(
   config: AgentyxConfig,
-  registry: StackRegistry = builtInStackRegistry,
+  registry: PackRegistry = builtInPackRegistry,
   skillRegistry: SkillRegistry = builtInSkillRegistry,
   mcpRegistry: McpServerRegistry = builtInMcpServerRegistry,
+  toolRegistry: ToolRegistry = builtInToolRegistry,
 ): ResolvedAgentyxConfig {
-  const requestedStacks = [...config.extends];
-  const resolvedStacks = resolveStacks(requestedStacks, registry);
-  const declaredMcpServers = collectStackMcpServerReferences(resolvedStacks, registry, mcpRegistry);
+  const requestedPacks = [...config.packs];
+  const resolvedPacks = resolvePacks(requestedPacks, registry);
+  const declaredMcpServers = collectPackMcpServerReferences(resolvedPacks, registry, mcpRegistry);
+  const declaredTools = collectPackToolReferences(resolvedPacks, registry, toolRegistry);
+  const knownOptionalCapabilities = [
+    ...declaredMcpServers
+      .filter((server) => server.activation === "optional")
+      .map((server) => server.name),
+    ...declaredTools.filter((tool) => tool.activation === "optional").map((tool) => tool.name),
+  ];
+
+  for (const capability of config.enable) {
+    if (!knownOptionalCapabilities.includes(capability)) {
+      throw new UnknownEnabledCapabilityError(capability, knownOptionalCapabilities);
+    }
+  }
 
   return {
-    requestedStacks,
-    resolvedStacks,
-    skills: collectStackSkills(resolvedStacks, registry, skillRegistry),
+    requestedPacks,
+    resolvedPacks,
+    skills: collectPackSkills(resolvedPacks, registry, skillRegistry),
     declaredMcpServers,
-    mcpServers: filterEffectiveMcpServers(declaredMcpServers, config.profile),
-    profile: config.profile,
+    mcpServers: filterEffectiveMcpServers(declaredMcpServers, config.enable),
+    declaredTools,
+    tools: filterEffectiveTools(declaredTools, config.enable),
+    enabled: [...config.enable],
     targets: [...config.targets],
   };
 }

@@ -22,6 +22,16 @@ export const builtInMcpServerSources: readonly McpServerSource[] = [
       args: ["@playwright/mcp@latest"],
     }),
   },
+  {
+    name: "codebase-memory",
+    load: () => ({
+      name: "codebase-memory",
+      description: "Structural code-intelligence MCP backed by a persistent code knowledge graph.",
+      transport: "stdio",
+      contextCost: "high",
+      command: "codebase-memory-mcp",
+    }),
+  },
 ];
 
 export const builtInMcpServerRegistry = createMcpServerRegistry(builtInMcpServerSources);

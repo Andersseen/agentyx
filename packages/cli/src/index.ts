@@ -10,7 +10,7 @@ import { createDoctorCommand } from "./commands/doctor.js";
 import { createInitCommand } from "./commands/init.js";
 import { createInstallCommand } from "./commands/install.js";
 import { createMcpCommand } from "./commands/mcp.js";
-import { createProfileCommand } from "./commands/profile.js";
+import { createPackCommand } from "./commands/pack.js";
 import { createResolveCommand } from "./commands/resolve.js";
 import { createSkillCommand } from "./commands/skill.js";
 import { createTargetCommand } from "./commands/target.js";
@@ -43,7 +43,7 @@ export function createAgentyxProgram(): Command {
     .addCommand(createResolveCommand())
     .addCommand(createSkillCommand())
     .addCommand(createMcpCommand())
-    .addCommand(createProfileCommand())
+    .addCommand(createPackCommand())
     .addCommand(createTargetCommand())
     .addCommand(createInstallCommand());
 }

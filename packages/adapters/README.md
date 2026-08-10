@@ -77,7 +77,7 @@ outside the directory a target owns is refused with `InstallPathError`, unchange
 rewritten, writes are UTF-8, and nothing is deleted, executed or fetched.
 
 Project MCP configuration is planned and written through the same plan-first machinery. Adapters
-receive only effective MCP definitions; optimization profile logic stays in core. Hooks,
+receive only active MCP definitions; pack and optional-capability resolution stays in core. Hooks,
 permissions and user-global configuration are not part of the contract yet.
 
 MIT © Andersseen

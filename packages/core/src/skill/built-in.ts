@@ -9,14 +9,32 @@ import type { SkillDefinition } from "./schema.js";
 /**
  * The skills Agentyx ships with. The names are the directory names under
  * `packages/core/skills`, and knowing them without touching the filesystem is
- * what lets stack resolution validate references without reading any body.
+ * what lets pack resolution validate references without reading any body.
  */
 export const builtInSkillNames = [
+  "engineering-principles",
+  "code-quality",
+  "api-design",
+  "code-review",
   "planning",
   "systematic-debugging",
   "verification",
+  "brainstorming",
+  "parallel-work",
+  "worktree-workflow",
+  "subagent-driven-development",
+  "requesting-code-review",
+  "typescript-strict",
+  "typescript-modeling",
   "typescript-modern",
   "angular-modern",
+  "angular-signals",
+  "angular-architecture",
+  "angular-testing",
+  "context-efficient-development",
+  "concise-output",
+  "targeted-exploration",
+  "focused-verification",
 ] as const;
 
 /** The absolute path of a built-in skill's `SKILL.md`. */
