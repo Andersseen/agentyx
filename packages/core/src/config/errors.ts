@@ -1,12 +1,9 @@
 import type { ZodError } from "zod";
 import { AgentyxError } from "../errors.js";
+import { type AgentyxIssue, toAgentyxIssues } from "../issues.js";
 
 /** A single configuration problem, addressed by its location in the document. */
-export interface AgentyxConfigIssue {
-  /** Dotted path to the offending value, or `(root)` for the document itself. */
-  readonly path: string;
-  readonly message: string;
-}
+export type AgentyxConfigIssue = AgentyxIssue;
 
 /** Raised when the supplied directory has no `.agentyx.json`. */
 export class AgentyxConfigNotFoundError extends AgentyxError {
@@ -37,7 +34,7 @@ export class AgentyxConfigValidationError extends AgentyxError {
   readonly filePath: string | undefined;
 
   constructor(error: ZodError, filePath?: string) {
-    const issues = toConfigIssues(error);
+    const issues = toAgentyxIssues(error);
     const location = filePath === undefined ? "" : ` in ${filePath}`;
     const details = issues.map((issue) => `  - ${issue.path}: ${issue.message}`).join("\n");
 
@@ -63,25 +60,4 @@ export class UnknownEnabledCapabilityError extends AgentyxError {
     this.capabilityName = capabilityName;
     this.knownCapabilities = knownCapabilities;
   }
-}
-
-function toConfigIssues(error: ZodError): readonly AgentyxConfigIssue[] {
-  return error.issues.map((issue) => ({
-    path: formatIssuePath(issue.path),
-    message: issue.message,
-  }));
-}
-
-function formatIssuePath(path: readonly PropertyKey[]): string {
-  if (path.length === 0) {
-    return "(root)";
-  }
-
-  return path.reduce<string>((formatted, segment) => {
-    if (typeof segment === "number") {
-      return `${formatted}[${segment}]`;
-    }
-
-    return formatted === "" ? String(segment) : `${formatted}.${String(segment)}`;
-  }, "");
 }

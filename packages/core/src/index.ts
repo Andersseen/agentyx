@@ -21,6 +21,32 @@ export {
   enabledCapabilityNameSchema,
 } from "./config/schema.js";
 export { AgentyxError } from "./errors.js";
+export type { AgentyxIssue } from "./issues.js";
+export { AgentyxManifestParseError, AgentyxManifestValidationError } from "./manifest/errors.js";
+export {
+  AGENTYX_MANIFEST_FILENAME,
+  agentyxManifestPath,
+  emptyInstallManifest,
+  formatInstallManifest,
+  hashContent,
+  loadInstallManifest,
+  manifestEntriesByPath,
+  parseInstallManifest,
+} from "./manifest/io.js";
+export type {
+  InstallManifest,
+  InstallManifestEntry,
+  InstallManifestInput,
+  McpManifestEntry,
+  SkillManifestEntry,
+} from "./manifest/schema.js";
+export {
+  INSTALL_MANIFEST_VERSION,
+  installManifestEntrySchema,
+  installManifestSchema,
+  mcpManifestEntrySchema,
+  skillManifestEntrySchema,
+} from "./manifest/schema.js";
 export { builtInMcpServerNames, builtInMcpServerRegistry } from "./mcp/built-in.js";
 export {
   DuplicateMcpServerError,

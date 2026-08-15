@@ -96,12 +96,52 @@ pnpm agentyx install --dry-run
 pnpm agentyx install
 ```
 
+Remove what Agentyx installed:
+
+```sh
+pnpm agentyx uninstall --dry-run
+pnpm agentyx uninstall
+```
+
 Inspect project health:
 
 ```sh
 pnpm agentyx doctor
 pnpm agentyx doctor --json
 ```
+
+## Installation lifecycle
+
+Agentyx records every file it writes in `.agentyx.lock.json` — the path, the targets that use it, and
+a hash of the exact content installed. Commit it: it is what lets Agentyx tell its own files apart
+from yours.
+
+That record decides what Agentyx may touch:
+
+- A destination Agentyx has no record of writing is a **conflict**. Nothing is written, the run fails,
+  and the offending paths are listed. This is what keeps a directory such as `.agents/skills` safe to
+  share with hand-written skills — including one that happens to carry the same name as a built-in
+  Skill. Use `--force` to overwrite deliberately.
+- A file Agentyx wrote but you have since edited is also a conflict. Agentyx will neither replace nor
+  remove it.
+- Everything else is Agentyx's to replace, so reinstalling an up-to-date project writes nothing.
+
+Removing a pack from `.agentyx.json` does not by itself remove what it installed. Ask for it:
+
+```sh
+pnpm agentyx install --prune           # remove managed files nothing resolves any more
+pnpm agentyx install --prune --dry-run # see what that would remove first
+```
+
+`uninstall` removes everything the manifest records and leaves `.agentyx.json` alone, so the project
+can be reinstalled afterwards. `--target <id>` limits it to one provider; a file two providers share
+in `.agents/skills` is only removed once both are gone.
+
+Provider MCP configuration is shared with you, so Agentyx never claims the whole file: pruning and
+uninstalling remove only the server entries Agentyx added, and the file itself is deleted only when
+Agentyx created it and nothing is left in it.
+
+`doctor` reports all of this — files that are stale, edited since install, or not Agentyx's to write.
 
 ## Configuration
 

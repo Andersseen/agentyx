@@ -62,7 +62,10 @@ describe("MCP provider rendering", () => {
       "",
     ].join("\n");
 
-    const content = renderCodexMcpConfig([builtInMcpServerRegistry.get("context7")], existing);
+    const { content } = renderCodexMcpConfig([builtInMcpServerRegistry.get("context7")], {
+      content: existing,
+      remove: [],
+    });
 
     expect(content).toContain('model = "gpt-5"');
     expect(content).toContain("[mcp_servers.other]");
@@ -78,7 +81,10 @@ describe("MCP provider rendering", () => {
       },
     });
 
-    const content = renderClaudeMcpConfig([builtInMcpServerRegistry.get("context7")], existing);
+    const { content } = renderClaudeMcpConfig([builtInMcpServerRegistry.get("context7")], {
+      content: existing,
+      remove: [],
+    });
     const parsed = JSON.parse(content);
 
     expect(parsed.custom).toBe(true);
@@ -97,7 +103,10 @@ describe("MCP provider rendering", () => {
       },
     });
 
-    const content = renderKimiMcpConfig([builtInMcpServerRegistry.get("context7")], existing);
+    const { content } = renderKimiMcpConfig([builtInMcpServerRegistry.get("context7")], {
+      content: existing,
+      remove: [],
+    });
     const parsed = JSON.parse(content);
 
     expect(parsed.custom).toBe(true);
@@ -109,19 +118,22 @@ describe("MCP provider rendering", () => {
 
   it("does not silently repair malformed MCP sections", () => {
     expect(() =>
-      renderCodexMcpConfig([builtInMcpServerRegistry.get("context7")], "mcp_servers = []\n"),
+      renderCodexMcpConfig([builtInMcpServerRegistry.get("context7")], {
+        content: "mcp_servers = []\n",
+        remove: [],
+      }),
     ).toThrow(ProviderConfigParseError);
     expect(() =>
-      renderClaudeMcpConfig(
-        [builtInMcpServerRegistry.get("context7")],
-        JSON.stringify({ mcpServers: [] }),
-      ),
+      renderClaudeMcpConfig([builtInMcpServerRegistry.get("context7")], {
+        content: JSON.stringify({ mcpServers: [] }),
+        remove: [],
+      }),
     ).toThrow(ProviderConfigParseError);
     expect(() =>
-      renderKimiMcpConfig(
-        [builtInMcpServerRegistry.get("context7")],
-        JSON.stringify({ mcpServers: [] }),
-      ),
+      renderKimiMcpConfig([builtInMcpServerRegistry.get("context7")], {
+        content: JSON.stringify({ mcpServers: [] }),
+        remove: [],
+      }),
     ).toThrow(ProviderConfigParseError);
   });
 });

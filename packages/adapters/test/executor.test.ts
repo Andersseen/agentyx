@@ -1,12 +1,19 @@
 import { mkdtemp, readdir, readFile, rm, stat, utimes, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { builtInSkillRegistry, formatSkillMarkdown, parseSkillMarkdown } from "@agentyx/core";
+import {
+  builtInMcpServerRegistry,
+  builtInSkillRegistry,
+  formatSkillMarkdown,
+  hashContent,
+  loadInstallManifest,
+  parseSkillMarkdown,
+} from "@agentyx/core";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { InstallPathError } from "../src/errors.js";
 import { applyInstallPlan, applyInstallPlans } from "../src/executor.js";
 import type { InstallOperation, InstallPlan } from "../src/plan.js";
-import { planInstall, planTargetInstall } from "../src/planner.js";
+import { planInstall, planTargetInstall, planUninstall } from "../src/planner.js";
 
 const skills = ["planning", "verification"].map((name) => builtInSkillRegistry.get(name));
 
@@ -29,6 +36,8 @@ describe("applyInstallPlan", () => {
       target: "codex",
       written: [".agents/skills/planning/SKILL.md", ".agents/skills/verification/SKILL.md"],
       unchanged: [],
+      deleted: [],
+      conflicts: [],
     });
     expect(await readdir(join(projectDir, ".agents", "skills"))).toEqual([
       "planning",
@@ -56,14 +65,37 @@ describe("applyInstallPlan", () => {
     expect(await readFile(join(projectDir, "package.json"), "utf8")).toBe("{}\n");
   });
 
-  it("replaces drifted content deterministically", async () => {
-    await applyInstallPlan(await planTargetInstall({ target: "codex", projectDir, skills }));
+  it("leaves content edited since Agentyx wrote it alone", async () => {
+    await applyInstallPlans(await planInstall({ targets: ["codex"], projectDir, skills }));
+
+    const path = join(projectDir, ".agents", "skills", "planning", "SKILL.md");
+    const edited = "---\nname: planning\ndescription: Edited\n---\n\nEdited.\n";
+    await writeFile(path, edited, "utf8");
+
+    const manifest = await loadInstallManifest(projectDir);
+    const plan = await planTargetInstall({ target: "codex", projectDir, skills, manifest });
+    expect(plan.operations[0]?.status).toBe("conflict");
+
+    const result = await applyInstallPlan(plan);
+
+    expect(result.conflicts).toEqual([".agents/skills/planning/SKILL.md"]);
+    expect(await readFile(path, "utf8")).toBe(edited);
+  });
+
+  it("replaces its own unedited content deterministically", async () => {
+    await applyInstallPlans(await planInstall({ targets: ["codex"], projectDir, skills }));
 
     const path = join(projectDir, ".agents", "skills", "planning", "SKILL.md");
     await writeFile(path, "---\nname: planning\ndescription: Edited\n---\n\nEdited.\n", "utf8");
 
-    const plan = await planTargetInstall({ target: "codex", projectDir, skills });
-    expect(plan.operations[0]?.status).toBe("update");
+    const manifest = await loadInstallManifest(projectDir);
+    const plan = await planTargetInstall({
+      target: "codex",
+      projectDir,
+      skills,
+      manifest,
+      force: true,
+    });
 
     await applyInstallPlan(plan);
 
@@ -184,5 +216,116 @@ describe("applyInstallPlans", () => {
 
     expect(forCodex).toBe(forClaude);
     expect(forCodex).toBe(formatSkillMarkdown(builtInSkillRegistry.get("verification")));
+  });
+});
+
+describe("applyInstallPlans manifest", () => {
+  let projectDir: string;
+
+  beforeEach(async () => {
+    projectDir = await mkdtemp(join(tmpdir(), "agentyx-manifest-exec-"));
+  });
+
+  afterEach(async () => {
+    await rm(projectDir, { recursive: true, force: true });
+  });
+
+  it("records every file it wrote, with the targets that share it", async () => {
+    await applyInstallPlans(await planInstall({ targets: ["codex", "kimi"], projectDir, skills }));
+
+    const manifest = await loadInstallManifest(projectDir);
+
+    expect(manifest.entries).toHaveLength(2);
+    expect(manifest.entries[0]).toEqual({
+      kind: "skill",
+      path: ".agents/skills/planning/SKILL.md",
+      skill: "planning",
+      targets: ["codex", "kimi"],
+      hash: hashContent(formatSkillMarkdown(builtInSkillRegistry.get("planning"))),
+    });
+  });
+
+  it("makes a reinstall a no-op instead of a conflict", async () => {
+    await applyInstallPlans(await planInstall({ targets: ["codex"], projectDir, skills }));
+
+    const manifest = await loadInstallManifest(projectDir);
+    const plans = await planInstall({ targets: ["codex"], projectDir, skills, manifest });
+
+    expect(plans[0]?.operations.map((operation) => operation.status)).toEqual([
+      "unchanged",
+      "unchanged",
+    ]);
+  });
+
+  it("keeps entries for targets outside the run", async () => {
+    await applyInstallPlans(
+      await planInstall({ targets: ["codex", "claude"], projectDir, skills }),
+    );
+
+    const manifest = await loadInstallManifest(projectDir);
+    await applyInstallPlans(
+      await planInstall({ targets: ["codex"], projectDir, skills, manifest, prune: true }),
+      { manifest },
+    );
+
+    const after = await loadInstallManifest(projectDir);
+
+    expect(after.entries.map((entry) => entry.path)).toContain(".claude/skills/planning/SKILL.md");
+  });
+
+  it("removes a pruned skill file and its now-empty directory", async () => {
+    await applyInstallPlans(await planInstall({ targets: ["codex"], projectDir, skills }));
+
+    const manifest = await loadInstallManifest(projectDir);
+    const plans = await planInstall({
+      targets: ["codex"],
+      projectDir,
+      skills: [builtInSkillRegistry.get("planning")],
+      manifest,
+      prune: true,
+    });
+    const [result] = await applyInstallPlans(plans, { manifest });
+
+    expect(result?.deleted).toEqual([".agents/skills/verification/SKILL.md"]);
+    expect(await readdir(join(projectDir, ".agents", "skills"))).toEqual(["planning"]);
+    expect((await loadInstallManifest(projectDir)).entries.map((entry) => entry.path)).toEqual([
+      ".agents/skills/planning/SKILL.md",
+    ]);
+  });
+
+  it("keeps a directory that still holds something else", async () => {
+    await applyInstallPlans(await planInstall({ targets: ["codex"], projectDir, skills }));
+    await writeFile(join(projectDir, ".agents", "skills", "verification", "NOTES.md"), "mine\n");
+
+    const manifest = await loadInstallManifest(projectDir);
+    const plans = await planInstall({
+      targets: ["codex"],
+      projectDir,
+      skills: [builtInSkillRegistry.get("planning")],
+      manifest,
+      prune: true,
+    });
+    await applyInstallPlans(plans, { manifest });
+
+    expect(await readdir(join(projectDir, ".agents", "skills", "verification"))).toEqual([
+      "NOTES.md",
+    ]);
+  });
+
+  it("leaves an uninstall with no trace of itself", async () => {
+    await applyInstallPlans(
+      await planInstall({
+        targets: ["codex"],
+        projectDir,
+        skills,
+        mcpServers: [builtInMcpServerRegistry.get("context7")],
+      }),
+    );
+
+    const manifest = await loadInstallManifest(projectDir);
+    const plans = await planUninstall({ targets: ["codex"], projectDir, manifest });
+    await applyInstallPlans(plans, { manifest });
+
+    expect(await readdir(projectDir)).toEqual([]);
   });
 });
