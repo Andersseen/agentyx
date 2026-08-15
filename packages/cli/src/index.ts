@@ -14,6 +14,7 @@ import { createPackCommand } from "./commands/pack.js";
 import { createResolveCommand } from "./commands/resolve.js";
 import { createSkillCommand } from "./commands/skill.js";
 import { createTargetCommand } from "./commands/target.js";
+import { createUninstallCommand } from "./commands/uninstall.js";
 
 const require = createRequire(import.meta.url);
 
@@ -45,7 +46,8 @@ export function createAgentyxProgram(): Command {
     .addCommand(createMcpCommand())
     .addCommand(createPackCommand())
     .addCommand(createTargetCommand())
-    .addCommand(createInstallCommand());
+    .addCommand(createInstallCommand())
+    .addCommand(createUninstallCommand());
 }
 
 function isMainModule(): boolean {

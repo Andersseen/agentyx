@@ -3,6 +3,7 @@ import { access } from "node:fs/promises";
 import { delimiter, relative, sep } from "node:path";
 import {
   builtInAdapterRegistry,
+  collectInstallConflicts,
   type InstallPlan,
   planInstall,
   summarizeInstallPlans,
@@ -12,11 +13,17 @@ import {
   AgentyxConfigNotFoundError,
   AgentyxConfigParseError,
   AgentyxConfigValidationError,
+  AgentyxManifestParseError,
+  AgentyxManifestValidationError,
   builtInMcpServerRegistry,
   builtInSkillRegistry,
   builtInToolRegistry,
   detectProject,
+  emptyInstallManifest,
+  type InstallManifest,
   loadAgentyxConfig,
+  loadInstallManifest,
+  manifestEntriesByPath,
   resolveAgentyxConfig,
 } from "@agentyx/core";
 import { Command } from "commander";
@@ -76,8 +83,25 @@ export interface DoctorReport {
   }[];
   readonly installation: {
     readonly summary:
-      | { readonly create: number; readonly update: number; readonly unchanged: number }
+      | {
+          readonly create: number;
+          readonly update: number;
+          readonly unchanged: number;
+          readonly conflict: number;
+          readonly delete: number;
+        }
       | undefined;
+    /** What `.agentyx.lock.json` says about the files Agentyx manages here. */
+    readonly manifest: {
+      readonly present: boolean;
+      readonly entries: number;
+      /** Managed files the current selection no longer resolves. */
+      readonly stale: readonly string[];
+      /** Managed files that have been edited since Agentyx wrote them. */
+      readonly drifted: readonly string[];
+      /** Destinations Agentyx would need but does not manage. */
+      readonly conflicts: readonly string[];
+    };
   };
   readonly efficiency: {
     readonly conciseOutput: boolean;
@@ -97,6 +121,8 @@ export async function runDoctorCommand(input: DoctorCommandInput): Promise<Docto
   const diagnostics: DoctorDiagnostic[] = [];
   const project = await detectProject(input.cwd);
   const configState = await readConfig(input.cwd);
+  const manifestState = await readManifest(input.cwd);
+  const manifest = manifestState.manifest;
   const targetReports: Array<DoctorReport["targets"][number]> = [];
   let resolved: ReturnType<typeof resolveAgentyxConfig> | undefined;
   let plans: readonly InstallPlan[] | undefined;
@@ -125,6 +151,10 @@ export async function runDoctorCommand(input: DoctorCommandInput): Promise<Docto
 
   if (configState.error !== undefined) {
     diagnostics.push(configState.error);
+  }
+
+  if (manifestState.error !== undefined) {
+    diagnostics.push(manifestState.error);
   }
 
   if (configState.config !== undefined) {
@@ -199,6 +229,42 @@ export async function runDoctorCommand(input: DoctorCommandInput): Promise<Docto
       projectDir: input.cwd,
       skills: resolved.skills.map((name) => builtInSkillRegistry.get(name)),
       mcpServers: resolved.mcpServers.map((name) => builtInMcpServerRegistry.get(name)),
+      manifest,
+      prune: true,
+    });
+  }
+
+  const recorded = manifestEntriesByPath(manifest);
+  const stale =
+    plans
+      ?.flatMap((plan) => plan.deletions)
+      .filter((operation) => operation.status === "delete")
+      .map((operation) => operation.relativePath) ?? [];
+  const allConflicts = plans === undefined ? [] : collectInstallConflicts(plans);
+  const drifted = allConflicts.filter((path) => recorded.has(path));
+  const conflicts = allConflicts.filter((path) => !recorded.has(path));
+
+  if (stale.length > 0) {
+    diagnostics.push({
+      level: "warning",
+      code: "stale_managed_files",
+      message: `${stale.length} installed file(s) are no longer resolved by this configuration: ${stale.join(", ")}. Run agentyx install --prune to remove them.`,
+    });
+  }
+
+  for (const path of drifted) {
+    diagnostics.push({
+      level: "warning",
+      code: "drifted_managed_file",
+      message: `${path} has been edited since Agentyx wrote it. Agentyx will not replace or remove it.`,
+    });
+  }
+
+  for (const path of conflicts) {
+    diagnostics.push({
+      level: "error",
+      code: "unmanaged_file_conflict",
+      message: `${path} is needed by this configuration but Agentyx did not write it. Move it, or install with --force.`,
     });
   }
 
@@ -248,6 +314,13 @@ export async function runDoctorCommand(input: DoctorCommandInput): Promise<Docto
     targets: targetReports,
     installation: {
       summary: plans === undefined ? undefined : summarizeInstallPlans(plans),
+      manifest: {
+        present: manifestState.present,
+        entries: manifest.entries.length,
+        stale,
+        drifted,
+        conflicts,
+      },
     },
     efficiency: {
       conciseOutput: resolved?.skills.includes("concise-output") ?? false,
@@ -325,14 +398,19 @@ export function renderDoctorReport(report: DoctorReport, json: boolean): string 
           }`,
       ),
     ),
-    section(
-      "Installation",
+    section("Installation", [
       report.installation.summary === undefined
-        ? ["not planned"]
-        : [
-            `${report.installation.summary.create} to create, ${report.installation.summary.update} to update, ${report.installation.summary.unchanged} unchanged`,
-          ],
-    ),
+        ? "not planned"
+        : `${report.installation.summary.create} to create, ${report.installation.summary.update} to update, ${report.installation.summary.unchanged} unchanged`,
+      `manifest: ${
+        report.installation.manifest.present
+          ? `${report.installation.manifest.entries} managed file(s)`
+          : "none recorded"
+      }`,
+      `stale: ${report.installation.manifest.stale.join(", ") || "none"}`,
+      `edited since install: ${report.installation.manifest.drifted.join(", ") || "none"}`,
+      `not managed by Agentyx: ${report.installation.manifest.conflicts.join(", ") || "none"}`,
+    ]),
     section("Efficiency", [
       `concise output: ${report.efficiency.conciseOutput ? "enabled" : "disabled"}`,
       `targeted exploration: ${report.efficiency.targetedExploration ? "enabled" : "disabled"}`,
@@ -385,6 +463,38 @@ async function readConfig(projectDir: string): Promise<{
           code: cause.code,
           message: cause.message,
         },
+      };
+    }
+
+    throw cause;
+  }
+}
+
+/**
+ * Reads the install manifest without letting a damaged one stop the report.
+ *
+ * Every other command refuses to act on a manifest it cannot understand, which
+ * is right — they write. Doctor exists to explain what is wrong, so a broken
+ * manifest becomes a diagnostic and the rest of the report still gets produced.
+ */
+async function readManifest(projectDir: string): Promise<{
+  readonly present: boolean;
+  readonly manifest: InstallManifest;
+  readonly error: DoctorDiagnostic | undefined;
+}> {
+  try {
+    const manifest = await loadInstallManifest(projectDir);
+
+    return { present: manifest.entries.length > 0, manifest, error: undefined };
+  } catch (cause) {
+    if (
+      cause instanceof AgentyxManifestParseError ||
+      cause instanceof AgentyxManifestValidationError
+    ) {
+      return {
+        present: true,
+        manifest: emptyInstallManifest(),
+        error: { level: "error", code: cause.code, message: cause.message },
       };
     }
 

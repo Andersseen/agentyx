@@ -1,7 +1,15 @@
-import { mkdir, mkdtemp, readdir, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { builtInMcpServerRegistry, builtInSkillRegistry, formatSkillMarkdown } from "@agentyx/core";
+import {
+  builtInMcpServerRegistry,
+  builtInSkillRegistry,
+  formatSkillMarkdown,
+  hashContent,
+  INSTALL_MANIFEST_VERSION,
+  type InstallManifest,
+  type InstallManifestEntry,
+} from "@agentyx/core";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { AgentAdapter } from "../src/adapter.js";
 import {
@@ -10,7 +18,7 @@ import {
   SharedInstallConflictError,
   UnknownAdapterError,
 } from "../src/errors.js";
-import { planInstall, planTargetInstall } from "../src/planner.js";
+import { planInstall, planTargetInstall, planUninstall } from "../src/planner.js";
 import { createAdapterRegistry } from "../src/registry.js";
 
 const skills = ["planning", "verification"].map((name) => builtInSkillRegistry.get(name));
@@ -183,17 +191,54 @@ describe("planTargetInstall", () => {
     expect(plan.operations.map((operation) => operation.status)).toEqual(["unchanged", "create"]);
   });
 
-  it("marks drifted managed content as update", async () => {
+  it("refuses to claim content it has no record of writing", async () => {
     const path = join(projectDir, ".claude", "skills", "planning");
     await mkdir(path, { recursive: true });
     await writeFile(join(path, "SKILL.md"), "---\nname: planning\ndescription: Old\n---\n\nOld.\n");
 
     const plan = await planTargetInstall({ target: "claude", projectDir, skills });
 
-    expect(plan.operations[0]?.status).toBe("update");
+    expect(plan.operations[0]?.status).toBe("conflict");
     expect(plan.operations[0]?.content).toBe(
       formatSkillMarkdown(builtInSkillRegistry.get("planning")),
     );
+  });
+
+  it("replaces its own content when the manifest vouches for it", async () => {
+    const path = join(projectDir, ".claude", "skills", "planning");
+    const stale = "---\nname: planning\ndescription: Old\n---\n\nOld.\n";
+    await mkdir(path, { recursive: true });
+    await writeFile(join(path, "SKILL.md"), stale);
+
+    const plan = await planTargetInstall({
+      target: "claude",
+      projectDir,
+      skills,
+      manifest: {
+        version: INSTALL_MANIFEST_VERSION,
+        entries: [
+          {
+            kind: "skill",
+            path: ".claude/skills/planning/SKILL.md",
+            skill: "planning",
+            targets: ["claude"],
+            hash: hashContent(stale),
+          },
+        ],
+      },
+    });
+
+    expect(plan.operations[0]?.status).toBe("update");
+  });
+
+  it("overwrites a conflict only when forced", async () => {
+    const path = join(projectDir, ".claude", "skills", "planning");
+    await mkdir(path, { recursive: true });
+    await writeFile(join(path, "SKILL.md"), "hand-written\n");
+
+    const plan = await planTargetInstall({ target: "claude", projectDir, skills, force: true });
+
+    expect(plan.operations[0]?.status).toBe("update");
   });
 
   it("ignores files it does not manage", async () => {
@@ -467,5 +512,278 @@ describe("planInstall", () => {
         registry: createAdapterRegistry([shared("left", "left"), shared("right", "right")]),
       }),
     ).rejects.toThrow(SharedInstallConflictError);
+  });
+});
+
+describe("pruning", () => {
+  let projectDir: string;
+
+  beforeEach(async () => {
+    projectDir = await mkdtemp(join(tmpdir(), "agentyx-prune-"));
+  });
+
+  afterEach(async () => {
+    await rm(projectDir, { recursive: true, force: true });
+  });
+
+  async function installed(
+    path: string,
+    content: string,
+    targets: readonly string[],
+    skill: string,
+  ): Promise<void> {
+    await mkdir(join(projectDir, ...path.split("/").slice(0, -1)), { recursive: true });
+    await writeFile(join(projectDir, ...path.split("/")), content, "utf8");
+    manifestEntries.push({
+      kind: "skill",
+      path,
+      skill,
+      targets: [...targets],
+      hash: hashContent(content),
+    });
+  }
+
+  let manifestEntries: InstallManifestEntry[] = [];
+
+  beforeEach(() => {
+    manifestEntries = [];
+  });
+
+  function manifest(): InstallManifest {
+    return { version: INSTALL_MANIFEST_VERSION, entries: manifestEntries };
+  }
+
+  it("proposes no removals unless pruning is asked for", async () => {
+    await installed(".agents/skills/dropped/SKILL.md", "old\n", ["codex"], "dropped");
+
+    const plan = await planTargetInstall({
+      target: "codex",
+      projectDir,
+      skills,
+      manifest: manifest(),
+    });
+
+    expect(plan.deletions).toEqual([]);
+  });
+
+  it("removes a managed skill nothing resolves any more", async () => {
+    await installed(".agents/skills/dropped/SKILL.md", "old\n", ["codex"], "dropped");
+
+    const plan = await planTargetInstall({
+      target: "codex",
+      projectDir,
+      skills,
+      manifest: manifest(),
+      prune: true,
+    });
+
+    expect(plan.deletions).toEqual([
+      {
+        type: "delete-file",
+        status: "delete",
+        kind: "skill",
+        path: join(projectDir, ".agents", "skills", "dropped", "SKILL.md"),
+        relativePath: ".agents/skills/dropped/SKILL.md",
+        skill: "dropped",
+        usedBy: ["codex"],
+      },
+    ]);
+  });
+
+  it("leaves a managed skill that was edited since Agentyx wrote it", async () => {
+    await installed(".agents/skills/dropped/SKILL.md", "old\n", ["codex"], "dropped");
+    await writeFile(
+      join(projectDir, ".agents", "skills", "dropped", "SKILL.md"),
+      "mine now\n",
+      "utf8",
+    );
+
+    const plan = await planTargetInstall({
+      target: "codex",
+      projectDir,
+      skills,
+      manifest: manifest(),
+      prune: true,
+    });
+
+    expect(plan.deletions[0]?.status).toBe("conflict");
+  });
+
+  it("never removes a file another provider in the project still shares", async () => {
+    await installed(".agents/skills/dropped/SKILL.md", "old\n", ["codex", "kimi"], "dropped");
+
+    const alone = await planTargetInstall({
+      target: "codex",
+      projectDir,
+      skills,
+      manifest: manifest(),
+      prune: true,
+    });
+
+    expect(alone.deletions).toEqual([]);
+
+    const together = await planInstall({
+      targets: ["codex", "kimi"],
+      projectDir,
+      skills,
+      manifest: manifest(),
+      prune: true,
+    });
+
+    expect(together[0]?.deletions[0]?.status).toBe("delete");
+  });
+
+  it("never touches a path recorded for a different provider", async () => {
+    await installed(".claude/skills/dropped/SKILL.md", "old\n", ["claude"], "dropped");
+
+    const plan = await planTargetInstall({
+      target: "codex",
+      projectDir,
+      skills,
+      manifest: manifest(),
+      prune: true,
+    });
+
+    expect(plan.deletions).toEqual([]);
+  });
+
+  it("takes back only the MCP keys it added", async () => {
+    await writeFile(
+      join(projectDir, ".mcp.json"),
+      `${JSON.stringify({ mcpServers: { mine: { type: "stdio", command: "mine", args: [] }, context7: { type: "http", url: "https://mcp.context7.com/mcp" } } }, null, 2)}\n`,
+      "utf8",
+    );
+
+    const plan = await planTargetInstall({
+      target: "claude",
+      projectDir,
+      skills,
+      mcpServers: [],
+      prune: true,
+      manifest: {
+        version: INSTALL_MANIFEST_VERSION,
+        entries: [
+          {
+            kind: "mcp",
+            path: ".mcp.json",
+            servers: ["context7"],
+            targets: ["claude"],
+            hash: hashContent("irrelevant"),
+            created: false,
+          },
+        ],
+      },
+    });
+
+    const parsed = JSON.parse(plan.mcpOperations[0]?.content ?? "{}");
+
+    expect(parsed.mcpServers.context7).toBeUndefined();
+    expect(parsed.mcpServers.mine).toEqual({ type: "stdio", command: "mine", args: [] });
+    expect(plan.deletions).toEqual([]);
+  });
+
+  it("removes an MCP config it created once nothing is left in it", async () => {
+    const content = `${JSON.stringify({ mcpServers: { context7: { type: "http", url: "https://mcp.context7.com/mcp" } } }, null, 2)}\n`;
+    await writeFile(join(projectDir, ".mcp.json"), content, "utf8");
+
+    const plan = await planTargetInstall({
+      target: "claude",
+      projectDir,
+      skills,
+      mcpServers: [],
+      prune: true,
+      manifest: {
+        version: INSTALL_MANIFEST_VERSION,
+        entries: [
+          {
+            kind: "mcp",
+            path: ".mcp.json",
+            servers: ["context7"],
+            targets: ["claude"],
+            hash: hashContent(content),
+            created: true,
+          },
+        ],
+      },
+    });
+
+    expect(plan.mcpOperations).toEqual([]);
+    expect(plan.deletions[0]).toMatchObject({
+      kind: "mcp",
+      status: "delete",
+      relativePath: ".mcp.json",
+    });
+  });
+
+  it("keeps an MCP config the user already had, even when emptied", async () => {
+    const content = `${JSON.stringify({ mcpServers: { context7: { type: "http", url: "https://mcp.context7.com/mcp" } } }, null, 2)}\n`;
+    await writeFile(join(projectDir, ".mcp.json"), content, "utf8");
+
+    const plan = await planTargetInstall({
+      target: "claude",
+      projectDir,
+      skills,
+      mcpServers: [],
+      prune: true,
+      manifest: {
+        version: INSTALL_MANIFEST_VERSION,
+        entries: [
+          {
+            kind: "mcp",
+            path: ".mcp.json",
+            servers: ["context7"],
+            targets: ["claude"],
+            hash: hashContent(content),
+            created: false,
+          },
+        ],
+      },
+    });
+
+    expect(plan.deletions).toEqual([]);
+    expect(plan.mcpOperations[0]?.content).toBe("{}\n");
+  });
+});
+
+describe("planUninstall", () => {
+  let projectDir: string;
+
+  beforeEach(async () => {
+    projectDir = await mkdtemp(join(tmpdir(), "agentyx-uninstall-"));
+  });
+
+  afterEach(async () => {
+    await rm(projectDir, { recursive: true, force: true });
+  });
+
+  it("plans the removal of everything recorded, and writes nothing", async () => {
+    const content = formatSkillMarkdown(builtInSkillRegistry.get("planning"));
+    await mkdir(join(projectDir, ".agents", "skills", "planning"), { recursive: true });
+    await writeFile(join(projectDir, ".agents", "skills", "planning", "SKILL.md"), content, "utf8");
+
+    const plans = await planUninstall({
+      targets: ["codex"],
+      projectDir,
+      manifest: {
+        version: INSTALL_MANIFEST_VERSION,
+        entries: [
+          {
+            kind: "skill",
+            path: ".agents/skills/planning/SKILL.md",
+            skill: "planning",
+            targets: ["codex"],
+            hash: hashContent(content),
+          },
+        ],
+      },
+    });
+
+    expect(plans[0]?.operations).toEqual([]);
+    expect(plans[0]?.deletions.map((operation) => operation.relativePath)).toEqual([
+      ".agents/skills/planning/SKILL.md",
+    ]);
+    expect(
+      await readFile(join(projectDir, ".agents", "skills", "planning", "SKILL.md"), "utf8"),
+    ).toBe(content);
   });
 });

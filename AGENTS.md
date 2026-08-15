@@ -6,11 +6,13 @@ configuration — Agentyx does not generate or read this file.
 ## What this project is
 
 Agentyx is a provider-agnostic CLI for defining reusable development environments for coding agents.
-The current scope is deliberately narrow: a configuration model (`.agentyx.json`), stack and Skill
-registries, provider-agnostic MCP definitions, stack/Skill/MCP resolution, optimization profiles,
+The current scope is deliberately narrow: a configuration model (`.agentyx.json`), pack and Skill
+registries, provider-agnostic MCP definitions, pack/Skill/MCP resolution, optimization profiles,
 project detection, `init`, `doctor`, and provider adapters that install into Codex
 (`.agents/skills`), Claude Code (`.claude/skills`) and Kimi Code (`.agents/skills`). Installation is
-project-local, plan-first, and covers Skill files plus project MCP configuration.
+project-local, plan-first, and covers Skill files plus project MCP configuration. It is also
+reversible: `.agentyx.lock.json` records what was written, which is what `install --prune` and
+`uninstall` act on.
 
 ## Commands
 
@@ -41,7 +43,7 @@ Markdown and provider-neutral — read the file and follow it, whichever agent y
 - [verify-agentyx](.agents/skills/verify-agentyx/SKILL.md) — read before handing back any change; it
   covers the CLI and schema checks `pnpm check` does not.
 - [add-builtin-stack](.agents/skills/add-builtin-stack/SKILL.md) — read when adding, renaming or
-  re-parenting a built-in stack.
+  re-parenting a built-in pack.
 - [context-efficient-development](.agents/skills/context-efficient-development/SKILL.md) — read for
   non-trivial Agentyx work to keep exploration, commands and output focused.
 - [navigate-agentyx](.agents/skills/navigate-agentyx/SKILL.md) — read when you need the repository map
@@ -68,8 +70,9 @@ swallow the conversation.
 ## Layering
 
 ```
-packages/core        domain: config schema/loader/resolver, stack and skill
-                     schema/registry/resolver/errors, SKILL.md parsing and serialization
+packages/core        domain: config schema/loader/resolver, pack and skill
+                     schema/registry/resolver/errors, install manifest schema and loader,
+                     SKILL.md parsing and serialization
 packages/core/skills built-in SKILL.md files, published as package assets
 packages/cli         Commander program and terminal output only
 packages/adapters    adapter contract, adapter registry, provider adapters,
@@ -83,30 +86,36 @@ Dependencies point one way: `cli → core`, `adapters → core`. Core depends on
 
 1. **`@agentyx/core` must not import Commander, `@clack/prompts`, `chalk`, or any terminal code.** If
    a change needs terminal output in core, the design is wrong.
-2. **Agentyx is provider agnostic.** Never introduce `CodexStack`, `ClaudeStack`, `CodexSkill` or any
-   concept that couples a stack or a skill to a provider. `targets` stays an open list of strings —
+2. **Agentyx is provider agnostic.** Never introduce `CodexPack`, `ClaudePack`, `CodexSkill` or any
+   concept that couples a pack or a skill to a provider. `targets` stays an open list of strings —
    do not turn it into a closed enum. Provider-specific behaviour lives in `@agentyx/adapters`, and an
    adapter owns a *destination*, never skill content: the canonical `SKILL.md` comes from
    `formatSkillMarkdown` in core, so a provider-specific copy of a skill body is always a bug.
 3. **Zod is the source of truth for types.** Infer with `z.infer` / `z.input`; never maintain a
    hand-written interface next to a schema.
-4. **Stacks and skills are data.** New stacks are entries in `builtInStacks`; new skills are a
+4. **Packs and skills are data.** New packs are entries in `builtInPacks`; new skills are a
    `SKILL.md` file plus a name in `builtInSkillNames`. Resolution logic must not grow a branch per
-   stack or per skill, and skill instructions never live in TypeScript string constants.
+   pack or per skill, and skill instructions never live in TypeScript string constants.
 5. **Domain errors, not strings.** Extend `AgentyxError` (`packages/core/src/errors.ts`) and give it a
    stable `code`. One inheritance level — no error hierarchies.
 6. **No premature abstraction.** No repositories, service containers, DI, factories, or plugin
    systems. Plain functions and plain objects.
 7. **Never silently repair invalid configuration.** Throw a descriptive error.
-8. **Installation plans and writes stay separate.** Planning reads; only `applyInstallPlan` writes.
-   Agentyx writes UTF-8 files inside the directory or project config file a target owns and nothing
-   else — no deletes, no shell commands, no network and no `$HOME`.
-   The root `.agentyx.json` dogfoods Agentyx itself; shared `.agents/skills` is safe because Agentyx only
-   manages exact resolved built-in Skill directories and never deletes unrelated repository-development
-   Skills.
-9. **Do not implement the future roadmap.** OpenCode, Cursor, global installs, codebase memory,
-   token budgets, remote registries, plugins, npm registry integration, uninstall and sync cleanup,
-   and an update system are all out of scope until asked for.
+8. **Installation plans and writes stay separate.** Planning reads; only `applyInstallPlan` and
+   `applyInstallPlans` write. Agentyx writes UTF-8 files inside the directory or project config file a
+   target owns, plus `.agentyx.lock.json` at the project root, and nothing else — no shell commands,
+   no network and no `$HOME`.
+9. **Agentyx only touches what it recorded.** `.agentyx.lock.json` names every managed path and hashes
+   its content. A destination that is not in the manifest, or whose content no longer matches the
+   hash, is a `conflict`: never overwritten, never deleted, unless `--force` says so. Deletion is
+   restricted to manifest-recorded paths, uses `rm` on single files and non-recursive `rmdir` on the
+   directories they leave behind, and never touches a provider MCP config file beyond the server keys
+   Agentyx added. This is what makes the shared `.agents/skills` directory safe: the root
+   `.agentyx.json` dogfoods Agentyx itself, and repository-development Skills live in the same
+   directory as built-in ones.
+10. **Do not implement the future roadmap.** OpenCode, Cursor, global installs, token budgets, remote
+    registries, plugins, npm registry integration and an update system are all out of scope until
+    asked for.
 
 ## Code conventions
 

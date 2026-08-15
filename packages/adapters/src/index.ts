@@ -5,6 +5,7 @@ export type {
   AdapterContext,
   AdapterDetection,
   AgentAdapter,
+  ExistingMcpConfig,
   PlannedFile,
   PlannedMcpConfig,
 } from "./adapter.js";
@@ -15,24 +16,27 @@ export {
 } from "./built-in.js";
 export {
   DuplicateAdapterError,
+  InstallConflictError,
   InstallPathError,
   MissingInstallTargetsError,
   ProviderConfigParseError,
   SharedInstallConflictError,
   UnknownAdapterError,
 } from "./errors.js";
-export type { InstallResult } from "./executor.js";
+export type { ApplyInstallOptions, InstallResult } from "./executor.js";
 export { applyInstallPlan, applyInstallPlans } from "./executor.js";
 export type {
+  DeleteOperation,
+  DeleteOperationStatus,
   InstallOperation,
   InstallOperationStatus,
   InstallPlan,
   InstallPlanSummary,
   McpInstallOperation,
 } from "./plan.js";
-export { summarizeInstallPlans } from "./plan.js";
+export { collectInstallConflicts, summarizeInstallPlans } from "./plan.js";
 export type { PlanInstallInput, PlanTargetInstallInput } from "./planner.js";
-export { planInstall, planTargetInstall } from "./planner.js";
+export { planInstall, planTargetInstall, planUninstall } from "./planner.js";
 export type { AdapterRegistry } from "./registry.js";
 export { createAdapterRegistry } from "./registry.js";
 export type { SkillDirectoryAdapterDefinition } from "./skill-directory.js";

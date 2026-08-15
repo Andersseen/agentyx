@@ -1,7 +1,7 @@
 import { stat } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { formatSkillMarkdown } from "@agentyx/core";
-import type { AdapterContext, AgentAdapter, PlannedFile } from "./adapter.js";
+import type { AdapterContext, AgentAdapter, ExistingMcpConfig, PlannedFile } from "./adapter.js";
 import {
   CLAUDE_MCP_CONFIG_SEGMENTS,
   CODEX_MCP_CONFIG_SEGMENTS,
@@ -121,11 +121,16 @@ export function createSkillDirectoryAdapter(
   return {
     ...adapter,
     mcpConfigPath,
-    planMcpConfig: (context: AdapterContext, existingContent: string | undefined) => ({
-      segments: mcpConfigSegments,
-      content: renderMcpConfig(context.mcpServers ?? [], existingContent),
-      servers: (context.mcpServers ?? []).map((server) => server.name),
-    }),
+    planMcpConfig: (context: AdapterContext, existing: ExistingMcpConfig) => {
+      const rendered = renderMcpConfig(context.mcpServers ?? [], existing);
+
+      return {
+        segments: mcpConfigSegments,
+        content: rendered.content,
+        empty: rendered.empty,
+        servers: (context.mcpServers ?? []).map((server) => server.name),
+      };
+    },
   };
 }
 

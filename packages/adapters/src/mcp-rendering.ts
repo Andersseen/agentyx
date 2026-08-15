@@ -1,6 +1,7 @@
 import { resolve } from "node:path";
 import type { McpServerDefinition } from "@agentyx/core";
 import { parse, stringify } from "@iarna/toml";
+import type { ExistingMcpConfig } from "./adapter.js";
 import { ProviderConfigParseError } from "./errors.js";
 
 export const CODEX_MCP_CONFIG_SEGMENTS = [".codex", "config.toml"] as const;
@@ -21,64 +22,116 @@ export function kimiMcpConfigPath(projectDir: string): string {
   return resolve(projectDir, ...KIMI_MCP_CONFIG_SEGMENTS);
 }
 
+/**
+ * A provider MCP config as Agentyx would leave it.
+ *
+ * `empty` reports that nothing is left in the document once Agentyx's own
+ * entries are gone — the one condition under which removing the file itself is
+ * safe, and something only the code that knows the format can determine.
+ */
+export interface RenderedMcpConfig {
+  readonly content: string;
+  readonly empty: boolean;
+}
+
 export function renderCodexMcpConfig(
   servers: readonly McpServerDefinition[],
-  existingContent: string | undefined,
-): string {
-  const config = parseTomlObject(existingContent, CODEX_MCP_CONFIG_SEGMENTS.join("/"));
-  const mcpServers = optionalRecord(
-    config.mcp_servers,
-    CODEX_MCP_CONFIG_SEGMENTS.join("/"),
-    "mcp_servers",
+  existing: ExistingMcpConfig,
+): RenderedMcpConfig {
+  const path = CODEX_MCP_CONFIG_SEGMENTS.join("/");
+  const config = parseTomlObject(existing.content, path);
+  const mcpServers = mergeServers(
+    optionalRecord(config.mcp_servers, path, "mcp_servers"),
+    servers,
+    existing.remove,
+    renderCodexMcpServer,
   );
 
-  for (const server of servers) {
-    mcpServers[server.name] = renderCodexMcpServer(server);
+  if (Object.keys(mcpServers).length > 0) {
+    config.mcp_servers = mcpServers;
+  } else {
+    delete config.mcp_servers;
   }
 
-  config.mcp_servers = sortRecord(mcpServers);
-
-  return stringify(sortRecord(config) as never);
+  return {
+    content: stringify(sortRecord(config) as never),
+    empty: Object.keys(config).length === 0,
+  };
 }
 
 export function renderClaudeMcpConfig(
   servers: readonly McpServerDefinition[],
-  existingContent: string | undefined,
-): string {
-  const config = parseJsonObject(existingContent, CLAUDE_MCP_CONFIG_SEGMENTS.join("/"));
-  const mcpServers = optionalRecord(
-    config.mcpServers,
+  existing: ExistingMcpConfig,
+): RenderedMcpConfig {
+  return renderJsonMcpConfig(
+    servers,
+    existing,
     CLAUDE_MCP_CONFIG_SEGMENTS.join("/"),
-    "mcpServers",
+    renderClaudeMcpServer,
   );
-
-  for (const server of servers) {
-    mcpServers[server.name] = renderClaudeMcpServer(server);
-  }
-
-  config.mcpServers = sortRecord(mcpServers);
-
-  return `${JSON.stringify(sortRecord(config), null, 2)}\n`;
 }
 
 export function renderKimiMcpConfig(
   servers: readonly McpServerDefinition[],
-  existingContent: string | undefined,
-): string {
-  const config = parseJsonObject(existingContent, KIMI_MCP_CONFIG_SEGMENTS.join("/"));
-  const mcpServers = optionalRecord(
-    config.mcpServers,
+  existing: ExistingMcpConfig,
+): RenderedMcpConfig {
+  return renderJsonMcpConfig(
+    servers,
+    existing,
     KIMI_MCP_CONFIG_SEGMENTS.join("/"),
-    "mcpServers",
+    renderKimiMcpServer,
+  );
+}
+
+/** Claude Code and Kimi Code use the same `mcpServers` object; only the server shape differs. */
+function renderJsonMcpConfig(
+  servers: readonly McpServerDefinition[],
+  existing: ExistingMcpConfig,
+  path: string,
+  renderServer: (server: McpServerDefinition) => JsonRecord,
+): RenderedMcpConfig {
+  const config = parseJsonObject(existing.content, path);
+  const mcpServers = mergeServers(
+    optionalRecord(config.mcpServers, path, "mcpServers"),
+    servers,
+    existing.remove,
+    renderServer,
   );
 
-  for (const server of servers) {
-    mcpServers[server.name] = renderKimiMcpServer(server);
+  if (Object.keys(mcpServers).length > 0) {
+    config.mcpServers = mcpServers;
+  } else {
+    delete config.mcpServers;
   }
 
-  config.mcpServers = sortRecord(mcpServers);
+  return {
+    content: `${JSON.stringify(sortRecord(config), null, 2)}\n`,
+    empty: Object.keys(config).length === 0,
+  };
+}
 
-  return `${JSON.stringify(sortRecord(config), null, 2)}\n`;
+/**
+ * Applies Agentyx's entries to whatever is already configured.
+ *
+ * Removals run first so that a server which is both resolved and listed for
+ * removal ends up installed rather than dropped, and keys Agentyx never claimed
+ * are carried through untouched.
+ */
+function mergeServers(
+  configured: JsonRecord,
+  servers: readonly McpServerDefinition[],
+  remove: readonly string[],
+  renderServer: (server: McpServerDefinition) => JsonRecord,
+): JsonRecord {
+  for (const name of remove) {
+    delete configured[name];
+  }
+
+  for (const server of servers) {
+    configured[server.name] = renderServer(server);
+  }
+
+  return sortRecord(configured);
 }
 
 export function renderCodexMcpServer(server: McpServerDefinition): JsonRecord {

@@ -76,6 +76,34 @@ export class ProviderConfigParseError extends AgentyxError {
   }
 }
 
+/**
+ * Raised when installing would touch a file Agentyx does not own.
+ *
+ * Either the file was there before Agentyx ever ran, or a file Agentyx wrote has
+ * been edited since. Both mean someone else's work is at the destination, and
+ * an installer that overwrites it silently is one that cannot be trusted with a
+ * shared directory such as `.agents/skills`. Nothing is written when this is
+ * raised.
+ */
+export class InstallConflictError extends AgentyxError {
+  readonly paths: readonly string[];
+
+  constructor(paths: readonly string[]) {
+    const list = [...paths].sort().map((path) => `  - ${path}`);
+
+    super(
+      "install_conflict",
+      [
+        `Refusing to overwrite ${paths.length} file(s) Agentyx does not manage:`,
+        ...list,
+        "Move or delete them, or re-run with --force to overwrite. Nothing was written.",
+      ].join("\n"),
+    );
+    this.name = "InstallConflictError";
+    this.paths = paths;
+  }
+}
+
 export class SharedInstallConflictError extends AgentyxError {
   readonly path: string;
   readonly targets: readonly string[];

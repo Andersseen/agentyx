@@ -42,6 +42,27 @@ export interface PlannedMcpConfig {
   readonly segments: readonly string[];
   readonly content: string;
   readonly servers: readonly string[];
+  /**
+   * Whether the rendered document has nothing left in it.
+   *
+   * Only the code that knows the file format can answer this, and it is what
+   * lets an uninstall remove a config file Agentyx created outright instead of
+   * leaving an empty shell behind.
+   */
+  readonly empty: boolean;
+}
+
+/**
+ * The state of a provider's MCP config before Agentyx touches it, plus the
+ * server keys to take back out of it.
+ *
+ * These files are shared with the user, so Agentyx merges into them rather than
+ * owning them: `remove` names only keys Agentyx itself added, and everything
+ * else in the document is carried through untouched.
+ */
+export interface ExistingMcpConfig {
+  readonly content: string | undefined;
+  readonly remove: readonly string[];
 }
 
 /** What Agentyx can say about a provider in a project without changing anything. */
@@ -85,6 +106,6 @@ export interface AgentAdapter {
   planFiles(context: AdapterContext): readonly PlannedFile[];
   /** Path to the project-local MCP config, when supported. */
   mcpConfigPath?(projectDir: string): string;
-  /** Merges resolved MCP servers into existing provider config content. */
-  planMcpConfig?(context: AdapterContext, existingContent: string | undefined): PlannedMcpConfig;
+  /** Merges resolved MCP servers into existing provider config content, minus any removals. */
+  planMcpConfig?(context: AdapterContext, existing: ExistingMcpConfig): PlannedMcpConfig;
 }

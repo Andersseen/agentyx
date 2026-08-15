@@ -1,6 +1,8 @@
 import {
   applyInstallPlans,
   builtInAdapterRegistry,
+  collectInstallConflicts,
+  InstallConflictError,
   type InstallPlan,
   planInstall,
   summarizeInstallPlans,
@@ -10,6 +12,7 @@ import {
   builtInMcpServerRegistry,
   builtInSkillRegistry,
   loadAgentyxConfig,
+  loadInstallManifest,
   resolveAgentyxConfig,
 } from "@agentyx/core";
 import { isCancel, multiselect } from "@clack/prompts";
@@ -33,6 +36,10 @@ export interface InstallCommandInput {
   readonly json: boolean;
   readonly skillsOnly?: boolean;
   readonly mcpOnly?: boolean;
+  /** Remove managed files and MCP entries the current selection no longer resolves. */
+  readonly prune?: boolean;
+  /** Overwrite files Agentyx does not manage instead of refusing to touch them. */
+  readonly force?: boolean;
   readonly cwd: string;
 }
 
@@ -51,9 +58,15 @@ export class InstallCommandError extends AgentyxError {
  * cannot receive different instructions; the plans differ only in where the
  * files go. `.agentyx.json` is never modified.
  *
+ * `.agentyx.lock.json` decides what Agentyx is allowed to touch. A destination it
+ * has no record of writing is reported as a conflict and the run stops without
+ * writing anything, so an installation can never quietly replace a hand-written
+ * skill that happens to share a name.
+ *
  * @throws {AgentyxConfigNotFoundError} when no packs were named and the project has no configuration.
  * @throws {MissingInstallTargetsError} when neither the configuration nor `--target` names a target.
  * @throws {UnknownAdapterError} when a target has no adapter.
+ * @throws {InstallConflictError} when a destination is not Agentyx's to write, and `--force` was not given.
  */
 export async function runInstallCommand(input: InstallCommandInput): Promise<string> {
   const environment = await resolveEnvironment(input);
@@ -63,18 +76,29 @@ export async function runInstallCommand(input: InstallCommandInput): Promise<str
   const mcpServers = input.skillsOnly
     ? []
     : environment.mcpServers.map((name) => builtInMcpServerRegistry.get(name));
+  const manifest = await loadInstallManifest(input.cwd);
   const plans = await planInstall({
     targets: environment.targets,
     projectDir: input.cwd,
     skills,
     mcpServers,
+    manifest,
+    prune: input.prune === true,
+    force: input.force === true,
   });
+  const conflicts = collectInstallConflicts(plans);
 
-  if (!input.dryRun) {
-    await applyInstallPlans(plans);
+  if (conflicts.length > 0 && !input.dryRun) {
+    throw new InstallConflictError(conflicts);
   }
 
-  return input.json ? renderJson(input, environment, plans) : renderText(input, plans);
+  if (!input.dryRun) {
+    await applyInstallPlans(plans, { manifest });
+  }
+
+  return input.json
+    ? renderJson(input, environment, plans, conflicts)
+    : renderText(input, plans, conflicts);
 }
 
 interface ResolvedEnvironment {
@@ -223,7 +247,11 @@ async function promptValue<T>(value: Promise<T | symbol>): Promise<T> {
 }
 
 /** Plans are reported per target, then summarised. Paths stay project-relative. */
-function renderText(input: InstallCommandInput, plans: readonly InstallPlan[]): string {
+function renderText(
+  input: InstallCommandInput,
+  plans: readonly InstallPlan[],
+  conflicts: readonly string[],
+): string {
   const summary = summarizeInstallPlans(plans);
   const blocks = plans.map((plan) =>
     [
@@ -248,15 +276,37 @@ function renderText(input: InstallCommandInput, plans: readonly InstallPlan[]): 
           ),
         ...plan.unsupportedMcp.map((name) => `unsupported project scope ${name}`),
       ]),
+      ...(plan.deletions.length > 0
+        ? [
+            section(
+              "Removed",
+              plan.deletions
+                .filter((operation) => operation.usedBy[0] === plan.target)
+                .map((operation) =>
+                  renderOperationLine(operation.status, operation.relativePath, operation.usedBy),
+                ),
+            ),
+          ]
+        : []),
     ].join("\n"),
   );
+  const conflictBlock =
+    conflicts.length > 0
+      ? [
+          section("Conflicts", conflicts),
+          "These files are not Agentyx's to replace. Move or delete them, or re-run with --force.",
+        ]
+      : [];
   const footer = input.dryRun
-    ? `Dry run: ${summary.create} to create, ${summary.update} to update, ${summary.unchanged} unchanged. Nothing was written.`
-    : `Installed: ${summary.create + summary.update} written, ${summary.unchanged} unchanged.`;
+    ? `Dry run: ${summary.create} to create, ${summary.update} to update, ${summary.delete} to remove, ${summary.unchanged} unchanged, ${summary.conflict} blocked. Nothing was written.`
+    : `Installed: ${summary.create + summary.update} written, ${summary.delete} removed, ${summary.unchanged} unchanged.`;
 
-  return [input.dryRun ? "Agentyx install (dry run)" : "Agentyx install", ...blocks, footer].join(
-    "\n\n",
-  );
+  return [
+    input.dryRun ? "Agentyx install (dry run)" : "Agentyx install",
+    ...blocks,
+    ...conflictBlock,
+    footer,
+  ].join("\n\n");
 }
 
 function renderOperationLine(status: string, detail: string, usedBy: readonly string[]): string {
@@ -274,9 +324,11 @@ function renderJson(
   input: InstallCommandInput,
   environment: ResolvedEnvironment,
   plans: readonly InstallPlan[],
+  conflicts: readonly string[],
 ): string {
   return toJson({
     dryRun: input.dryRun,
+    conflicts,
     packs: environment.packs,
     skills: environment.skills,
     declaredMcpServers: environment.declaredMcpServers,
@@ -300,6 +352,14 @@ function renderJson(
         type: operation.type,
         status: operation.status,
         servers: operation.servers,
+        path: operation.relativePath,
+        usedBy: operation.usedBy,
+      })),
+      deletions: plan.deletions.map((operation) => ({
+        type: operation.type,
+        status: operation.status,
+        kind: operation.kind,
+        skill: operation.skill,
         path: operation.relativePath,
         usedBy: operation.usedBy,
       })),
@@ -344,6 +404,8 @@ export function createInstallCommand(): Command {
     .option("--json", "print machine-readable JSON only", false)
     .option("--skills-only", "install skills without MCP configuration", false)
     .option("--mcp-only", "install MCP configuration without skills", false)
+    .option("--prune", "remove managed files the current selection no longer resolves", false)
+    .option("--force", "overwrite files Agentyx does not manage", false)
     .action(
       async (
         packs: string[],
@@ -357,6 +419,8 @@ export function createInstallCommand(): Command {
           json: boolean;
           skillsOnly: boolean;
           mcpOnly: boolean;
+          prune: boolean;
+          force: boolean;
         },
       ) => {
         await emit(() =>
@@ -371,6 +435,8 @@ export function createInstallCommand(): Command {
             json: options.json,
             skillsOnly: options.skillsOnly,
             mcpOnly: options.mcpOnly,
+            prune: options.prune,
+            force: options.force,
             cwd: process.cwd(),
           }),
         );

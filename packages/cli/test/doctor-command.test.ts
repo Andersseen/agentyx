@@ -1,4 +1,4 @@
-import { cp, mkdtemp, readdir, rm, writeFile } from "node:fs/promises";
+import { cp, mkdir, mkdtemp, readdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -8,7 +8,19 @@ import {
   renderDoctorReport,
   runDoctorCommand,
 } from "../src/commands/doctor.js";
+import { runInstallCommand } from "../src/commands/install.js";
 import { createAgentyxProgram } from "../src/index.js";
+
+const installInput = {
+  packs: [],
+  enable: [],
+  targets: [],
+  skills: [],
+  mcpServers: [],
+  select: false,
+  dryRun: false,
+  json: false,
+};
 
 const fixturesPath = fileURLToPath(
   new URL("../../../packages/core/test/fixtures", import.meta.url),
@@ -50,7 +62,13 @@ describe("agentyx doctor", () => {
       resolvedPacks: ["technical", "typescript"],
       skillsCount: 7,
     });
-    expect(report.installation.summary).toEqual({ create: 7, update: 0, unchanged: 0 });
+    expect(report.installation.summary).toEqual({
+      create: 7,
+      update: 0,
+      unchanged: 0,
+      conflict: 0,
+      delete: 0,
+    });
     expect(await readdir(projectDir)).not.toContain(".agents");
   });
 
@@ -162,6 +180,97 @@ describe("agentyx doctor", () => {
     await runDoctorCommand({ json: false, cwd: projectDir });
 
     expect(await readdir(projectDir)).toEqual([".agentyx.json"]);
+  });
+});
+
+describe("agentyx doctor install manifest", () => {
+  it("reports no managed files before the first install", async () => {
+    await writeConfig({ packs: ["technical"], targets: ["codex"] });
+
+    const report = await runDoctorCommand({ json: false, cwd: projectDir });
+
+    expect(report.installation.manifest).toEqual({
+      present: false,
+      entries: 0,
+      stale: [],
+      drifted: [],
+      conflicts: [],
+    });
+  });
+
+  it("counts what an installation recorded, and stays healthy", async () => {
+    await cp(join(fixturesPath, "typescript-project"), projectDir, { recursive: true });
+    await writeConfig({ packs: ["technical", "typescript"], targets: ["codex"] });
+    await runInstallCommand({ ...installInput, cwd: projectDir });
+
+    const report = await runDoctorCommand({ json: false, cwd: projectDir });
+
+    expect(report.installation.manifest.present).toBe(true);
+    expect(report.installation.manifest.entries).toBe(7);
+    expect(report.status).toBe("healthy");
+  });
+
+  it("warns about installed skills the configuration no longer resolves", async () => {
+    await writeConfig({ packs: ["technical", "typescript"], targets: ["codex"] });
+    await runInstallCommand({ ...installInput, cwd: projectDir });
+    await writeConfig({ packs: ["technical"], targets: ["codex"] });
+
+    const report = await runDoctorCommand({ json: false, cwd: projectDir });
+
+    expect(report.installation.manifest.stale).toContain(
+      ".agents/skills/typescript-strict/SKILL.md",
+    );
+    expect(report.diagnostics.map((diagnostic) => diagnostic.code)).toContain(
+      "stale_managed_files",
+    );
+    expect(report.status).toBe("warnings");
+  });
+
+  it("warns about a managed skill edited since installation", async () => {
+    await writeConfig({ packs: ["technical"], targets: ["codex"] });
+    await runInstallCommand({ ...installInput, cwd: projectDir });
+    await writeFile(
+      join(projectDir, ".agents", "skills", "code-quality", "SKILL.md"),
+      "edited\n",
+      "utf8",
+    );
+
+    const report = await runDoctorCommand({ json: false, cwd: projectDir });
+
+    expect(report.installation.manifest.drifted).toEqual([".agents/skills/code-quality/SKILL.md"]);
+    expect(report.diagnostics.map((diagnostic) => diagnostic.code)).toContain(
+      "drifted_managed_file",
+    );
+  });
+
+  it("errors on a destination Agentyx does not manage", async () => {
+    await writeConfig({ packs: ["technical"], targets: ["codex"] });
+    await mkdir(join(projectDir, ".agents", "skills", "code-quality"), { recursive: true });
+    await writeFile(
+      join(projectDir, ".agents", "skills", "code-quality", "SKILL.md"),
+      "mine\n",
+      "utf8",
+    );
+
+    const report = await runDoctorCommand({ json: false, cwd: projectDir });
+
+    expect(report.installation.manifest.conflicts).toEqual([
+      ".agents/skills/code-quality/SKILL.md",
+    ]);
+    expect(report.status).toBe("errors");
+    expect(renderDoctorReport(report, false)).toContain("not managed by Agentyx");
+  });
+
+  it("reports a damaged manifest instead of crashing", async () => {
+    await writeConfig({ packs: ["technical"], targets: ["codex"] });
+    await writeFile(join(projectDir, ".agentyx.lock.json"), "{ not json", "utf8");
+
+    const report = await runDoctorCommand({ json: false, cwd: projectDir });
+
+    expect(report.status).toBe("errors");
+    expect(report.diagnostics.map((diagnostic) => diagnostic.code)).toContain(
+      "agentyx_manifest_parse_error",
+    );
   });
 });
 
