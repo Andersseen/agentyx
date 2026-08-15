@@ -21,7 +21,7 @@
     "@angular/forms": "21.2.19",
     "@angular/platform-browser": "21.2.19",
     "@angular/platform-browser-dynamic": "21.2.19",
-    "@angular/router": "21.2.19",
+    "@angular/router": "22.1.1",
     "@voltui/components": "1.0.0",
     "angular-movement": "0.7.0",
     "lumen-icons": "0.2.0",
