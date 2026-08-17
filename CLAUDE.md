@@ -12,7 +12,7 @@
   edit the file under `.agents/skills` and leave the bridge alone:
   - `/verify-agentyx` — the full verification pipeline, including the CLI checks `pnpm check` does not
     cover.
-  - `/add-builtin-stack` — add a stack to the built-in registry with the tests it needs.
+  - `/add-builtin-pack` — add a pack to the built-in registry with the tests it needs.
   - `/context-efficient-development` — keep exploration, iteration commands and output concise.
   - `/navigate-agentyx` — choose the right package or directory before changing code.
   - `/repo-ai-tooling` — use RTK, codebase memory and MCP tools without wasting context.
