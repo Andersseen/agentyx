@@ -2,18 +2,37 @@ import { describe, expect, it } from "vitest";
 import { builtInMcpServerRegistry } from "../src/mcp/built-in.js";
 import { DuplicatePackError } from "../src/pack/errors.js";
 import { builtInPackRegistry, builtInPacks, createPackRegistry } from "../src/pack/registry.js";
+import { PACK_CATEGORIES } from "../src/pack/schema.js";
 import { builtInSkillRegistry } from "../src/skill/built-in.js";
 import { builtInToolRegistry } from "../src/tool/built-in.js";
 
 describe("built-in pack registry", () => {
-  it("ships exactly the first five packs", () => {
+  it("ships exactly the documented packs", () => {
     expect([...builtInPackRegistry.keys()]).toEqual([
       "technical",
       "typescript",
       "angular",
       "efficiency",
       "agentic",
+      "testing",
+      "security",
+      "performance",
+      "accessibility",
+      "refactoring",
+      "documentation",
+      "observability",
+      "data",
+      "git",
+      "devops",
     ]);
+  });
+
+  it("categorizes every built-in pack", () => {
+    for (const pack of builtInPackRegistry.values()) {
+      expect(PACK_CATEGORIES, `${pack.name} has category ${pack.category}`).toContain(
+        pack.category,
+      );
+    }
   });
 
   it("describes every built-in pack", () => {

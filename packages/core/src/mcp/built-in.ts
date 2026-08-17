@@ -32,6 +32,49 @@ export const builtInMcpServerSources: readonly McpServerSource[] = [
       command: "codebase-memory-mcp",
     }),
   },
+  {
+    name: "github",
+    load: () => ({
+      name: "github",
+      description: "Read repositories, issues, pull requests and workflow runs on GitHub.",
+      transport: "http",
+      contextCost: "high",
+      url: "https://api.githubcopilot.com/mcp/",
+    }),
+  },
+  {
+    name: "sentry",
+    load: () => ({
+      name: "sentry",
+      description: "Inspect production issues, events and stack traces recorded by Sentry.",
+      transport: "http",
+      contextCost: "medium",
+      url: "https://mcp.sentry.dev/mcp",
+    }),
+  },
+  {
+    name: "chrome-devtools",
+    load: () => ({
+      name: "chrome-devtools",
+      description: "Record performance traces and inspect pages through Chrome DevTools.",
+      transport: "stdio",
+      contextCost: "high",
+      command: "npx",
+      args: ["-y", "chrome-devtools-mcp@latest"],
+    }),
+  },
+  {
+    name: "supabase",
+    load: () => ({
+      name: "supabase",
+      description: "Inspect and query Supabase project schemas, tables and logs.",
+      transport: "stdio",
+      contextCost: "high",
+      command: "npx",
+      args: ["-y", "@supabase/mcp-server-supabase@latest"],
+      env: { SUPABASE_ACCESS_TOKEN: { fromEnv: "SUPABASE_ACCESS_TOKEN" } },
+    }),
+  },
 ];
 
 export const builtInMcpServerRegistry = createMcpServerRegistry(builtInMcpServerSources);

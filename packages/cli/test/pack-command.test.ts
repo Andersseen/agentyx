@@ -11,6 +11,16 @@ describe("agentyx pack list", () => {
         "angular        framework",
         "efficiency     efficiency",
         "agentic        workflow",
+        "testing        engineering",
+        "security       engineering",
+        "performance    engineering",
+        "accessibility  engineering",
+        "refactoring    engineering",
+        "documentation  engineering",
+        "observability  engineering",
+        "data           engineering",
+        "git            workflow",
+        "devops         workflow",
       ].join("\n"),
     );
   });

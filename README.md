@@ -21,16 +21,26 @@ Packs contribute provider-neutral capabilities:
 
 ## Packs
 
-| Pack         | Category    | Purpose                                                        |
-| ------------ | ----------- | -------------------------------------------------------------- |
-| `technical`  | engineering | General engineering quality, API design, code review           |
-| `typescript` | language    | Strict, modeled, modern TypeScript                             |
-| `angular`    | framework   | Modern Angular APIs, signals, architecture, testing            |
-| `efficiency` | efficiency  | Context-efficient exploration, output, iteration, verification |
-| `agentic`    | workflow    | Brainstorming, planning, debugging, parallel and review flows  |
+| Pack            | Category    | Purpose                                                        |
+| --------------- | ----------- | -------------------------------------------------------------- |
+| `technical`     | engineering | General engineering quality, API design, code review           |
+| `typescript`    | language    | Strict, modeled, modern TypeScript                             |
+| `angular`       | framework   | Modern Angular APIs, signals, architecture, testing            |
+| `efficiency`    | efficiency  | Context-efficient exploration, output, iteration, verification |
+| `agentic`       | workflow    | Brainstorming, planning, debugging, parallel and review flows  |
+| `testing`       | engineering | Test level choice, doubles, end-to-end scope, flaky tests      |
+| `security`      | engineering | Input validation, secrets, dependencies, authorization         |
+| `performance`   | engineering | Profiling, web vitals, database query performance              |
+| `accessibility` | engineering | Semantic markup, ARIA patterns, keyboard navigation            |
+| `refactoring`   | engineering | Safe restructuring, legacy code, dependency hygiene            |
+| `documentation` | engineering | Technical writing, API reference, decision records             |
+| `observability` | engineering | Structured logging, metrics and tracing, incident response     |
+| `data`          | engineering | Schema design, migrations, transactional consistency           |
+| `git`           | workflow    | Commit hygiene, branching, reviewable pull requests            |
+| `devops`        | workflow    | CI pipelines, containers, deployment safety, infrastructure    |
 
-Technology packs do not hide inheritance. If a project wants both TypeScript and Angular behavior,
-select both:
+Packs compose without inheritance, so cross-cutting engineering packs stack on top of a technology
+choice. If a project wants both TypeScript and Angular behavior, select both:
 
 ```json
 {
@@ -56,6 +66,16 @@ Current optional capabilities:
 
 - `rtk`: Rust Token Killer executable, detected as `rtk` on PATH.
 - `codebase-memory`: structural code-intelligence MCP backed by a persistent knowledge graph.
+- `playwright`: browser automation MCP, declared by `testing`.
+- `chrome-devtools`: performance tracing and page inspection MCP, declared by `performance` and
+  `accessibility`.
+- `sentry`: production issue and stack trace MCP, declared by `observability`.
+- `supabase`: project schema and log MCP, declared by `data`. Reads `SUPABASE_ACCESS_TOKEN` from the
+  environment.
+- `github`: repository, issue and pull-request MCP, declared by `git`.
+
+Remote MCP servers are declared without credentials so the agent performs its own authorization
+flow. Agentyx never writes a token into a provider configuration file.
 
 Agentyx never downloads binaries, runs installers, edits PATH, or installs third-party runtime
 Skills for these capabilities.
