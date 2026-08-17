@@ -57,8 +57,7 @@ Rules for the definition:
 
 In `packages/core/test/pack-registry.test.ts`:
 
-- add the new name to the `[...builtInPackRegistry.keys()]` assertion, in position — and rename that
-  test if its title still counts the packs ("ships exactly the first five packs");
+- add the new name to the `[...builtInPackRegistry.keys()]` assertion, in position;
 - add its `skills` to the declared-skills test if the pack is one users will select directly.
 
 The cross-checks that every referenced skill, MCP server and tool exists in the corresponding
