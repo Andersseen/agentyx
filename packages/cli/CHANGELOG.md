@@ -1,5 +1,19 @@
 # @agentyx/cli
 
+## 0.5.0
+
+### Minor Changes
+
+- b4559ea: Add safe project-owned Skill directories, local packs, trusted external source inspection, and the
+  initial Superpowers source definition. Reject conflicting install scopes and ship the onboarding and
+  evaluation foundation for reusable agent environments.
+
+### Patch Changes
+
+- Updated dependencies [b4559ea]
+  - @agentyx/core@0.5.0
+  - @agentyx/adapters@0.5.0
+
 ## 0.4.0
 
 ### Minor Changes
