@@ -2,7 +2,8 @@ import { z } from "zod";
 import { agentyxConfigSchema } from "./schema.js";
 
 /** Canonical identifier of the published `.agentyx.json` schema. */
-export const AGENTYX_CONFIG_SCHEMA_ID = "https://agentyx.dev/schema/agentyx.schema.json";
+export const AGENTYX_CONFIG_SCHEMA_ID =
+  "https://raw.githubusercontent.com/Andersseen/agentyx/main/packages/core/schema/agentyx.schema.json";
 
 /**
  * Derives the JSON Schema for `.agentyx.json` from the Zod model, which stays the
