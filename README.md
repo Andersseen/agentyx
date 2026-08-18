@@ -128,6 +128,7 @@ Inspect project health:
 ```sh
 pnpm agentyx doctor
 pnpm agentyx doctor --json
+pnpm agentyx doctor --check # fail on warnings or errors, useful in CI
 ```
 
 ## Installation lifecycle

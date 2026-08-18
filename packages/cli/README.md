@@ -9,6 +9,7 @@ agentyx pack list
 agentyx resolve
 agentyx install --dry-run
 agentyx doctor
+agentyx doctor --check
 ```
 
 Configuration is pack-first:
@@ -32,3 +33,6 @@ agentyx skill list
 agentyx mcp list
 agentyx target list
 ```
+
+`doctor --check` keeps normal human or JSON output, but exits with code 1 on warnings as well as
+errors so CI can fail before install drift turns into a broken run.

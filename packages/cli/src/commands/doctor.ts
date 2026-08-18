@@ -426,6 +426,14 @@ export function renderDoctorReport(report: DoctorReport, json: boolean): string 
   ].join("\n");
 }
 
+export function doctorExitCode(report: DoctorReport, check: boolean): number | undefined {
+  if (report.status === "errors" || (check && report.status === "warnings")) {
+    return 1;
+  }
+
+  return undefined;
+}
+
 async function readConfig(projectDir: string): Promise<{
   readonly present: boolean;
   readonly valid: boolean;
@@ -562,13 +570,12 @@ export function createDoctorCommand(): Command {
   return new Command("doctor")
     .description("Inspect Agentyx configuration, resolution, targets and installability.")
     .option("--json", "print machine-readable JSON only", false)
-    .action(async (options: { json: boolean }) => {
+    .option("--check", "exit with code 1 on warnings as well as errors", false)
+    .action(async (options: { json: boolean; check: boolean }) => {
       const report = await runDoctorCommand({ json: options.json, cwd: process.cwd() });
 
       process.stdout.write(`${renderDoctorReport(report, options.json)}\n`);
 
-      if (report.status === "errors") {
-        process.exitCode = 1;
-      }
+      process.exitCode = doctorExitCode(report, options.check);
     });
 }
