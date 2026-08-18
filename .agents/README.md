@@ -21,7 +21,7 @@ file, follow the body.
 
 - [verify-agentyx](skills/verify-agentyx/SKILL.md) — the full verification pipeline, including the CLI
   and schema checks `pnpm check` does not cover.
-- [add-builtin-stack](skills/add-builtin-stack/SKILL.md) — add a stack to the built-in registry with
+- [add-builtin-pack](skills/add-builtin-pack/SKILL.md) — add a pack to the built-in registry with
   the tests it needs.
 - [context-efficient-development](skills/context-efficient-development/SKILL.md) — keep Agentyx
   development context, commands and output focused without weakening verification.

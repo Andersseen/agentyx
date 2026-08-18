@@ -77,6 +77,72 @@ export const builtInPacks: readonly PackDefinitionInput[] = [
       "requesting-code-review",
     ],
   },
+  {
+    name: "testing",
+    category: "engineering",
+    description: "Test design, isolation and stability at every level of the pyramid.",
+    skills: ["test-strategy", "test-doubles", "e2e-testing", "flaky-tests"],
+    mcpServers: [{ name: "playwright", activation: "optional" }],
+  },
+  {
+    name: "security",
+    category: "engineering",
+    description: "Application security fundamentals for untrusted input, secrets and access.",
+    skills: ["secure-coding", "secrets-handling", "dependency-security", "auth-patterns"],
+  },
+  {
+    name: "performance",
+    category: "engineering",
+    description: "Measure before optimizing, across application, browser and database.",
+    skills: ["performance-profiling", "web-vitals", "query-performance"],
+    mcpServers: [{ name: "chrome-devtools", activation: "optional" }],
+  },
+  {
+    name: "accessibility",
+    category: "engineering",
+    description: "Accessible markup, ARIA and keyboard interaction for web interfaces.",
+    skills: ["semantic-html", "aria-patterns", "keyboard-navigation"],
+    mcpServers: [{ name: "chrome-devtools", activation: "optional" }],
+  },
+  {
+    name: "refactoring",
+    category: "engineering",
+    description: "Change structure safely, including in legacy code with weak tests.",
+    skills: ["refactoring-safely", "legacy-code", "dependency-hygiene"],
+  },
+  {
+    name: "documentation",
+    category: "engineering",
+    description: "Documentation, interface reference and decision records that stay useful.",
+    skills: ["technical-writing", "api-documentation", "decision-records"],
+  },
+  {
+    name: "observability",
+    category: "engineering",
+    description: "Logging, metrics, tracing and incident response for running systems.",
+    skills: ["structured-logging", "metrics-and-tracing", "incident-response"],
+    mcpServers: [{ name: "sentry", activation: "optional" }],
+  },
+  {
+    name: "data",
+    category: "engineering",
+    description: "Schema design, migrations and transactional correctness.",
+    skills: ["data-modeling", "schema-migrations", "transactions-and-consistency"],
+    mcpServers: [{ name: "supabase", activation: "optional" }],
+  },
+  {
+    name: "git",
+    category: "workflow",
+    description: "Commit, branch and pull-request practice for reviewable history.",
+    skills: ["commit-hygiene", "branching-strategy", "pull-requests"],
+    mcpServers: [{ name: "github", activation: "optional" }],
+  },
+  {
+    name: "devops",
+    category: "workflow",
+    description: "Continuous integration, containers, deployment safety and infrastructure.",
+    skills: ["ci-pipelines", "containerization", "deployment-safety", "infrastructure-as-code"],
+  },
 ];
 
 /** The registry used by default when no explicit registry is supplied. */

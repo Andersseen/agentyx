@@ -8,7 +8,15 @@ import {
 
 describe("builtInMcpServerRegistry", () => {
   it("lists the built-in MCP servers", () => {
-    expect(builtInMcpServerRegistry.names).toEqual(["context7", "playwright", "codebase-memory"]);
+    expect(builtInMcpServerRegistry.names).toEqual([
+      "context7",
+      "playwright",
+      "codebase-memory",
+      "github",
+      "sentry",
+      "chrome-devtools",
+      "supabase",
+    ]);
   });
 
   it("retrieves known MCP servers and metadata", () => {
@@ -34,6 +42,30 @@ describe("builtInMcpServerRegistry", () => {
         name: "codebase-memory",
         description:
           "Structural code-intelligence MCP backed by a persistent code knowledge graph.",
+        transport: "stdio",
+        contextCost: "high",
+      },
+      {
+        name: "github",
+        description: "Read repositories, issues, pull requests and workflow runs on GitHub.",
+        transport: "http",
+        contextCost: "high",
+      },
+      {
+        name: "sentry",
+        description: "Inspect production issues, events and stack traces recorded by Sentry.",
+        transport: "http",
+        contextCost: "medium",
+      },
+      {
+        name: "chrome-devtools",
+        description: "Record performance traces and inspect pages through Chrome DevTools.",
+        transport: "stdio",
+        contextCost: "high",
+      },
+      {
+        name: "supabase",
+        description: "Inspect and query Supabase project schemas, tables and logs.",
         transport: "stdio",
         contextCost: "high",
       },

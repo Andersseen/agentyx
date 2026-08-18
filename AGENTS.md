@@ -42,8 +42,8 @@ Markdown and provider-neutral — read the file and follow it, whichever agent y
 
 - [verify-agentyx](.agents/skills/verify-agentyx/SKILL.md) — read before handing back any change; it
   covers the CLI and schema checks `pnpm check` does not.
-- [add-builtin-stack](.agents/skills/add-builtin-stack/SKILL.md) — read when adding, renaming or
-  re-parenting a built-in pack.
+- [add-builtin-pack](.agents/skills/add-builtin-pack/SKILL.md) — read when adding, renaming or
+  re-categorizing a built-in pack.
 - [context-efficient-development](.agents/skills/context-efficient-development/SKILL.md) — read for
   non-trivial Agentyx work to keep exploration, commands and output focused.
 - [navigate-agentyx](.agents/skills/navigate-agentyx/SKILL.md) — read when you need the repository map

@@ -24,6 +24,16 @@ describe("resolvePacks", () => {
     expect(resolvePacks([])).toEqual([]);
   });
 
+  it("composes cross-cutting packs with a stack without hidden inheritance", () => {
+    expect(resolvePacks(["typescript", "testing", "security", "git"])).toEqual([
+      "typescript",
+      "testing",
+      "security",
+      "git",
+    ]);
+    expect(resolvePacks(["observability"])).toEqual(["observability"]);
+  });
+
   it("uses the supplied registry", () => {
     const registry = createPackRegistry([{ name: "custom" }]);
 
