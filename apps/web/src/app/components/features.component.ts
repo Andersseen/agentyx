@@ -106,6 +106,19 @@ import { LmnCommandLineIcon } from "lumen-icons/command-line";
             </volt-card-description>
           </volt-card-header>
         </volt-card>
+
+        <volt-card class="feature-card h-full p-2 lg:col-span-3" [moveWhileHover]="{ y: [0, -10], scale: [1, 1.012] }">
+          <volt-card-header>
+            <span class="icon-shell text-info">
+              <lmn-cog-6-tooth class="h-5 w-5" aria-hidden="true" />
+            </span>
+            <volt-card-title>Project-owned packs</volt-card-title>
+            <volt-card-description>
+              Compose checked-in Agent Skills with the built-in catalogue. Local roots stay inside
+              the project and remain reviewable in version control.
+            </volt-card-description>
+          </volt-card-header>
+        </volt-card>
       </div>
     </section>
   `,
