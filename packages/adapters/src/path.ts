@@ -1,4 +1,5 @@
-import { isAbsolute, relative, sep } from "node:path";
+import { lstat } from "node:fs/promises";
+import { isAbsolute, join, relative, sep } from "node:path";
 import { InstallPathError } from "./errors.js";
 
 /**
@@ -16,6 +17,44 @@ export function assertInside(path: string, root: string): void {
 
   if (offset === "" || offset === ".." || offset.startsWith(`..${sep}`) || isAbsolute(offset)) {
     throw new InstallPathError(path, root);
+  }
+}
+
+/**
+ * Fails unless `path` is inside `root` without crossing an existing symlink.
+ *
+ * `assertInside` is lexical: it catches `../` and absolute-path escapes, but the
+ * filesystem can still redirect an otherwise-valid path through a symlink. This
+ * guard walks the existing path segments before a plan reads, writes or deletes
+ * so a project-local destination cannot resolve outside the project at runtime.
+ */
+export async function assertInsideRealPath(path: string, root: string): Promise<void> {
+  assertInside(path, root);
+
+  let current = root;
+  for (const segment of relative(root, path).split(sep)) {
+    current = join(current, segment);
+
+    const stats = await lstatExisting(current);
+    if (stats === undefined) {
+      return;
+    }
+
+    if (stats.isSymbolicLink()) {
+      throw new InstallPathError(path, root);
+    }
+  }
+}
+
+async function lstatExisting(path: string) {
+  try {
+    return await lstat(path);
+  } catch (cause) {
+    if (cause instanceof Error && (cause as NodeJS.ErrnoException).code === "ENOENT") {
+      return undefined;
+    }
+
+    throw cause;
   }
 }
 

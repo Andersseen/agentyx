@@ -1,4 +1,4 @@
-import { mkdtemp, readdir, readFile, rm, stat, utimes, writeFile } from "node:fs/promises";
+import { mkdtemp, readdir, readFile, rm, stat, symlink, utimes, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
@@ -150,6 +150,29 @@ describe("applyInstallPlan", () => {
     const hostile: InstallPlan = { ...plan, skillsPath: tmpdir() };
 
     await expect(applyInstallPlan(hostile)).rejects.toThrow(InstallPathError);
+  });
+
+  it("rejects a symlinked target directory before writing", async () => {
+    const outsideDir = await mkdtemp(join(tmpdir(), "agentyx-outside-"));
+    const plan = await planTargetInstall({ target: "codex", projectDir, skills });
+
+    try {
+      await symlink(outsideDir, join(projectDir, ".agents"));
+
+      const escaping: InstallPlan = {
+        ...plan,
+        skillsPath: join(projectDir, ".agents", "skills"),
+        operations: plan.operations.map((operation) => ({
+          ...operation,
+          path: join(projectDir, ".agents", "skills", operation.skill, "SKILL.md"),
+        })),
+      };
+
+      await expect(applyInstallPlan(escaping)).rejects.toThrow(InstallPathError);
+      await expect(readdir(outsideDir)).resolves.toEqual([]);
+    } finally {
+      await rm(outsideDir, { recursive: true, force: true });
+    }
   });
 
   it("reports the offending path on the error", async () => {

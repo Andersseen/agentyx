@@ -14,7 +14,7 @@ import {
 import type { AgentAdapter, PlannedFile } from "./adapter.js";
 import { builtInAdapterRegistry } from "./built-in.js";
 import { MissingInstallTargetsError, SharedInstallConflictError } from "./errors.js";
-import { assertInside, toDisplayPath } from "./path.js";
+import { assertInside, assertInsideRealPath, toDisplayPath } from "./path.js";
 import type {
   DeleteOperation,
   DeleteOperationStatus,
@@ -80,6 +80,7 @@ export async function planTargetInstall(input: PlanTargetInstallInput): Promise<
   const skillsPath = adapter.skillsPath(projectDir);
 
   assertInside(skillsPath, projectDir);
+  await assertInsideRealPath(skillsPath, projectDir);
 
   const manifest = input.manifest ?? emptyInstallManifest();
   const recorded = manifestEntriesByPath(manifest);
@@ -175,6 +176,7 @@ async function planFile(
   const path = resolve(projectDir, join(...file.segments));
 
   assertInside(path, skillsPath);
+  await assertInsideRealPath(path, skillsPath);
 
   const relativePath = toDisplayPath(projectDir, path);
   const entry = recorded.get(relativePath);
@@ -235,6 +237,7 @@ async function planMcp(input: PlanMcpInput): Promise<{
   }
 
   assertInside(configPath, projectDir);
+  await assertInsideRealPath(configPath, projectDir);
 
   const relativePath = toDisplayPath(projectDir, configPath);
   const entry = recorded.get(relativePath);
@@ -271,6 +274,7 @@ async function planMcp(input: PlanMcpInput): Promise<{
   const path = resolve(projectDir, join(...planned.segments));
 
   assertInside(path, projectDir);
+  await assertInsideRealPath(path, projectDir);
 
   return {
     operations: [
@@ -324,6 +328,7 @@ async function planSkillDeletions(
       const path = resolve(projectDir, ...entry.path.split("/"));
 
       assertInside(path, adapter.skillsPath(projectDir));
+      await assertInsideRealPath(path, adapter.skillsPath(projectDir));
 
       return {
         type: "delete-file" as const,

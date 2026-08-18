@@ -9,7 +9,7 @@ import {
   type InstallManifestEntry,
   manifestEntriesByPath,
 } from "@agentyx/core";
-import { assertInside } from "./path.js";
+import { assertInside, assertInsideRealPath } from "./path.js";
 import type { InstallPlan } from "./plan.js";
 
 /** What an applied plan actually did, in project-relative paths. */
@@ -59,6 +59,7 @@ export async function applyInstallPlan(
   applied = new Set<string>(),
 ): Promise<InstallResult> {
   assertInside(plan.skillsPath, plan.projectDir);
+  await assertInsideRealPath(plan.skillsPath, plan.projectDir);
 
   const written: string[] = [];
   const unchanged: string[] = [];
@@ -67,6 +68,7 @@ export async function applyInstallPlan(
 
   for (const operation of plan.operations) {
     assertInside(operation.path, plan.skillsPath);
+    await assertInsideRealPath(operation.path, plan.skillsPath);
 
     if (operation.status === "conflict") {
       conflicts.push(operation.relativePath);
@@ -88,6 +90,7 @@ export async function applyInstallPlan(
 
   for (const operation of plan.mcpOperations) {
     assertInside(operation.path, plan.projectDir);
+    await assertInsideRealPath(operation.path, plan.projectDir);
 
     if (operation.status === "conflict") {
       conflicts.push(operation.relativePath);
@@ -109,6 +112,10 @@ export async function applyInstallPlan(
 
   for (const operation of plan.deletions) {
     assertInside(operation.path, operation.kind === "skill" ? plan.skillsPath : plan.projectDir);
+    await assertInsideRealPath(
+      operation.path,
+      operation.kind === "skill" ? plan.skillsPath : plan.projectDir,
+    );
 
     if (operation.status === "conflict") {
       conflicts.push(operation.relativePath);
