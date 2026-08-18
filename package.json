@@ -27,7 +27,7 @@
     "dev": "pnpm --filter @agentyx/web dev",
     "format": "biome check --write .",
     "lint": "biome lint .",
-    "release": "pnpm build && changeset publish",
+    "release": "pnpm check && pnpm smoke:pack && changeset publish",
     "smoke:pack": "node packages/cli/scripts/pack-smoke.mjs",
     "test": "vitest run",
     "typecheck": "pnpm -r --parallel run typecheck",

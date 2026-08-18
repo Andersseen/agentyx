@@ -35,11 +35,17 @@ jobs:
       - name: Install
         run: pnpm install --frozen-lockfile
 
+      - name: Check
+        run: pnpm check
+
+      - name: Package smoke test
+        run: pnpm smoke:pack
+
       - name: Create release pull request or publish
         uses: changesets/action@v1
         with:
           version: pnpm run version-packages
-          publish: pnpm run release
+          publish: pnpm exec changeset publish
           commit: "chore: release"
           title: "chore: release"
         env:
