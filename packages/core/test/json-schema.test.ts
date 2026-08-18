@@ -23,6 +23,7 @@ describe("buildAgentyxConfigJsonSchema", () => {
       "targets",
       "skillDirectories",
       "localPacks",
+      "trustedSources",
     ]);
   });
 

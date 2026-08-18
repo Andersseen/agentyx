@@ -4,5 +4,6 @@
 "@agentyx/cli": minor
 ---
 
-Add safe project-owned Skill directories and local packs, reject conflicting install scopes, and
-ship the onboarding and evaluation foundation for reusable agent environments.
+Add safe project-owned Skill directories, local packs, trusted external source inspection, and the
+initial Superpowers source definition. Reject conflicting install scopes and ship the onboarding and
+evaluation foundation for reusable agent environments.

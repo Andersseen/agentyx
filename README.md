@@ -105,6 +105,14 @@ pnpm dlx @agentyx/cli pack list
 pnpm dlx @agentyx/cli pack show efficiency
 ```
 
+Inspect trusted external sources:
+
+```sh
+pnpm dlx @agentyx/cli source list
+pnpm dlx @agentyx/cli source show superpowers
+pnpm dlx @agentyx/cli source inspect superpowers
+```
+
 Resolve the selected capabilities:
 
 ```sh
@@ -172,6 +180,36 @@ Collections that depend on bundled scripts, references, assets, hooks, or provid
 richer integration than copying `SKILL.md`. The security and compatibility policy for those sources
 is documented in [Trusted sources](docs/trusted-sources.md).
 
+## Trusted sources
+
+Agentyx has an initial trusted-source registry for reputable external Skill/plugin projects whose
+layout needs review before installation. The first source is
+[Superpowers](https://github.com/obra/superpowers), a Codex plugin with planning, TDD, debugging and
+delivery workflow Skills.
+
+Keep the checkout inside the project and pin the reviewed ref:
+
+```json
+{
+  "trustedSources": [
+    {
+      "name": "superpowers",
+      "path": ".agentyx/sources/superpowers",
+      "ref": "v5.1.0"
+    }
+  ]
+}
+```
+
+Then inspect it locally:
+
+```sh
+pnpm dlx @agentyx/cli source inspect superpowers
+```
+
+This validates the known repository, plugin manifest, Skill names and resource presence. It does not
+clone the repository, run hooks, execute scripts, or install resource-bearing Skills yet.
+
 ## Installation lifecycle
 
 Agentyx records every file it writes in `.agentyx.lock.json` — the path, the targets that use it, and
@@ -217,6 +255,7 @@ Agentyx created it and nothing is left in it.
 | `targets` | `string[]` | `[]`    | Coding-agent providers to install into       |
 | `skillDirectories` | `string[]` | none | Project-relative roots containing local Skills |
 | `localPacks` | `Pack[]` | none | Project-owned packs composed from known Skills |
+| `trustedSources` | `TrustedSource[]` | none | Pinned local checkouts of known external sources |
 
 Unknown packs and unknown enabled capabilities fail with explicit Agentyx errors.
 

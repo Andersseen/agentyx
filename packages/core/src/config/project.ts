@@ -7,6 +7,7 @@ import { builtInSkillRegistry } from "../skill/built-in.js";
 import { parseSkillMarkdown } from "../skill/markdown.js";
 import { createSkillRegistry, type SkillRegistry, type SkillSource } from "../skill/registry.js";
 import type { SkillDefinition } from "../skill/schema.js";
+import { getTrustedSourceDefinition } from "../source/registry.js";
 import { LocalSkillDirectoryError } from "./errors.js";
 import { loadAgentyxConfig } from "./loader.js";
 import type { AgentyxConfig } from "./schema.js";
@@ -30,6 +31,10 @@ export async function loadAgentyxProject(
 ): Promise<AgentyxProject> {
   const projectDir = resolve(projectPath);
   const config = await loadAgentyxConfig(projectDir);
+  for (const source of config.trustedSources ?? []) {
+    getTrustedSourceDefinition(source);
+  }
+
   const localSources = await loadLocalSkillSources(projectDir, config.skillDirectories ?? []);
   const skillRegistry = createSkillRegistry([
     ...builtInSkillRegistry.names.map(

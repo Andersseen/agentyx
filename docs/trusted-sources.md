@@ -26,6 +26,37 @@ the provider's native plugin mechanism when one exists instead of flattening the
 Skills. The Agentyx integration can pin compatibility, report installation health, and link the
 native installation path without pretending to own files written by another installer.
 
+## Current Superpowers integration
+
+Agentyx knows `superpowers` as a trusted `codex-plugin` source. A project can vendor or submodule a
+reviewed checkout and pin the reviewed ref:
+
+```json
+{
+  "trustedSources": [
+    {
+      "name": "superpowers",
+      "path": ".agentyx/sources/superpowers",
+      "ref": "v5.1.0"
+    }
+  ]
+}
+```
+
+`agentyx source inspect superpowers` validates:
+
+- the checkout resolves inside the project;
+- `.codex-plugin/plugin.json` is readable JSON;
+- the manifest name is `superpowers`;
+- the manifest repository is `https://github.com/obra/superpowers`;
+- the manifest points to a Skill directory inside the checkout;
+- every listed Skill has a matching lowercase kebab-case `SKILL.md` name;
+- which Skills carry supporting files that Agentyx does not install yet.
+
+The command is intentionally local-only. It does not clone, fetch, execute plugin hooks, copy assets,
+or install Skills. Once Agentyx manages complete Skill directories, this same source record can
+become the compatibility gate for installing selected Superpowers Skills.
+
 ## Admission policy
 
 A curated source is eligible only when all of these are recorded:

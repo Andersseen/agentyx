@@ -128,6 +128,32 @@ export { createSkillRegistry } from "./skill/registry.js";
 export { resolvePackSkills } from "./skill/resolver.js";
 export type { SkillDefinition, SkillDefinitionInput } from "./skill/schema.js";
 export { skillDefinitionSchema } from "./skill/schema.js";
+export {
+  DuplicateTrustedSourceError,
+  TrustedSourceLoadError,
+  UnknownTrustedSourceError,
+} from "./source/errors.js";
+export { inspectTrustedSource } from "./source/inspection.js";
+export {
+  createTrustedSourceRegistry,
+  getTrustedSourceDefinition,
+  knownTrustedSourceRegistry,
+  knownTrustedSources,
+} from "./source/registry.js";
+export type {
+  CodexPluginManifest,
+  TrustedSourceDefinition,
+  TrustedSourceReference,
+  TrustedSourceSkillSummary,
+} from "./source/schema.js";
+export {
+  codexPluginManifestSchema,
+  trustedSourceDefinitionSchema,
+  trustedSourceNameSchema,
+  trustedSourcePathSchema,
+  trustedSourceReferenceSchema,
+  trustedSourceSkillSummarySchema,
+} from "./source/schema.js";
 export { builtInToolNames, builtInToolRegistry } from "./tool/built-in.js";
 export {
   DuplicateToolError,

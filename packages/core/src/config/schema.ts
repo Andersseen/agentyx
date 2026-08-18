@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { packDefinitionSchema, packNameSchema } from "../pack/schema.js";
+import { trustedSourceReferenceSchema } from "../source/schema.js";
 
 /**
  * Targets stay free-form strings on purpose: third-party adapters should be
@@ -51,6 +52,10 @@ export const agentyxConfigSchema = z.strictObject({
   localPacks: z
     .array(packDefinitionSchema)
     .describe("Project-owned packs that can reference built-in or local Skills.")
+    .optional(),
+  trustedSources: z
+    .array(trustedSourceReferenceSchema)
+    .describe("Pinned local checkouts of known external skill/plugin sources.")
     .optional(),
 });
 

@@ -146,6 +146,34 @@
         "additionalProperties": false
       },
       "description": "Project-owned packs that can reference built-in or local Skills."
+    },
+    "trustedSources": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+            "description": "Known trusted source identifier."
+          },
+          "path": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "^(?!\\/)(?![A-Za-z]:)(?!.*(?:^|\\/)\\.\\.(?:\\/|$))[^\\\\\\0]+$",
+            "description": "Project-relative checkout path for this source."
+          },
+          "ref": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Reviewed immutable commit, signed tag or pinned release identifier."
+          }
+        },
+        "required": ["name", "path", "ref"],
+        "additionalProperties": false
+      },
+      "description": "Pinned local checkouts of known external skill/plugin sources."
     }
   },
   "additionalProperties": false

@@ -12,6 +12,9 @@ describe("agentyxConfigSchema", () => {
       targets: ["codex", "claude", "kimi"],
       skillDirectories: [".agentyx/skills"],
       localPacks: [{ name: "team", category: "workflow", skills: ["team-review"] }],
+      trustedSources: [
+        { name: "superpowers", path: ".agentyx/sources/superpowers", ref: "v5.1.0" },
+      ],
     });
 
     expect(config).toEqual({
@@ -28,6 +31,9 @@ describe("agentyxConfigSchema", () => {
           mcpServers: [],
           tools: [],
         },
+      ],
+      trustedSources: [
+        { name: "superpowers", path: ".agentyx/sources/superpowers", ref: "v5.1.0" },
       ],
     });
   });
@@ -96,6 +102,14 @@ describe("parseAgentyxConfig", () => {
       expect(() => parseAgentyxConfig({ skillDirectories: [skillDirectory] })).toThrow(
         AgentyxConfigValidationError,
       );
+    }
+  });
+
+  it("rejects unsafe or platform-specific trusted source paths", () => {
+    for (const path of ["../superpowers", "/tmp/superpowers", "C:/superpowers", "sources\\repo"]) {
+      expect(() =>
+        parseAgentyxConfig({ trustedSources: [{ name: "superpowers", path, ref: "v5.1.0" }] }),
+      ).toThrow(AgentyxConfigValidationError);
     }
   });
 

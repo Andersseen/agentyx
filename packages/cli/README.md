@@ -30,6 +30,8 @@ agentyx pack show efficiency
 agentyx skill list
 agentyx mcp list
 agentyx target list
+agentyx source show superpowers
+agentyx source inspect superpowers
 ```
 
 `doctor --check` keeps normal human or JSON output, but exits with code 1 on warnings as well as
@@ -38,3 +40,7 @@ errors so CI can fail before install drift turns into a broken run.
 Project-owned packs can reference standard `SKILL.md` directories declared through
 `skillDirectories` and `localPacks` in `.agentyx.json`. Paths are project-relative and Agentyx
 rejects symlinks that resolve outside the project.
+
+Trusted external sources can be declared through `trustedSources` and inspected locally. The initial
+Superpowers integration validates the local `.codex-plugin/plugin.json` and Skill inventory, but
+keeps installation disabled until Agentyx can preserve resource-bearing Skill directories.

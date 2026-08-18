@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { LocalSkillDirectoryError } from "../src/config/errors.js";
 import { loadAgentyxProject } from "../src/config/project.js";
 import { resolveAgentyxConfig } from "../src/config/resolver.js";
+import { UnknownTrustedSourceError } from "../src/source/errors.js";
 
 describe("loadAgentyxProject", () => {
   let projectDir: string;
@@ -86,5 +87,17 @@ describe("loadAgentyxProject", () => {
     await expect(loadAgentyxProject(projectDir)).rejects.toThrow(
       'team-review/SKILL.md declares the name "another-name"',
     );
+  });
+
+  it("rejects unknown trusted source names", async () => {
+    await writeFile(
+      join(projectDir, ".agentyx.json"),
+      JSON.stringify({
+        trustedSources: [{ name: "not-superpowers", path: ".agentyx/sources/nope", ref: "v1" }],
+      }),
+      "utf8",
+    );
+
+    await expect(loadAgentyxProject(projectDir)).rejects.toThrow(UnknownTrustedSourceError);
   });
 });
