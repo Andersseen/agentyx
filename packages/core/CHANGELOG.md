@@ -1,5 +1,11 @@
 # @agentyx/core
 
+## 0.4.0
+
+### Minor Changes
+
+- 944407a: Use the repository-hosted JSON Schema identifier instead of the unrelated agentyx.dev domain.
+
 ## 0.3.1
 
 ## 0.3.0

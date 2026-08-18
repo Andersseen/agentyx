@@ -1,5 +1,16 @@
 # @agentyx/adapters
 
+## 0.4.0
+
+### Minor Changes
+
+- 0560ecd: Reject symlinked install paths during planning and execution so project-local destinations cannot redirect writes outside the project.
+
+### Patch Changes
+
+- Updated dependencies [944407a]
+  - @agentyx/core@0.4.0
+
 ## 0.3.1
 
 ### Patch Changes
