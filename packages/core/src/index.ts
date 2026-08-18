@@ -3,6 +3,7 @@ export {
   AgentyxConfigNotFoundError,
   AgentyxConfigParseError,
   AgentyxConfigValidationError,
+  LocalSkillDirectoryError,
   UnknownEnabledCapabilityError,
 } from "./config/errors.js";
 export { AGENTYX_CONFIG_SCHEMA_ID, buildAgentyxConfigJsonSchema } from "./config/json-schema.js";
@@ -12,6 +13,8 @@ export {
   loadAgentyxConfig,
   parseAgentyxConfig,
 } from "./config/loader.js";
+export type { AgentyxProject } from "./config/project.js";
+export { loadAgentyxProject } from "./config/project.js";
 export type { ResolvedAgentyxConfig } from "./config/resolver.js";
 export { resolveAgentyxConfig } from "./config/resolver.js";
 export type { AgentyxConfig, AgentyxConfigInput } from "./config/schema.js";
@@ -19,6 +22,7 @@ export {
   agentyxConfigSchema,
   agentyxTargetSchema,
   enabledCapabilityNameSchema,
+  skillDirectorySchema,
 } from "./config/schema.js";
 export { AgentyxError } from "./errors.js";
 export type { AgentyxIssue } from "./issues.js";

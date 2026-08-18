@@ -11,9 +11,10 @@ import {
   AgentyxError,
   builtInMcpServerRegistry,
   builtInSkillRegistry,
-  loadAgentyxConfig,
+  loadAgentyxProject,
   loadInstallManifest,
   resolveAgentyxConfig,
+  type SkillRegistry,
 } from "@agentyx/core";
 import { isCancel, multiselect } from "@clack/prompts";
 import { Command } from "commander";
@@ -69,10 +70,17 @@ export class InstallCommandError extends AgentyxError {
  * @throws {InstallConflictError} when a destination is not Agentyx's to write, and `--force` was not given.
  */
 export async function runInstallCommand(input: InstallCommandInput): Promise<string> {
+  if (input.skillsOnly === true && input.mcpOnly === true) {
+    throw new InstallCommandError(
+      "install_scope_conflict",
+      "--skills-only and --mcp-only cannot be used together.",
+    );
+  }
+
   const environment = await resolveEnvironment(input);
   const skills = input.mcpOnly
     ? []
-    : environment.skills.map((name) => builtInSkillRegistry.get(name));
+    : environment.skills.map((name) => environment.skillRegistry.get(name));
   const mcpServers = input.skillsOnly
     ? []
     : environment.mcpServers.map((name) => builtInMcpServerRegistry.get(name));
@@ -110,6 +118,7 @@ interface ResolvedEnvironment {
   readonly tools: readonly string[];
   readonly enabled: readonly string[];
   readonly targets: readonly string[];
+  readonly skillRegistry: SkillRegistry;
 }
 
 async function resolveEnvironment(input: InstallCommandInput): Promise<ResolvedEnvironment> {
@@ -144,6 +153,7 @@ async function resolveEnvironment(input: InstallCommandInput): Promise<ResolvedE
       tools: [],
       enabled: [],
       targets: selected.targets,
+      skillRegistry: builtInSkillRegistry,
     };
   }
 
@@ -163,14 +173,20 @@ async function resolveEnvironment(input: InstallCommandInput): Promise<ResolvedE
       tools: resolved.tools,
       enabled: resolved.enabled,
       targets: input.targets,
+      skillRegistry: builtInSkillRegistry,
     };
   }
 
-  const config = await loadAgentyxConfig(input.cwd);
-  const resolved = resolveAgentyxConfig({
-    ...config,
-    enable: [...unique([...config.enable, ...(input.enable ?? [])])],
-  });
+  const project = await loadAgentyxProject(input.cwd);
+  const config = project.config;
+  const resolved = resolveAgentyxConfig(
+    {
+      ...config,
+      enable: [...unique([...config.enable, ...(input.enable ?? [])])],
+    },
+    project.packRegistry,
+    project.skillRegistry,
+  );
 
   return {
     packs: resolved.resolvedPacks,
@@ -181,6 +197,7 @@ async function resolveEnvironment(input: InstallCommandInput): Promise<ResolvedE
     tools: resolved.tools,
     enabled: resolved.enabled,
     targets: input.targets.length > 0 ? input.targets : resolved.targets,
+    skillRegistry: project.skillRegistry,
   };
 }
 

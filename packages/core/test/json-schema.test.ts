@@ -21,6 +21,8 @@ describe("buildAgentyxConfigJsonSchema", () => {
       "packs",
       "enable",
       "targets",
+      "skillDirectories",
+      "localPacks",
     ]);
   });
 

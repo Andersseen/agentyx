@@ -10,6 +10,8 @@ describe("agentyxConfigSchema", () => {
       packs: ["technical", "typescript", "angular"],
       enable: ["rtk"],
       targets: ["codex", "claude", "kimi"],
+      skillDirectories: [".agentyx/skills"],
+      localPacks: [{ name: "team", category: "workflow", skills: ["team-review"] }],
     });
 
     expect(config).toEqual({
@@ -17,6 +19,16 @@ describe("agentyxConfigSchema", () => {
       packs: ["technical", "typescript", "angular"],
       enable: ["rtk"],
       targets: ["codex", "claude", "kimi"],
+      skillDirectories: [".agentyx/skills"],
+      localPacks: [
+        {
+          name: "team",
+          category: "workflow",
+          skills: ["team-review"],
+          mcpServers: [],
+          tools: [],
+        },
+      ],
     });
   });
 
@@ -77,6 +89,14 @@ describe("parseAgentyxConfig", () => {
     expect(parseAgentyxConfig({ targets: ["some-third-party-adapter"] }).targets).toEqual([
       "some-third-party-adapter",
     ]);
+  });
+
+  it("rejects unsafe or platform-specific Skill directory paths", () => {
+    for (const skillDirectory of ["../skills", "/tmp/skills", "C:/skills", "skills\\team"]) {
+      expect(() => parseAgentyxConfig({ skillDirectories: [skillDirectory] })).toThrow(
+        AgentyxConfigValidationError,
+      );
+    }
   });
 
   it("rejects unknown top-level keys", () => {

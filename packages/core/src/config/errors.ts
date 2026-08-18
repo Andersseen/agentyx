@@ -61,3 +61,18 @@ export class UnknownEnabledCapabilityError extends AgentyxError {
     this.knownCapabilities = knownCapabilities;
   }
 }
+
+/** Raised when a configured local Skill directory cannot be loaded safely. */
+export class LocalSkillDirectoryError extends AgentyxError {
+  readonly directory: string;
+
+  constructor(directory: string, reason: string, options?: ErrorOptions) {
+    super(
+      "local_skill_directory_error",
+      `Could not load local Skill directory "${directory}": ${reason}`,
+      options,
+    );
+    this.name = "LocalSkillDirectoryError";
+    this.directory = directory;
+  }
+}
