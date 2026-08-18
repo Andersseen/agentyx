@@ -6,6 +6,8 @@
       "!node_modules",
       "!**/dist",
       "!**/coverage",
+      "!**/playwright-report",
+      "!**/test-results",
       "!pnpm-lock.yaml",
       "!apps/web/src/styles.css"
     ]

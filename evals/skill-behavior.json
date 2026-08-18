@@ -1,0 +1,30 @@
+[
+  {
+    "id": "typescript-nullability",
+    "packs": ["typescript"],
+    "prompt": "Refactor this TypeScript API so missing values are modeled explicitly.",
+    "expectedSkills": ["typescript-strict", "typescript-modeling"],
+    "expectedBehaviors": ["avoids non-null assertions", "models absence in the type"]
+  },
+  {
+    "id": "debug-root-cause",
+    "packs": ["agentic"],
+    "prompt": "Fix an intermittent test failure with no known reproduction.",
+    "expectedSkills": ["systematic-debugging", "verification"],
+    "expectedBehaviors": ["reproduces before editing", "adds a regression test"]
+  },
+  {
+    "id": "safe-refactor",
+    "packs": ["refactoring", "testing"],
+    "prompt": "Split a large legacy module without changing observable behavior.",
+    "expectedSkills": ["refactoring-safely", "legacy-code", "test-strategy"],
+    "expectedBehaviors": ["establishes characterization tests", "uses small reversible steps"]
+  },
+  {
+    "id": "secure-input",
+    "packs": ["security"],
+    "prompt": "Implement a search endpoint using a user-provided query.",
+    "expectedSkills": ["secure-coding"],
+    "expectedBehaviors": ["validates input", "uses parameterized queries"]
+  }
+]
