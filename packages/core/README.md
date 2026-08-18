@@ -16,7 +16,11 @@ import {
 } from "@agentyx/core";
 
 builtInPacks.map((pack) => pack.name);
-// ["technical", "typescript", "angular", "efficiency", "agentic"]
+// [
+//   "technical", "typescript", "angular", "efficiency", "agentic",
+//   "testing", "security", "performance", "accessibility", "refactoring",
+//   "documentation", "observability", "data", "git", "devops"
+// ]
 
 resolvePacks(["technical", "typescript", "angular"]);
 // ["technical", "typescript", "angular"]

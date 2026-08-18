@@ -220,17 +220,17 @@ export class AboutComponent {
   readonly steps: Step[] = [
     {
       step: "1. Initialize",
-      command: "agentyx init --pack angular --target codex",
+      command: "pnpm dlx @agentyx/cli init --pack angular --target codex",
       description: "Scaffold .agentyx.json with your chosen packs and targets.",
     },
     {
       step: "2. Resolve",
-      command: "agentyx resolve --json",
+      command: "pnpm dlx @agentyx/cli resolve --json",
       description: "Preview the full capability plan before any file is touched.",
     },
     {
       step: "3. Install",
-      command: "agentyx install --dry-run",
+      command: "pnpm dlx @agentyx/cli install --dry-run",
       description: "Apply resolved skills and MCP config into provider-native directories.",
     },
   ];
@@ -238,7 +238,7 @@ export class AboutComponent {
   readonly guardrails = [
     {
       title: "Provider clean",
-      copy: "Stacks stay neutral; adapters own destinations and file formats.",
+      copy: "Packs stay neutral; adapters own destinations and file formats.",
     },
     {
       title: "Plan before write",
