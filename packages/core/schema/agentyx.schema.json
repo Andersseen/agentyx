@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://agentyx.dev/schema/agentyx.schema.json",
+  "$id": "https://raw.githubusercontent.com/Andersseen/agentyx/main/packages/core/schema/agentyx.schema.json",
   "title": "Agentyx project configuration",
   "description": "Configuration for an Agentyx project (.agentyx.json).",
   "type": "object",

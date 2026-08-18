@@ -1,5 +1,18 @@
 # @agentyx/cli
 
+## 0.4.0
+
+### Minor Changes
+
+- 6490ac0: Add `agentyx doctor --check` so CI can fail on warnings as well as errors.
+
+### Patch Changes
+
+- Updated dependencies [0560ecd]
+- Updated dependencies [944407a]
+  - @agentyx/adapters@0.4.0
+  - @agentyx/core@0.4.0
+
 ## 0.3.1
 
 ### Patch Changes

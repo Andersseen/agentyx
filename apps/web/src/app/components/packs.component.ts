@@ -47,7 +47,7 @@ interface Pack {
         </h2>
         <p class="mt-4 text-lg text-muted-foreground">
           Mix and match capability packs to match your project. Technology packs do not hide
-          inheritance—select exactly what you need.
+          inheritance; select exactly what you need.
         </p>
       </div>
 
@@ -86,6 +86,11 @@ interface Pack {
                   @case ("agentic") {
                     <span class="icon-shell text-secondary">
                       <lmn-users class="h-5 w-5" aria-hidden="true" />
+                    </span>
+                  }
+                  @default {
+                    <span class="icon-shell text-foreground">
+                      <lmn-code-bracket class="h-5 w-5" aria-hidden="true" />
                     </span>
                   }
                 }
@@ -138,7 +143,77 @@ export class PacksComponent {
       category: "workflow",
       purpose: "Brainstorming, planning, debugging, parallel and review flows.",
       icon: "users",
-      span: "sm:col-span-2 lg:col-span-2",
+      span: "",
+    },
+    {
+      name: "testing",
+      category: "engineering",
+      purpose: "Test level choice, doubles, end-to-end scope, and flaky tests.",
+      icon: "code-bracket",
+      span: "",
+    },
+    {
+      name: "security",
+      category: "engineering",
+      purpose: "Input validation, secrets, dependencies, and authorization.",
+      icon: "code-bracket",
+      span: "",
+    },
+    {
+      name: "performance",
+      category: "engineering",
+      purpose: "Profiling, web vitals, and database query performance.",
+      icon: "code-bracket",
+      span: "",
+    },
+    {
+      name: "accessibility",
+      category: "engineering",
+      purpose: "Semantic markup, ARIA patterns, and keyboard navigation.",
+      icon: "code-bracket",
+      span: "",
+    },
+    {
+      name: "refactoring",
+      category: "engineering",
+      purpose: "Safe restructuring, legacy code, and dependency hygiene.",
+      icon: "code-bracket",
+      span: "",
+    },
+    {
+      name: "documentation",
+      category: "engineering",
+      purpose: "Technical writing, API reference, and decision records.",
+      icon: "code-bracket",
+      span: "",
+    },
+    {
+      name: "observability",
+      category: "engineering",
+      purpose: "Structured logging, metrics, tracing, and incident response.",
+      icon: "code-bracket",
+      span: "",
+    },
+    {
+      name: "data",
+      category: "engineering",
+      purpose: "Schema design, migrations, and transactional consistency.",
+      icon: "code-bracket",
+      span: "",
+    },
+    {
+      name: "git",
+      category: "workflow",
+      purpose: "Commit hygiene, branching, and reviewable pull requests.",
+      icon: "code-bracket",
+      span: "",
+    },
+    {
+      name: "devops",
+      category: "workflow",
+      purpose: "CI pipelines, containers, deployment safety, and infrastructure.",
+      icon: "code-bracket",
+      span: "",
     },
   ];
 }

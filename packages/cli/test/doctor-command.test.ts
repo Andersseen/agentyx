@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   createDoctorCommand,
+  doctorExitCode,
   renderDoctorReport,
   runDoctorCommand,
 } from "../src/commands/doctor.js";
@@ -279,7 +280,27 @@ describe("doctor command wiring", () => {
     expect(createAgentyxProgram().commands.map((command) => command.name())).toContain("doctor");
   });
 
-  it("has only stable output options", () => {
-    expect(createDoctorCommand().options.map((option) => option.long)).toEqual(["--json"]);
+  it("has stable output and CI options", () => {
+    expect(createDoctorCommand().options.map((option) => option.long)).toEqual([
+      "--json",
+      "--check",
+    ]);
+  });
+
+  it("keeps warnings non-fatal unless check mode is enabled", () => {
+    const report = {
+      status: "warnings",
+    } as Parameters<typeof doctorExitCode>[0];
+
+    expect(doctorExitCode(report, false)).toBeUndefined();
+    expect(doctorExitCode(report, true)).toBe(1);
+  });
+
+  it("always fails on errors", () => {
+    const report = {
+      status: "errors",
+    } as Parameters<typeof doctorExitCode>[0];
+
+    expect(doctorExitCode(report, false)).toBe(1);
   });
 });

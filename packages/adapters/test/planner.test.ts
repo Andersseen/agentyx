@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readdir, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
@@ -362,6 +362,20 @@ describe("planTargetInstall containment", () => {
         planFiles: () => [],
       }),
     ).rejects.toThrow(InstallPathError);
+  });
+
+  it("rejects a target directory redirected by a symlink", async () => {
+    const outsideDir = await mkdtemp(join(tmpdir(), "agentyx-outside-"));
+
+    try {
+      await symlink(outsideDir, join(projectDir, ".agents"));
+
+      await expect(
+        withAdapter(escaping([".agents", "skills", "planning", "SKILL.md"])),
+      ).rejects.toThrow(InstallPathError);
+    } finally {
+      await rm(outsideDir, { recursive: true, force: true });
+    }
   });
 });
 

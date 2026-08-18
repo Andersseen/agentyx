@@ -39,8 +39,8 @@ Packs contribute provider-neutral capabilities:
 | `git`           | workflow    | Commit hygiene, branching, reviewable pull requests            |
 | `devops`        | workflow    | CI pipelines, containers, deployment safety, infrastructure    |
 
-Packs compose without inheritance, so cross-cutting engineering packs stack on top of a technology
-choice. If a project wants both TypeScript and Angular behavior, select both:
+Packs compose without inheritance, so cross-cutting engineering packs combine with technology
+choices explicitly. If a project wants both TypeScript and Angular behavior, select both:
 
 ```json
 {
@@ -128,6 +128,7 @@ Inspect project health:
 ```sh
 pnpm agentyx doctor
 pnpm agentyx doctor --json
+pnpm agentyx doctor --check # fail on warnings or errors, useful in CI
 ```
 
 ## Installation lifecycle

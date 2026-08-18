@@ -27,9 +27,11 @@ released, you will be credited in the advisory unless you prefer otherwise.
 
 ## Scope
 
-Agentyx reads `.agentyx.json` from a project directory and prints resolved configuration. Reports that
-are in scope include, for example, path traversal when resolving configuration, code execution
-triggered by parsing a configuration file, and dependency vulnerabilities reachable from published
+Agentyx reads `.agentyx.json`, resolves provider-neutral packs, and can write project-local Skills,
+project MCP entries, and `.agentyx.lock.json` during `install`, `install --prune`, and `uninstall`.
+Reports that are in scope include, for example, path traversal or symlink escapes during install,
+unexpected writes outside the project, code execution triggered by parsing a configuration file,
+credential leaks into provider config, and dependency vulnerabilities reachable from published
 package code.
 
 Out of scope: issues that require a user to deliberately run untrusted code, and vulnerabilities in

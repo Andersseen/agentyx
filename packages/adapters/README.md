@@ -1,10 +1,10 @@
 # @agentyx/adapters
 
 Provider adapters for [Agentyx](https://github.com/Andersseen/agentyx): the layer that turns an
-already-resolved, profile-filtered Agentyx environment into the files a specific coding agent expects.
+already-resolved Agentyx environment into the files a specific coding agent expects.
 
-Agentyx stacks and skills describe development environments, never providers, so everything a provider
-knows lives here rather than in
+Agentyx packs, skills, MCP definitions, and tool checks describe development environments, never
+providers, so everything a provider knows lives here rather than in
 [`@agentyx/core`](https://github.com/Andersseen/agentyx/tree/main/packages/core). This package depends
 on core; core never depends on it.
 
@@ -72,12 +72,18 @@ remote registry — an adapter is a value you pass in.
 
 ## Safety
 
-Agentyx only manages `<destination>/<skill>/SKILL.md` for skills it resolved. A plan that would write
-outside the directory a target owns is refused with `InstallPathError`, unchanged files are not
-rewritten, writes are UTF-8, and nothing is deleted, executed or fetched.
+Agentyx only manages `<destination>/<skill>/SKILL.md` for skills it resolved, plus the MCP server keys
+it added to a provider project config. A plan that would write outside the directory or project file a
+target owns is refused with `InstallPathError`, including project-local paths redirected through
+symlinks. Unchanged files are not rewritten, writes are UTF-8, and nothing is executed, fetched, or
+installed globally.
 
 Project MCP configuration is planned and written through the same plan-first machinery. Adapters
 receive only active MCP definitions; pack and optional-capability resolution stays in core. Hooks,
 permissions and user-global configuration are not part of the contract yet.
+
+Prune and uninstall act only on paths and MCP server keys recorded in `.agentyx.lock.json`. A file
+whose current content no longer matches the manifest hash is reported as a conflict and left alone
+unless the caller explicitly chooses `--force`.
 
 MIT © Andersseen

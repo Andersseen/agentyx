@@ -137,22 +137,22 @@ interface Stat {
               </div>
               <span class="text-xs text-muted-foreground">terminal</span>
             </div>
-            <pre class="overflow-x-auto p-4 text-left text-sm leading-7 text-foreground sm:p-6"><code><span class="text-info">$</span> pnpm agentyx resolve angular
+            <pre class="overflow-x-auto p-4 text-left text-sm leading-7 text-foreground sm:p-6"><code><span class="text-info">$</span> pnpm dlx @agentyx/cli resolve angular
 
-<span class="text-warning">Stacks</span>
-  core
-  typescript
+<span class="text-warning">Packs</span>
   angular
 
 <span class="text-info">Skills</span>
   angular-modern
   angular-signals
+  angular-architecture
   angular-testing
 
-<span class="text-secondary">Targets</span>
-  codex
-  claude
-  kimi</code></pre>
+<span class="text-secondary">MCP</span>
+  context7    default
+
+<span class="text-success">Tools</span>
+  (none)</code></pre>
           </div>
         </div>
       </div>
