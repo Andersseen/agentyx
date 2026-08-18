@@ -4,12 +4,10 @@ Provider-agnostic CLI for selecting Agentyx capability packs and installing thei
 configuration into local coding-agent targets.
 
 ```sh
-agentyx init --pack technical --pack typescript --target codex --yes
-agentyx pack list
-agentyx resolve
-agentyx install --dry-run
-agentyx doctor
-agentyx doctor --check
+pnpm dlx @agentyx/cli init --pack technical --pack typescript --target codex --yes
+pnpm dlx @agentyx/cli doctor
+pnpm dlx @agentyx/cli install --dry-run
+pnpm dlx @agentyx/cli install
 ```
 
 Configuration is pack-first:
@@ -36,3 +34,7 @@ agentyx target list
 
 `doctor --check` keeps normal human or JSON output, but exits with code 1 on warnings as well as
 errors so CI can fail before install drift turns into a broken run.
+
+Project-owned packs can reference standard `SKILL.md` directories declared through
+`skillDirectories` and `localPacks` in `.agentyx.json`. Paths are project-relative and Agentyx
+rejects symlinks that resolve outside the project.

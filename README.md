@@ -82,54 +82,95 @@ Skills for these capabilities.
 
 ## Usage
 
-Initialize a project:
+Run Agentyx directly from npm; a global installation is not required:
 
 ```sh
-pnpm agentyx init \
+pnpm dlx @agentyx/cli init \
   --pack technical \
   --pack typescript \
   --pack angular \
   --target codex \
   --target kimi \
   --yes
+
+pnpm dlx @agentyx/cli doctor
+pnpm dlx @agentyx/cli install --dry-run
+pnpm dlx @agentyx/cli install
 ```
 
 Inspect packs:
 
 ```sh
-pnpm agentyx pack list
-pnpm agentyx pack show efficiency
+pnpm dlx @agentyx/cli pack list
+pnpm dlx @agentyx/cli pack show efficiency
 ```
 
 Resolve the selected capabilities:
 
 ```sh
-pnpm agentyx resolve
-pnpm agentyx resolve technical typescript angular
-pnpm agentyx resolve efficiency --enable rtk --json
+pnpm dlx @agentyx/cli resolve
+pnpm dlx @agentyx/cli resolve technical typescript angular
+pnpm dlx @agentyx/cli resolve efficiency --enable rtk --json
 ```
 
 Install into configured targets:
 
 ```sh
-pnpm agentyx install --dry-run
-pnpm agentyx install
+pnpm dlx @agentyx/cli install --dry-run
+pnpm dlx @agentyx/cli install
 ```
 
 Remove what Agentyx installed:
 
 ```sh
-pnpm agentyx uninstall --dry-run
-pnpm agentyx uninstall
+pnpm dlx @agentyx/cli uninstall --dry-run
+pnpm dlx @agentyx/cli uninstall
 ```
 
 Inspect project health:
 
 ```sh
-pnpm agentyx doctor
-pnpm agentyx doctor --json
-pnpm agentyx doctor --check # fail on warnings or errors, useful in CI
+pnpm dlx @agentyx/cli doctor
+pnpm dlx @agentyx/cli doctor --json
+pnpm dlx @agentyx/cli doctor --check # fail on warnings or errors, useful in CI
 ```
+
+## Project-owned packs
+
+Agentyx can compose its built-in catalogue with instruction-only Agent Skills checked into your
+repository. A Skill root uses the minimal Agent Skills layout: one directory per Skill, each
+containing `SKILL.md`.
+
+```text
+.agentyx/skills/
+  team-review/SKILL.md
+```
+
+Reference the root and group its Skills into a local pack:
+
+```json
+{
+  "packs": ["technical", "team"],
+  "skillDirectories": [".agentyx/skills"],
+  "localPacks": [
+    {
+      "name": "team",
+      "category": "workflow",
+      "description": "Our repository-specific review workflow.",
+      "skills": ["team-review"]
+    }
+  ],
+  "targets": ["codex", "claude"]
+}
+```
+
+Directories must stay inside the project even after resolving symlinks. Agentyx reads them locally;
+it never clones repositories or executes bundled code. This makes a pinned, reviewed vendor copy or
+submodule a safe foundation for integrating third-party collections.
+
+Collections that depend on bundled scripts, references, assets, hooks, or provider plugins need a
+richer integration than copying `SKILL.md`. The security and compatibility policy for those sources
+is documented in [Trusted sources](docs/trusted-sources.md).
 
 ## Installation lifecycle
 
@@ -150,8 +191,8 @@ That record decides what Agentyx may touch:
 Removing a pack from `.agentyx.json` does not by itself remove what it installed. Ask for it:
 
 ```sh
-pnpm agentyx install --prune           # remove managed files nothing resolves any more
-pnpm agentyx install --prune --dry-run # see what that would remove first
+pnpm dlx @agentyx/cli install --prune           # remove managed files nothing resolves any more
+pnpm dlx @agentyx/cli install --prune --dry-run # see what that would remove first
 ```
 
 `uninstall` removes everything the manifest records and leaves `.agentyx.json` alone, so the project
@@ -174,6 +215,8 @@ Agentyx created it and nothing is left in it.
 | `packs`   | `string[]` | `[]`    | Capability packs selected for the project    |
 | `enable`  | `string[]` | `[]`    | Optional capabilities activated explicitly   |
 | `targets` | `string[]` | `[]`    | Coding-agent providers to install into       |
+| `skillDirectories` | `string[]` | none | Project-relative roots containing local Skills |
+| `localPacks` | `Pack[]` | none | Project-owned packs composed from known Skills |
 
 Unknown packs and unknown enabled capabilities fail with explicit Agentyx errors.
 
@@ -199,6 +242,8 @@ pnpm typecheck
 pnpm test
 pnpm build
 pnpm check
+pnpm eval:skills
+pnpm e2e:web
 ```
 
 Tests import core source through workspace aliases, so most unit tests do not require a build. The
