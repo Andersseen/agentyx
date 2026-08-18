@@ -1,9 +1,11 @@
-import { builtInPacks } from "@agentyx/core";
+import { builtInPackRegistry, UnknownPackError } from "@agentyx/core";
 import { Command } from "commander";
 import { emit, section, toJson } from "../output.js";
 
 export function runPackListCommand(): string {
-  return builtInPacks.map((pack) => `${pack.name.padEnd(14)} ${pack.category}`).join("\n");
+  return [...builtInPackRegistry.values()]
+    .map((pack) => `${pack.name.padEnd(14)} ${pack.category}`)
+    .join("\n");
 }
 
 export interface PackShowCommandInput {
@@ -12,12 +14,10 @@ export interface PackShowCommandInput {
 }
 
 export function runPackShowCommand(input: PackShowCommandInput): string {
-  const pack = builtInPacks.find((candidate) => candidate.name === input.name);
+  const pack = builtInPackRegistry.get(input.name);
 
   if (pack === undefined) {
-    throw new Error(
-      `Unknown pack "${input.name}". Known packs: ${builtInPacks.map((p) => p.name).join(", ")}.`,
-    );
+    throw new UnknownPackError(input.name, undefined, [...builtInPackRegistry.keys()]);
   }
 
   if (input.json) {
@@ -28,20 +28,14 @@ export function runPackShowCommand(input: PackShowCommandInput): string {
     pack.name,
     pack.description ?? "",
     `category: ${pack.category}`,
-    section("Skills", pack.skills ?? []),
+    section("Skills", pack.skills),
     section(
       "MCP",
-      (pack.mcpServers ?? []).map((server) =>
-        typeof server === "string"
-          ? `${server}    default`
-          : `${server.name}    ${server.activation}`,
-      ),
+      pack.mcpServers.map((server) => `${server.name}    ${server.activation}`),
     ),
     section(
       "Tools",
-      (pack.tools ?? []).map((tool) =>
-        typeof tool === "string" ? `${tool}    default` : `${tool.name}    ${tool.activation}`,
-      ),
+      pack.tools.map((tool) => `${tool.name}    ${tool.activation}`),
     ),
   ].join("\n");
 }

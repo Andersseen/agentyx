@@ -1,3 +1,4 @@
+import { UnknownPackError } from "@agentyx/core";
 import { describe, expect, it } from "vitest";
 import { createPackCommand, runPackListCommand, runPackShowCommand } from "../src/commands/pack.js";
 import { createAgentyxProgram } from "../src/index.js";
@@ -42,6 +43,19 @@ describe("agentyx pack show", () => {
       name: "angular",
       category: "framework",
     });
+  });
+
+  it("fails cleanly for unknown packs", () => {
+    expect(() => runPackShowCommand({ name: "nope", json: false })).toThrow(UnknownPackError);
+  });
+
+  it("applies registry defaults instead of raw definition input", () => {
+    const pack = JSON.parse(runPackShowCommand({ name: "technical", json: true }));
+
+    expect(pack).toMatchObject({ mcpServers: [], tools: [] });
+    expect(runPackShowCommand({ name: "testing", json: false })).toContain(
+      "playwright    optional",
+    );
   });
 });
 
