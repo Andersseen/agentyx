@@ -14,5 +14,9 @@ test("presents a usable and accurate first-run path", async ({ page }) => {
   const localPacks = page.getByText("Project-owned packs", { exact: true });
   await localPacks.scrollIntoViewIfNeeded();
   await expect(localPacks).toBeVisible();
+  const trustedSources = page.getByText("Trusted sources", { exact: true });
+  await expect(trustedSources).toBeVisible();
+  await expect(page.getByText("Inspect pinned external sources such as Superpowers")).toBeVisible();
+  await expect(page.getByText("pnpm dlx @agentyx/cli source inspect superpowers")).toBeVisible();
   await expect(page.locator("body")).not.toHaveCSS("overflow-x", "scroll");
 });
