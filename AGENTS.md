@@ -70,7 +70,7 @@ swallow the conversation.
 ## Layering
 
 ```
-packages/core        domain: config schema/loader/resolver, pack and skill
+packages/core        domain: config schema/loader/resolver, pack, skill, MCP and tool
                      schema/registry/resolver/errors, install manifest schema and loader,
                      SKILL.md parsing and serialization
 packages/core/skills built-in SKILL.md files, published as package assets
@@ -78,6 +78,7 @@ packages/cli         Commander program and terminal output only
 packages/adapters    adapter contract, adapter registry, provider adapters,
                      install planning, filesystem executor
 examples/angular     .agentyx.json fixture, referenced by core, cli and adapter tests
+apps/web             the official website; consumes no workspace package
 ```
 
 Dependencies point one way: `cli → core`, `adapters → core`. Core depends on `zod` and nothing else.
