@@ -14,7 +14,7 @@ import type { ToolReference } from "../tool/schema.js";
 import { UnknownEnabledCapabilityError } from "./errors.js";
 import type { AgentyxConfig } from "./schema.js";
 
-/** A project configuration with its pack inheritance expanded. */
+/** A project configuration with its selected packs resolved. */
 export interface ResolvedAgentyxConfig {
   /** The packs the project asked for, in configuration order. */
   readonly requestedPacks: readonly string[];
@@ -38,7 +38,6 @@ export interface ResolvedAgentyxConfig {
  * The input is never mutated.
  *
  * @throws {UnknownPackError} when a configured pack is missing.
- * @throws {CircularPackDependencyError} when inheritance forms a cycle.
  * @throws {UnknownSkillError} when a pack references an unknown skill.
  */
 export function resolveAgentyxConfig(

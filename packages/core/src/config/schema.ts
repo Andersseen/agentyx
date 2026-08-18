@@ -1,5 +1,6 @@
 import { z } from "zod";
-import { packNameSchema } from "../pack/schema.js";
+import { packDefinitionSchema, packNameSchema } from "../pack/schema.js";
+import { trustedSourceReferenceSchema } from "../source/schema.js";
 
 /**
  * Targets stay free-form strings on purpose: third-party adapters should be
@@ -13,6 +14,19 @@ export const enabledCapabilityNameSchema = z
   .regex(
     /^[a-z0-9]+(?:-[a-z0-9]+)*$/,
     'Enabled capability names must be lowercase kebab-case, for example "rtk".',
+  );
+
+/**
+ * Portable project-relative path to a directory whose direct children are Agent Skills.
+ * Backslashes, absolute paths and parent traversal are rejected so the same config is safe on
+ * every supported platform.
+ */
+export const skillDirectorySchema = z
+  .string()
+  .min(1, "Skill directories must be non-empty strings.")
+  .regex(
+    /^(?!\/)(?![A-Za-z]:)(?!.*(?:^|\/)\.\.(?:\/|$))[^\\\0]+$/,
+    "Skill directories must be portable project-relative paths without parent traversal.",
   );
 
 /** The `.agentyx.json` project configuration. */
@@ -31,6 +45,18 @@ export const agentyxConfigSchema = z.strictObject({
     .array(agentyxTargetSchema)
     .describe("Coding-agent providers this project targets.")
     .default([]),
+  skillDirectories: z
+    .array(skillDirectorySchema)
+    .describe("Project-relative roots containing local Agent Skills.")
+    .optional(),
+  localPacks: z
+    .array(packDefinitionSchema)
+    .describe("Project-owned packs that can reference built-in or local Skills.")
+    .optional(),
+  trustedSources: z
+    .array(trustedSourceReferenceSchema)
+    .describe("Pinned local checkouts of known external skill/plugin sources.")
+    .optional(),
 });
 
 /** A validated configuration, with defaults applied. */

@@ -13,15 +13,17 @@ import {
   AgentyxConfigNotFoundError,
   AgentyxConfigParseError,
   AgentyxConfigValidationError,
+  AgentyxError,
   AgentyxManifestParseError,
   AgentyxManifestValidationError,
+  type AgentyxProject,
   builtInMcpServerRegistry,
   builtInSkillRegistry,
   builtInToolRegistry,
   detectProject,
   emptyInstallManifest,
   type InstallManifest,
-  loadAgentyxConfig,
+  loadAgentyxProject,
   loadInstallManifest,
   manifestEntriesByPath,
   resolveAgentyxConfig,
@@ -159,7 +161,11 @@ export async function runDoctorCommand(input: DoctorCommandInput): Promise<Docto
 
   if (configState.config !== undefined) {
     try {
-      resolved = resolveAgentyxConfig(configState.config);
+      resolved = resolveAgentyxConfig(
+        configState.config,
+        configState.project?.packRegistry,
+        configState.project?.skillRegistry,
+      );
     } catch (cause) {
       diagnostics.push({
         level: "error",
@@ -227,7 +233,9 @@ export async function runDoctorCommand(input: DoctorCommandInput): Promise<Docto
     plans = await planInstall({
       targets: resolved.targets,
       projectDir: input.cwd,
-      skills: resolved.skills.map((name) => builtInSkillRegistry.get(name)),
+      skills: resolved.skills.map((name) =>
+        (configState.project?.skillRegistry ?? builtInSkillRegistry).get(name),
+      ),
       mcpServers: resolved.mcpServers.map((name) => builtInMcpServerRegistry.get(name)),
       manifest,
       prune: true,
@@ -438,13 +446,17 @@ async function readConfig(projectDir: string): Promise<{
   readonly present: boolean;
   readonly valid: boolean;
   readonly config: AgentyxConfig | undefined;
+  readonly project: AgentyxProject | undefined;
   readonly error: DoctorDiagnostic | undefined;
 }> {
   try {
+    const project = await loadAgentyxProject(projectDir);
+
     return {
       present: true,
       valid: true,
-      config: await loadAgentyxConfig(projectDir),
+      config: project.config,
+      project,
       error: undefined,
     };
   } catch (cause) {
@@ -453,6 +465,7 @@ async function readConfig(projectDir: string): Promise<{
         present: false,
         valid: false,
         config: undefined,
+        project: undefined,
         error: {
           level: "warning",
           code: "agentyx_config_missing",
@@ -466,11 +479,22 @@ async function readConfig(projectDir: string): Promise<{
         present: true,
         valid: false,
         config: undefined,
+        project: undefined,
         error: {
           level: "error",
           code: cause.code,
           message: cause.message,
         },
+      };
+    }
+
+    if (cause instanceof AgentyxError) {
+      return {
+        present: true,
+        valid: false,
+        config: undefined,
+        project: undefined,
+        error: { level: "error", code: cause.code, message: cause.message },
       };
     }
 

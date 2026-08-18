@@ -214,6 +214,13 @@ export class AboutComponent {
     "agentic"
   ],
   "enable": [],
+  "trustedSources": [
+    {
+      "name": "superpowers",
+      "path": ".agentyx/sources/superpowers",
+      "ref": "v5.1.0"
+    }
+  ],
   "targets": ["codex", "claude", "kimi"]
 }`;
 
@@ -229,7 +236,12 @@ export class AboutComponent {
       description: "Preview the full capability plan before any file is touched.",
     },
     {
-      step: "3. Install",
+      step: "3. Inspect sources",
+      command: "pnpm dlx @agentyx/cli source inspect superpowers",
+      description: "Validate pinned external sources before adopting their workflows.",
+    },
+    {
+      step: "4. Install",
       command: "pnpm dlx @agentyx/cli install --dry-run",
       description: "Apply resolved skills and MCP config into provider-native directories.",
     },

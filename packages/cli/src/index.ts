@@ -13,6 +13,7 @@ import { createMcpCommand } from "./commands/mcp.js";
 import { createPackCommand } from "./commands/pack.js";
 import { createResolveCommand } from "./commands/resolve.js";
 import { createSkillCommand } from "./commands/skill.js";
+import { createSourceCommand } from "./commands/source.js";
 import { createTargetCommand } from "./commands/target.js";
 import { createUninstallCommand } from "./commands/uninstall.js";
 
@@ -43,6 +44,7 @@ export function createAgentyxProgram(): Command {
     .addCommand(createDoctorCommand())
     .addCommand(createResolveCommand())
     .addCommand(createSkillCommand())
+    .addCommand(createSourceCommand())
     .addCommand(createMcpCommand())
     .addCommand(createPackCommand())
     .addCommand(createTargetCommand())

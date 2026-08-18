@@ -6,6 +6,7 @@ import { LmnBoltIcon } from "lumen-icons/bolt";
 import { LmnCheckCircleIcon } from "lumen-icons/check-circle";
 import { LmnCog6ToothIcon } from "lumen-icons/cog-6-tooth";
 import { LmnCommandLineIcon } from "lumen-icons/command-line";
+import { LmnShieldCheckIcon } from "lumen-icons/shield-check";
 
 @Component({
   selector: "app-features",
@@ -19,6 +20,7 @@ import { LmnCommandLineIcon } from "lumen-icons/command-line";
     LmnCog6ToothIcon,
     LmnCheckCircleIcon,
     LmnArrowPathRoundedSquareIcon,
+    LmnShieldCheckIcon,
     MoveHoverDirective,
     MoveInViewDirective,
     MoveStaggerDirective,
@@ -103,6 +105,32 @@ import { LmnCommandLineIcon } from "lumen-icons/command-line";
             <volt-card-description>
               Generate installation plans and apply them to configured targets. Dry-run first, then
               commit the changes.
+            </volt-card-description>
+          </volt-card-header>
+        </volt-card>
+
+        <volt-card class="feature-card h-full p-2 lg:col-span-2" [moveWhileHover]="{ y: [0, -10], scale: [1, 1.012] }">
+          <volt-card-header>
+            <span class="icon-shell text-info">
+              <lmn-cog-6-tooth class="h-5 w-5" aria-hidden="true" />
+            </span>
+            <volt-card-title>Project-owned packs</volt-card-title>
+            <volt-card-description>
+              Compose checked-in Agent Skills with the built-in catalogue. Local roots stay inside
+              the project and remain reviewable in version control.
+            </volt-card-description>
+          </volt-card-header>
+        </volt-card>
+
+        <volt-card class="feature-card h-full p-2 sm:col-span-2 lg:col-span-1" [moveWhileHover]="{ y: [0, -10], scale: [1, 1.012] }">
+          <volt-card-header>
+            <span class="icon-shell text-success">
+              <lmn-shield-check class="h-5 w-5" aria-hidden="true" />
+            </span>
+            <volt-card-title>Trusted sources</volt-card-title>
+            <volt-card-description>
+              Inspect pinned external sources such as Superpowers before adoption. Agentyx validates
+              the manifest, Skill inventory, and resource-bearing directories locally.
             </volt-card-description>
           </volt-card-header>
         </volt-card>

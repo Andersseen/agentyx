@@ -69,8 +69,8 @@ interface Stat {
           </h1>
 
           <p class="mx-auto mt-6 max-w-2xl text-base leading-relaxed text-muted-foreground sm:text-xl lg:mx-0">
-            One config. Every agent. Agentyx gives Codex, Claude Code, and Kimi Code the same
-            project-local behavior using native Skills and provider-neutral MCP definitions.
+            One config. Every agent. Compose built-in and project-owned Skills, then give Codex,
+            Claude Code, and Kimi Code the same project-local behavior.
           </p>
 
           <div class="mt-10 flex flex-col justify-center gap-3 sm:flex-row lg:justify-start">

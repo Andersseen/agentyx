@@ -151,6 +151,20 @@ describe("agentyx install --skill/--mcp", () => {
       }),
     ).rejects.toThrow("Manual --skill/--mcp selection cannot be combined with pack arguments.");
   });
+
+  it("rejects mutually exclusive install scopes before planning or pruning", async () => {
+    await writeConfig({ packs: ["technical"], targets: ["codex"] });
+
+    await expect(
+      runInstallCommand({
+        ...baseInput,
+        skillsOnly: true,
+        mcpOnly: true,
+        prune: true,
+        cwd: projectDir,
+      }),
+    ).rejects.toThrow("--skills-only and --mcp-only cannot be used together.");
+  });
 });
 
 describe("agentyx install", () => {
@@ -165,6 +179,28 @@ describe("agentyx install", () => {
     expect(
       await readFile(join(projectDir, ".agents/skills/code-quality/SKILL.md"), "utf8"),
     ).toContain("# Code quality");
+  });
+
+  it("installs a project-owned pack from a local Agent Skills directory", async () => {
+    const skillDir = join(projectDir, ".agentyx", "skills", "team-review");
+    await mkdir(skillDir, { recursive: true });
+    await writeFile(
+      join(skillDir, "SKILL.md"),
+      "---\nname: team-review\ndescription: Review with team conventions.\n---\n\nFollow the team checklist.\n",
+      "utf8",
+    );
+    await writeConfig({
+      packs: ["team"],
+      targets: ["codex"],
+      skillDirectories: [".agentyx/skills"],
+      localPacks: [{ name: "team", category: "workflow", skills: ["team-review"] }],
+    });
+
+    await runInstallCommand({ ...baseInput, cwd: projectDir });
+
+    expect(
+      await readFile(join(projectDir, ".agents", "skills", "team-review", "SKILL.md"), "utf8"),
+    ).toContain("Follow the team checklist.");
   });
 });
 

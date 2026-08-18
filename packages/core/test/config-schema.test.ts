@@ -10,6 +10,11 @@ describe("agentyxConfigSchema", () => {
       packs: ["technical", "typescript", "angular"],
       enable: ["rtk"],
       targets: ["codex", "claude", "kimi"],
+      skillDirectories: [".agentyx/skills"],
+      localPacks: [{ name: "team", category: "workflow", skills: ["team-review"] }],
+      trustedSources: [
+        { name: "superpowers", path: ".agentyx/sources/superpowers", ref: "v5.1.0" },
+      ],
     });
 
     expect(config).toEqual({
@@ -17,6 +22,19 @@ describe("agentyxConfigSchema", () => {
       packs: ["technical", "typescript", "angular"],
       enable: ["rtk"],
       targets: ["codex", "claude", "kimi"],
+      skillDirectories: [".agentyx/skills"],
+      localPacks: [
+        {
+          name: "team",
+          category: "workflow",
+          skills: ["team-review"],
+          mcpServers: [],
+          tools: [],
+        },
+      ],
+      trustedSources: [
+        { name: "superpowers", path: ".agentyx/sources/superpowers", ref: "v5.1.0" },
+      ],
     });
   });
 
@@ -77,6 +95,22 @@ describe("parseAgentyxConfig", () => {
     expect(parseAgentyxConfig({ targets: ["some-third-party-adapter"] }).targets).toEqual([
       "some-third-party-adapter",
     ]);
+  });
+
+  it("rejects unsafe or platform-specific Skill directory paths", () => {
+    for (const skillDirectory of ["../skills", "/tmp/skills", "C:/skills", "skills\\team"]) {
+      expect(() => parseAgentyxConfig({ skillDirectories: [skillDirectory] })).toThrow(
+        AgentyxConfigValidationError,
+      );
+    }
+  });
+
+  it("rejects unsafe or platform-specific trusted source paths", () => {
+    for (const path of ["../superpowers", "/tmp/superpowers", "C:/superpowers", "sources\\repo"]) {
+      expect(() =>
+        parseAgentyxConfig({ trustedSources: [{ name: "superpowers", path, ref: "v5.1.0" }] }),
+      ).toThrow(AgentyxConfigValidationError);
+    }
   });
 
   it("rejects unknown top-level keys", () => {

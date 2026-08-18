@@ -37,6 +37,143 @@
         "minLength": 1
       },
       "description": "Coding-agent providers this project targets."
+    },
+    "skillDirectories": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "pattern": "^(?!\\/)(?![A-Za-z]:)(?!.*(?:^|\\/)\\.\\.(?:\\/|$))[^\\\\\\0]+$"
+      },
+      "description": "Project-relative roots containing local Agent Skills."
+    },
+    "localPacks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique pack identifier."
+          },
+          "category": {
+            "default": "engineering",
+            "type": "string",
+            "enum": ["engineering", "language", "framework", "efficiency", "workflow"],
+            "description": "Discoverability category; does not affect resolution."
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Short human-readable summary of the pack."
+          },
+          "skills": {
+            "default": [],
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+            },
+            "description": "Skills this pack contributes, in declaration order."
+          },
+          "mcpServers": {
+            "type": "array",
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 1,
+                  "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "type": "string",
+                      "minLength": 1,
+                      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+                      "description": "MCP server identifier."
+                    },
+                    "activation": {
+                      "default": "default",
+                      "type": "string",
+                      "enum": ["default", "optional"],
+                      "description": "Whether this MCP capability is active by default or explicit opt-in."
+                    }
+                  },
+                  "required": ["name"],
+                  "additionalProperties": false
+                }
+              ]
+            },
+            "description": "MCP servers this pack contributes, in declaration order."
+          },
+          "tools": {
+            "type": "array",
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 1,
+                  "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "type": "string",
+                      "minLength": 1,
+                      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+                      "description": "Tool identifier."
+                    },
+                    "activation": {
+                      "default": "default",
+                      "type": "string",
+                      "enum": ["default", "optional"]
+                    }
+                  },
+                  "required": ["name"],
+                  "additionalProperties": false
+                }
+              ]
+            },
+            "description": "Local tools this pack contributes, in declaration order."
+          }
+        },
+        "required": ["name"],
+        "additionalProperties": false
+      },
+      "description": "Project-owned packs that can reference built-in or local Skills."
+    },
+    "trustedSources": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+            "description": "Known trusted source identifier."
+          },
+          "path": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "^(?!\\/)(?![A-Za-z]:)(?!.*(?:^|\\/)\\.\\.(?:\\/|$))[^\\\\\\0]+$",
+            "description": "Project-relative checkout path for this source."
+          },
+          "ref": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Reviewed immutable commit, signed tag or pinned release identifier."
+          }
+        },
+        "required": ["name", "path", "ref"],
+        "additionalProperties": false
+      },
+      "description": "Pinned local checkouts of known external skill/plugin sources."
     }
   },
   "additionalProperties": false

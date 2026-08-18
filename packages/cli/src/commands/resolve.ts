@@ -1,4 +1,4 @@
-import { loadAgentyxConfig, resolveAgentyxConfig } from "@agentyx/core";
+import { loadAgentyxProject, resolveAgentyxConfig } from "@agentyx/core";
 import { Command } from "commander";
 import { emit, section, toJson } from "../output.js";
 
@@ -34,11 +34,16 @@ export async function runResolveCommand(input: ResolveCommandInput): Promise<str
         ].join("\n\n");
   }
 
-  const config = await loadAgentyxConfig(input.cwd);
-  const resolved = resolveAgentyxConfig({
-    ...config,
-    enable: [...unique([...config.enable, ...(input.enable ?? [])])],
-  });
+  const project = await loadAgentyxProject(input.cwd);
+  const config = project.config;
+  const resolved = resolveAgentyxConfig(
+    {
+      ...config,
+      enable: [...unique([...config.enable, ...(input.enable ?? [])])],
+    },
+    project.packRegistry,
+    project.skillRegistry,
+  );
 
   if (input.json) {
     return toJson(resolved);

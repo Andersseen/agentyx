@@ -2,6 +2,8 @@
 .analog
 .angular
 dist
+playwright-report
+test-results
 .vite
 
 # Vite
