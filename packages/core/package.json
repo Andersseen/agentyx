@@ -1,6 +1,6 @@
 {
   "name": "@agentyx/core",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "Shared domain foundations for Agentyx: configuration model, pack resolution and skills.",
   "type": "module",
   "license": "MIT",
