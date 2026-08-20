@@ -14,6 +14,7 @@ export {
   builtInAdapterRegistry,
   builtInAdapters,
 } from "./built-in.js";
+export { detectConfiguredTargets } from "./detect.js";
 export {
   DuplicateAdapterError,
   InstallConflictError,

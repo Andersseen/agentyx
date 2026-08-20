@@ -29,6 +29,12 @@ import {
  * - **Kimi Code MCP** supports project scope in `.kimi-code/mcp.json` with an `mcpServers` object.
  *   Kimi also supports SSE, but Agentyx's provider-neutral MCP model currently covers stdio and HTTP.
  *
+ * Each definition also names the project-local paths that only that provider
+ * creates. `.agents/skills` is shared by Codex and Kimi Code, so it cannot say
+ * which agent a project uses; `.codex/`, `.claude/` and `.kimi-code/` can, and
+ * that is what lets `init` propose the agents already in the checkout instead
+ * of a fixed guess. Agentyx reads them and nothing more.
+ *
  * Neither definition carries skill content: they are three fields and a
  * directory, and the instructions come from the Agentyx skill registry.
  */
@@ -37,6 +43,7 @@ export const builtInAdapterDefinitions: readonly SkillDirectoryAdapterDefinition
     id: "codex",
     name: "Codex",
     skillsDir: [".agents", "skills"],
+    markers: [[".codex"]],
     reference: "https://developers.openai.com/codex/skills",
     mcp: {
       project: true,
@@ -49,6 +56,7 @@ export const builtInAdapterDefinitions: readonly SkillDirectoryAdapterDefinition
     id: "claude",
     name: "Claude Code",
     skillsDir: [".claude", "skills"],
+    markers: [[".claude"], ["CLAUDE.md"]],
     reference: "https://code.claude.com/docs/en/skills",
     mcp: {
       project: true,
@@ -61,6 +69,7 @@ export const builtInAdapterDefinitions: readonly SkillDirectoryAdapterDefinition
     id: "kimi",
     name: "Kimi Code",
     skillsDir: [".agents", "skills"],
+    markers: [[".kimi-code"]],
     reference: "https://www.kimi.com/code/docs/en/kimi-code-cli/customization/skills.html",
     mcp: {
       project: true,
