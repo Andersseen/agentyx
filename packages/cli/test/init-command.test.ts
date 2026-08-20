@@ -1,4 +1,4 @@
-import { cp, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
+import { cp, mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -54,7 +54,7 @@ describe("agentyx init --yes", () => {
         "Targets",
         "  codex",
         "  kimi",
-        "Next: agentyx doctor",
+        "Next: agentyx install — writes these skills into Codex and Kimi Code.",
       ].join("\n"),
     );
     expect(JSON.parse(await readFile(join(projectDir, ".agentyx.json"), "utf8"))).toEqual({
@@ -64,6 +64,98 @@ describe("agentyx init --yes", () => {
     });
     expect(await readdir(projectDir)).not.toContain(".agents");
     expect(await readdir(projectDir)).not.toContain(".claude");
+  });
+
+  /**
+   * The whole point of `--install`: a first-time user reaches installed skills
+   * from the one command they would think to type, without learning a second.
+   */
+  it("installs into every target when asked to, in the same run", async () => {
+    await cp(join(fixturesPath, "typescript-project"), projectDir, { recursive: true });
+
+    const output = await runInitCommand({
+      packs: ["typescript"],
+      enable: [],
+      targets: ["codex", "claude"],
+      yes: true,
+      install: true,
+      force: false,
+      json: false,
+      cwd: projectDir,
+    });
+
+    expect(output).toContain("Created .agentyx.json");
+    expect(output).toContain("Agentyx install");
+    expect(output).toContain("Next: agentyx doctor");
+    expect(
+      await readFile(
+        join(projectDir, ".agents", "skills", "typescript-strict", "SKILL.md"),
+        "utf8",
+      ),
+    ).toContain("typescript-strict");
+    expect(
+      await readFile(
+        join(projectDir, ".claude", "skills", "typescript-strict", "SKILL.md"),
+        "utf8",
+      ),
+    ).toContain("typescript-strict");
+    expect(await readdir(projectDir)).toContain(".agentyx.lock.json");
+  });
+
+  it("reports the install in JSON alongside the config it wrote", async () => {
+    await cp(join(fixturesPath, "typescript-project"), projectDir, { recursive: true });
+
+    const report = JSON.parse(
+      await runInitCommand({
+        packs: ["typescript"],
+        enable: [],
+        targets: ["codex"],
+        yes: true,
+        install: true,
+        force: false,
+        json: true,
+        cwd: projectDir,
+      }),
+    );
+
+    expect(report.installed).toBe(true);
+    expect(report.install.targets).toEqual(["codex"]);
+    expect(report.install.summary.create).toBeGreaterThan(0);
+  });
+
+  /**
+   * The config is written before the install runs, so a failing install must
+   * say so — otherwise the user cannot tell whether anything happened.
+   */
+  it("says the config was created when the install cannot run", async () => {
+    await cp(join(fixturesPath, "typescript-project"), projectDir, { recursive: true });
+    await mkdir(join(projectDir, ".agents", "skills", "typescript-strict"), { recursive: true });
+    await writeFile(
+      join(projectDir, ".agents", "skills", "typescript-strict", "SKILL.md"),
+      "hand-written, not Agentyx's\n",
+      "utf8",
+    );
+
+    await expect(
+      runInitCommand({
+        packs: ["typescript"],
+        enable: [],
+        targets: ["codex"],
+        yes: true,
+        install: true,
+        force: false,
+        json: false,
+        cwd: projectDir,
+      }),
+    ).rejects.toThrow(/\.agentyx\.json was created, but the installation did not run/);
+
+    expect(await readFile(join(projectDir, ".agentyx.json"), "utf8")).toContain("typescript");
+    expect(
+      await readFile(
+        join(projectDir, ".agents", "skills", "typescript-strict", "SKILL.md"),
+        "utf8",
+      ),
+    ).toBe("hand-written, not Agentyx's\n");
   });
 
   it("infers Angular packs safely but still requires explicit targets", async () => {
@@ -122,6 +214,7 @@ describe("agentyx init --yes", () => {
 
     expect(JSON.parse(output)).toEqual({
       path: ".agentyx.json",
+      installed: false,
       replaced: true,
       packs: ["typescript"],
       enable: [],
@@ -169,6 +262,7 @@ describe("init command wiring", () => {
       "--enable",
       "--target",
       "--yes",
+      "--install",
       "--force",
       "--json",
     ]);

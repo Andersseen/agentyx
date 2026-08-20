@@ -1,19 +1,22 @@
 import { access, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { builtInAdapterRegistry } from "@agentyx/adapters";
+import { builtInAdapterRegistry, detectConfiguredTargets } from "@agentyx/adapters";
 import {
   AGENTYX_CONFIG_FILENAME,
   AgentyxError,
   buildAgentyxConfig,
+  builtInMcpServerRegistry,
   builtInPacks,
   detectProject,
   formatAgentyxConfig,
   parseAgentyxConfig,
   resolveAgentyxConfig,
 } from "@agentyx/core";
-import { confirm, isCancel, multiselect } from "@clack/prompts";
+import { autocompleteMultiselect, confirm, isCancel, multiselect } from "@clack/prompts";
 import { Command } from "commander";
 import { emit, section, toJson } from "../output.js";
+import { formatPackName, packOptions, targetOptions } from "../prompts.js";
+import { executeInstall, type InstallOutcome, type InstallReport } from "./install.js";
 
 export interface InitCommandInput {
   readonly packs: readonly string[];
@@ -22,6 +25,13 @@ export interface InitCommandInput {
   readonly yes: boolean;
   readonly force: boolean;
   readonly json: boolean;
+  /**
+   * Install into the configured targets once the config is written.
+   *
+   * Left undefined, an interactive run asks and a `--yes` run does not install,
+   * so a script's behaviour never changes without the flag.
+   */
+  readonly install?: boolean;
   readonly cwd: string;
 }
 
@@ -32,21 +42,75 @@ export interface InitPlan {
   readonly path: string;
   readonly content: string;
   readonly replaced: boolean;
+  /** Whether this run should go on to install, decided before anything is written. */
+  readonly install: boolean;
 }
 
 export class InitError extends AgentyxError {
-  constructor(code: string, message: string) {
-    super(code, message);
+  constructor(code: string, message: string, options?: ErrorOptions) {
+    super(code, message, options);
     this.name = "InitError";
   }
 }
 
+/**
+ * Creates `.agentyx.json` and, when asked to, installs it.
+ *
+ * Writing a config file is not what anyone came for — the skills landing in the
+ * agents is. So `init` finishes the job in one run instead of ending on the
+ * name of a second command the user has no reason to know. The installation is
+ * `agentyx install` itself, not a copy of it, so the plan, the manifest and the
+ * conflict rules are identical either way.
+ */
 export async function runInitCommand(input: InitCommandInput): Promise<string> {
   const plan = input.yes ? await planNonInteractiveInit(input) : await planInteractiveInit(input);
 
   await writeFile(plan.path, plan.content, "utf8");
 
-  return input.json ? renderInitJson(plan) : renderInitText(plan);
+  if (!plan.install) {
+    return input.json ? renderInitJson(plan, undefined) : renderInitText(plan, undefined);
+  }
+
+  const outcome = await installAfterInit(input);
+
+  return input.json ? renderInitJson(plan, outcome.report) : renderInitText(plan, outcome.text);
+}
+
+/**
+ * Runs the installation the config just written describes.
+ *
+ * A failure here is reported as a failure of `init`, but with the config file
+ * mentioned: it exists, and re-running `agentyx install` after fixing the cause
+ * is all that is left to do. Saying only "conflict" would leave the user
+ * guessing whether anything happened at all.
+ */
+async function installAfterInit(input: InitCommandInput): Promise<InstallOutcome> {
+  try {
+    return await executeInstall({
+      packs: [],
+      targets: [],
+      skills: [],
+      mcpServers: [],
+      select: false,
+      dryRun: false,
+      json: input.json,
+      cwd: input.cwd,
+    });
+  } catch (cause) {
+    if (!(cause instanceof AgentyxError)) {
+      throw cause;
+    }
+
+    throw new InitError(
+      "init_install_failed",
+      [
+        `${AGENTYX_CONFIG_FILENAME} was created, but the installation did not run:`,
+        cause.message,
+        "Resolve the problem above and run agentyx install.",
+      ].join("\n"),
+      { cause },
+    );
+  }
 }
 
 export async function planNonInteractiveInit(input: InitCommandInput): Promise<InitPlan> {
@@ -89,6 +153,7 @@ export async function planNonInteractiveInit(input: InitCommandInput): Promise<I
     path,
     content: formatAgentyxConfig(config),
     replaced: exists,
+    install: input.install === true,
   };
 }
 
@@ -113,28 +178,25 @@ async function planInteractiveInit(input: InitCommandInput): Promise<InitPlan> {
     input.packs.length > 0
       ? [...input.packs]
       : await promptValue(
-          multiselect({
+          autocompleteMultiselect({
             message: ["Agentyx", "", section("Detected", detected), "", "Packs"].join("\n"),
             initialValues: [...detection.recommendedPacks],
             required: true,
-            options: builtInPacks.map((pack) => ({
-              value: pack.name,
-              label: `${formatPackName(pack.name)} (${pack.category})`,
-            })),
+            maxItems: 10,
+            placeholder: "Type to search packs...",
+            options: [...packOptions()],
           }),
         );
+  const configured = await detectConfiguredTargets(input.cwd);
   const targets =
     input.targets.length > 0
       ? [...input.targets]
       : await promptValue(
           multiselect({
             message: "Targets",
-            initialValues: ["codex", "kimi"],
+            initialValues: [...configured],
             required: true,
-            options: builtInAdapterRegistry.list().map((adapter) => ({
-              value: adapter.id,
-              label: adapter.name,
-            })),
+            options: [...targetOptions(configured)],
           }),
         );
 
@@ -152,7 +214,10 @@ async function planInteractiveInit(input: InitCommandInput): Promise<InitPlan> {
             options: optionalCapabilities.map((capability) => ({
               value: capability.name,
               label: capability.name,
-              hint: capability.kind,
+              hint:
+                capability.description === undefined
+                  ? capability.kind
+                  : `${capability.kind} — ${capability.description}`,
             })),
           }),
         );
@@ -175,27 +240,67 @@ async function planInteractiveInit(input: InitCommandInput): Promise<InitPlan> {
     throw new InitError("init_cancelled", "Agentyx init cancelled. No files were written.");
   }
 
-  return { packs: parsed.packs, enable: parsed.enable, targets, path, content, replaced: exists };
+  const install =
+    input.install ??
+    (await promptValue(
+      confirm({
+        message: `Install the skills into ${formatTargetNames(targets)} now?`,
+        initialValue: true,
+      }),
+    ));
+
+  return {
+    packs: parsed.packs,
+    enable: parsed.enable,
+    targets,
+    path,
+    content,
+    replaced: exists,
+    install,
+  };
 }
 
-function renderInitText(plan: InitPlan): string {
+/** Provider names as a reader would say them, for a question about them. */
+function formatTargetNames(targets: readonly string[]): string {
+  const names = targets.map((target) => builtInAdapterRegistry.get(target).name);
+  const last = names.at(-1);
+
+  if (names.length <= 1 || last === undefined) {
+    return last ?? "the configured targets";
+  }
+
+  return `${names.slice(0, -1).join(", ")} and ${last}`;
+}
+
+/**
+ * The init report, ending on the one command that still has to run.
+ *
+ * When nothing was installed that command is `install`, because a config file
+ * on its own has changed nothing for any agent. When the install already
+ * happened the remaining step is `doctor`, which verifies it.
+ */
+function renderInitText(plan: InitPlan, install: string | undefined): string {
   return [
     plan.replaced ? "Replaced .agentyx.json" : "Created .agentyx.json",
     "",
     section("Packs", plan.packs),
     section("Enabled", plan.enable),
     section("Targets", plan.targets),
-    "Next: agentyx doctor",
+    ...(install === undefined
+      ? [`Next: agentyx install — writes these skills into ${formatTargetNames(plan.targets)}.`]
+      : ["", install, "", "Next: agentyx doctor"]),
   ].join("\n");
 }
 
-function renderInitJson(plan: InitPlan): string {
+function renderInitJson(plan: InitPlan, install: InstallReport | undefined): string {
   return toJson({
     path: AGENTYX_CONFIG_FILENAME,
     replaced: plan.replaced,
     packs: plan.packs,
     enable: plan.enable,
     targets: plan.targets,
+    installed: install !== undefined,
+    ...(install === undefined ? {} : { install }),
   });
 }
 
@@ -230,16 +335,13 @@ function collectTarget(value: string, previous: string[]): string[] {
   return [...previous, value];
 }
 
-function formatPackName(pack: string): string {
-  return pack === "typescript" ? "TypeScript" : pack === "angular" ? "Angular" : pack;
-}
-
 function optionalCapabilitiesFor(packs: readonly string[]): readonly {
   readonly name: string;
   readonly kind: string;
+  readonly description: string | undefined;
 }[] {
   const selected = new Set(packs);
-  const capabilities: Array<{ name: string; kind: string }> = [];
+  const capabilities: Array<{ name: string; kind: string; description: string | undefined }> = [];
   const seen = new Set<string>();
 
   for (const pack of builtInPacks) {
@@ -254,19 +356,33 @@ function optionalCapabilitiesFor(packs: readonly string[]): readonly {
         !seen.has(server.name)
       ) {
         seen.add(server.name);
-        capabilities.push({ name: server.name, kind: "MCP" });
+        capabilities.push({
+          name: server.name,
+          kind: "MCP",
+          description: describeMcpServer(server.name),
+        });
       }
     }
 
     for (const tool of pack.tools ?? []) {
       if (typeof tool === "object" && tool.activation === "optional" && !seen.has(tool.name)) {
         seen.add(tool.name);
-        capabilities.push({ name: tool.name, kind: "tool" });
+        capabilities.push({ name: tool.name, kind: "tool", description: undefined });
       }
     }
   }
 
   return capabilities;
+}
+
+/**
+ * An optional MCP server's own description, or `undefined` when it is not a
+ * built-in one. A pack may reference a server Agentyx does not ship, and that
+ * must not stop the prompt from offering it.
+ */
+function describeMcpServer(name: string): string | undefined {
+  return builtInMcpServerRegistry.listMetadata().find((server) => server.name === name)
+    ?.description;
 }
 
 export function createInitCommand(): Command {
@@ -276,6 +392,7 @@ export function createInitCommand(): Command {
     .option("--enable <id>", "optional capability to enable; repeatable", collectName, [])
     .option("--target <id>", "target agent to configure; repeatable", collectTarget, [])
     .option("--yes", "accept inferred and explicit choices without prompts", false)
+    .option("--install", "install into the configured targets without asking")
     .option("--force", "replace an existing .agentyx.json", false)
     .option("--json", "print machine-readable JSON only", false)
     .action(
@@ -284,6 +401,7 @@ export function createInitCommand(): Command {
         enable: string[];
         target: string[];
         yes: boolean;
+        install?: boolean;
         force: boolean;
         json: boolean;
       }) => {
@@ -293,6 +411,7 @@ export function createInitCommand(): Command {
             enable: options.enable,
             targets: options.target,
             yes: options.yes,
+            ...(options.install === undefined ? {} : { install: options.install }),
             force: options.force,
             json: options.json,
             cwd: process.cwd(),

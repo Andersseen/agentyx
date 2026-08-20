@@ -27,6 +27,14 @@ export interface SkillDirectoryAdapterDefinition {
    * separator is ever written by hand.
    */
   readonly skillsDir: readonly string[];
+  /**
+   * Project-local paths that only this provider creates, as segments. Their
+   * presence is what lets Agentyx offer a provider as a default instead of
+   * guessing; `skillsDir` cannot serve here because providers share it.
+   *
+   * Agentyx only ever reads these — they are never planned, written or removed.
+   */
+  readonly markers: readonly (readonly string[])[];
   /** Why this location — kept next to the value so the choice stays auditable. */
   readonly reference: string;
   readonly mcp?:
@@ -82,8 +90,12 @@ export function createSkillDirectoryAdapter(
     skillsPath,
     detect: async (projectDir) => {
       const path = skillsPath(projectDir);
+      const [present, configured] = await Promise.all([
+        isDirectory(path),
+        hasAnyMarker(projectDir, definition.markers),
+      ]);
 
-      return { target: definition.id, skillsPath: path, present: await isDirectory(path) };
+      return { target: definition.id, skillsPath: path, present, configured };
     },
     planFiles: (context: AdapterContext): readonly PlannedFile[] =>
       context.skills.map((skill) => ({
@@ -132,6 +144,27 @@ export function createSkillDirectoryAdapter(
       };
     },
   };
+}
+
+/** True as soon as one marker exists, whether it is a file or a directory. */
+async function hasAnyMarker(
+  projectDir: string,
+  markers: readonly (readonly string[])[],
+): Promise<boolean> {
+  const results = await Promise.all(
+    markers.map((segments) => exists(resolve(projectDir, join(...segments)))),
+  );
+
+  return results.some(Boolean);
+}
+
+async function exists(path: string): Promise<boolean> {
+  try {
+    await stat(path);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 async function isDirectory(path: string): Promise<boolean> {

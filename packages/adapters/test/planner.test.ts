@@ -93,7 +93,12 @@ describe("planTargetInstall", () => {
         name: "Acme",
         capabilities: { skills: true, mcp: { project: false, global: false } },
         skillsPath: (dir) => join(dir, ".acme"),
-        detect: async (dir) => ({ target: "acme", skillsPath: join(dir, ".acme"), present: false }),
+        detect: async (dir) => ({
+          target: "acme",
+          skillsPath: join(dir, ".acme"),
+          present: false,
+          configured: false,
+        }),
         planFiles: ({ skills: resolved }) =>
           resolved.map((skill) => ({
             segments: [".acme", `${skill.name}.md`],
@@ -270,7 +275,12 @@ describe("planTargetInstall", () => {
         name: "Acme",
         capabilities: { skills: true, mcp: { project: false, global: false } },
         skillsPath: (dir) => join(dir, ".acme"),
-        detect: async (dir) => ({ target: "acme", skillsPath: join(dir, ".acme"), present: false }),
+        detect: async (dir) => ({
+          target: "acme",
+          skillsPath: join(dir, ".acme"),
+          present: false,
+          configured: false,
+        }),
         planFiles: ({ skills: resolved }) =>
           resolved.map((skill) => ({
             segments: [".acme", `${skill.name}.md`],
@@ -317,6 +327,7 @@ describe("planTargetInstall containment", () => {
       target: "escaping",
       skillsPath: join(dir, ".escaping"),
       present: false,
+      configured: false,
     }),
     planFiles: ({ skills: resolved }) =>
       resolved.map((skill) => ({ segments, content: "x", skill: skill.name })),
@@ -345,7 +356,12 @@ describe("planTargetInstall containment", () => {
         name: "Escaping",
         capabilities: { skills: true, mcp: { project: false, global: false } },
         skillsPath: () => tmpdir(),
-        detect: async () => ({ target: "escaping", skillsPath: tmpdir(), present: false }),
+        detect: async () => ({
+          target: "escaping",
+          skillsPath: tmpdir(),
+          present: false,
+          configured: false,
+        }),
         planFiles: () => [],
       }),
     ).rejects.toThrow(InstallPathError);
@@ -358,7 +374,12 @@ describe("planTargetInstall containment", () => {
         name: "Escaping",
         capabilities: { skills: true, mcp: { project: false, global: false } },
         skillsPath: (dir) => dir,
-        detect: async (dir) => ({ target: "escaping", skillsPath: dir, present: false }),
+        detect: async (dir) => ({
+          target: "escaping",
+          skillsPath: dir,
+          present: false,
+          configured: false,
+        }),
         planFiles: () => [],
       }),
     ).rejects.toThrow(InstallPathError);
@@ -509,6 +530,7 @@ describe("planInstall", () => {
         target: id,
         skillsPath: join(dir, ".agents", "skills"),
         present: false,
+        configured: false,
       }),
       planFiles: ({ skills: resolved }) =>
         resolved.map((skill) => ({

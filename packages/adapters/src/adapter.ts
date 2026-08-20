@@ -72,6 +72,15 @@ export interface AdapterDetection {
   readonly skillsPath: string;
   /** Whether that directory already exists. */
   readonly present: boolean;
+  /**
+   * Whether the provider itself appears to be used in this project.
+   *
+   * Distinct from `present`: the skills directory is shared between providers
+   * — Codex and Kimi Code both read `.agents/skills` — so its existence says
+   * nothing about *which* agent the project uses. This looks at a marker the
+   * provider owns alone, which is what makes it usable as a default.
+   */
+  readonly configured: boolean;
 }
 
 /**

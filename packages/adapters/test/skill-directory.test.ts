@@ -111,6 +111,7 @@ describe("detect", () => {
       target: "codex",
       skillsPath: join(temporaryProject, ".agents", "skills"),
       present: false,
+      configured: false,
     });
     expect(await readdir(temporaryProject)).toEqual([]);
   });
@@ -128,6 +129,7 @@ describe("createSkillDirectoryAdapter", () => {
       id: "acme",
       name: "Acme Agent",
       skillsDir: [".acme", "skills"],
+      markers: [[".acme"]],
       reference: "https://example.invalid/skills",
     });
 

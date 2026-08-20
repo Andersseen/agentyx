@@ -1,9 +1,10 @@
 import {
   applyInstallPlans,
-  builtInAdapterRegistry,
   collectInstallConflicts,
+  detectConfiguredTargets,
   InstallConflictError,
   type InstallPlan,
+  type InstallPlanSummary,
   planInstall,
   summarizeInstallPlans,
 } from "@agentyx/adapters";
@@ -16,9 +17,16 @@ import {
   resolveAgentyxConfig,
   type SkillRegistry,
 } from "@agentyx/core";
-import { isCancel, multiselect } from "@clack/prompts";
+import { autocompleteMultiselect, isCancel, multiselect } from "@clack/prompts";
 import { Command } from "commander";
 import { emit, section, toJson } from "../output.js";
+import {
+  mcpOptions,
+  packOptions,
+  skillNamesForPacks,
+  skillOptions,
+  targetOptions,
+} from "../prompts.js";
 
 export interface InstallCommandInput {
   /**
@@ -70,6 +78,27 @@ export class InstallCommandError extends AgentyxError {
  * @throws {InstallConflictError} when a destination is not Agentyx's to write, and `--force` was not given.
  */
 export async function runInstallCommand(input: InstallCommandInput): Promise<string> {
+  const outcome = await executeInstall(input);
+
+  return input.json ? toJson(outcome.report) : outcome.text;
+}
+
+/** Both renderings of one installation, so a caller can compose either. */
+export interface InstallOutcome {
+  readonly text: string;
+  readonly report: InstallReport;
+  readonly summary: InstallPlanSummary;
+}
+
+/**
+ * Performs the installation and renders it, without deciding which rendering
+ * the caller wants.
+ *
+ * `init` uses this to finish the job it started rather than telling the user to
+ * run a second command, and gets the same plan, the same conflict rules and the
+ * same output as `agentyx install` because it is the same code path.
+ */
+export async function executeInstall(input: InstallCommandInput): Promise<InstallOutcome> {
   if (input.skillsOnly === true && input.mcpOnly === true) {
     throw new InstallCommandError(
       "install_scope_conflict",
@@ -104,9 +133,11 @@ export async function runInstallCommand(input: InstallCommandInput): Promise<str
     await applyInstallPlans(plans, { manifest });
   }
 
-  return input.json
-    ? renderJson(input, environment, plans, conflicts)
-    : renderText(input, plans, conflicts);
+  return {
+    text: renderText(input, plans, conflicts),
+    report: buildInstallReport(input, environment, plans, conflicts),
+    summary: summarizeInstallPlans(plans),
+  };
 }
 
 interface ResolvedEnvironment {
@@ -201,42 +232,68 @@ async function resolveEnvironment(input: InstallCommandInput): Promise<ResolvedE
   };
 }
 
+/**
+ * Walks the user through a manual selection.
+ *
+ * Agentyx ships far more skills than fit on a screen, so the skill step is a
+ * searchable list rather than a scrollable one, and an optional pack filter
+ * runs first to shorten it. The filter only decides what is *shown*: skipping
+ * it offers every skill, and the packs chosen here are never written to
+ * `.agentyx.json` — a manual selection stays a list of skills.
+ *
+ * Anything already passed on the command line skips its step.
+ */
 async function promptManualSelection(input: InstallCommandInput): Promise<InstallCommandInput> {
+  const configured = await detectConfiguredTargets(input.cwd);
   const targets =
     input.targets.length > 0
       ? input.targets
       : await promptValue(
           multiselect({
             message: "Targets",
-            initialValues: ["codex"],
+            initialValues: [...configured],
             required: true,
-            options: builtInAdapterRegistry.list().map((adapter) => ({
-              value: adapter.id,
-              label: adapter.name,
-            })),
+            options: [...targetOptions(configured)],
           }),
         );
+  const browsePacks =
+    input.skills.length > 0
+      ? []
+      : await promptValue(
+          autocompleteMultiselect({
+            message: "Narrow the skill list by pack (optional — leave empty for all)",
+            required: false,
+            maxItems: 10,
+            placeholder: "Type to search packs...",
+            options: [...packOptions()],
+          }),
+        );
+  const browsable = skillNamesForPacks(browsePacks);
   const skills =
     input.skills.length > 0
       ? input.skills
       : await promptValue(
-          multiselect({
-            message: "Skills",
-            initialValues: ["planning", "verification"],
-            options: builtInSkillRegistry.names.map((name) => ({ value: name, label: name })),
+          autocompleteMultiselect({
+            message:
+              browsePacks.length === 0
+                ? "Skills"
+                : `Skills from ${browsePacks.join(", ")} (${browsable.length})`,
+            required: false,
+            maxItems: 10,
+            placeholder: "Type to search skills...",
+            options: [...skillOptions(browsable)],
           }),
         );
   const mcpServers =
     input.mcpServers.length > 0
       ? input.mcpServers
       : await promptValue(
-          multiselect({
+          autocompleteMultiselect({
             message: "MCP servers",
-            options: builtInMcpServerRegistry.listMetadata().map((server) => ({
-              value: server.name,
-              label: server.name,
-              hint: `${server.transport}, ${server.contextCost ?? "unknown"} context`,
-            })),
+            required: false,
+            maxItems: 10,
+            placeholder: "Type to search MCP servers...",
+            options: [...mcpOptions()],
           }),
         );
 
@@ -337,13 +394,13 @@ function renderOperationLine(status: string, detail: string, usedBy: readonly st
  * `resolve` prints identifiers only: the output stays cheap to pipe, and the
  * instructions have exactly one home.
  */
-function renderJson(
+function buildInstallReport(
   input: InstallCommandInput,
   environment: ResolvedEnvironment,
   plans: readonly InstallPlan[],
   conflicts: readonly string[],
-): string {
-  return toJson({
+) {
+  return {
     dryRun: input.dryRun,
     conflicts,
     packs: environment.packs,
@@ -383,8 +440,14 @@ function renderJson(
       unsupportedMcp: plan.unsupportedMcp,
     })),
     summary: summarizeInstallPlans(plans),
-  });
+  };
 }
+
+/**
+ * The machine-readable install report, derived from the builder rather than
+ * declared twice — the JSON output has exactly one definition.
+ */
+export type InstallReport = ReturnType<typeof buildInstallReport>;
 
 function collectTarget(value: string, previous: string[]): string[] {
   return [...previous, value];

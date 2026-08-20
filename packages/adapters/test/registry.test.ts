@@ -10,7 +10,12 @@ const fakeAdapter = (id: string): AgentAdapter => ({
   name: id,
   capabilities: { skills: true, mcp: { project: false, global: false } },
   skillsPath: (projectDir) => projectDir,
-  detect: async (projectDir) => ({ target: id, skillsPath: projectDir, present: false }),
+  detect: async (projectDir) => ({
+    target: id,
+    skillsPath: projectDir,
+    present: false,
+    configured: false,
+  }),
   planFiles: () => [],
 });
 

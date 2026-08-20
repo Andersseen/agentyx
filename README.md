@@ -85,17 +85,34 @@ Skills for these capabilities.
 Run Agentyx directly from npm; a global installation is not required:
 
 ```sh
+pnpm dlx @agentyx/cli init
+```
+
+That is the whole first run. `init` detects the project's stack and the agents already used in the
+checkout, offers them as defaults, and finishes by installing the skills into each one — so a first
+run goes from nothing to installed without a second command.
+
+The same flow, scripted:
+
+```sh
 pnpm dlx @agentyx/cli init \
   --pack technical \
   --pack typescript \
   --pack angular \
   --target codex \
   --target kimi \
-  --yes
+  --yes \
+  --install
 
 pnpm dlx @agentyx/cli doctor
-pnpm dlx @agentyx/cli install --dry-run
-pnpm dlx @agentyx/cli install
+```
+
+Without `--install`, `init` only writes `.agentyx.json` and tells you the install command to run.
+
+Pick skills and MCP servers by hand instead of by pack, with a searchable list:
+
+```sh
+pnpm dlx @agentyx/cli install --select
 ```
 
 Inspect packs:
