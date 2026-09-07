@@ -290,6 +290,13 @@ Adapters do not know about packs. They receive already-resolved Skills and MCP d
 provider-specific project files. Agentyx keeps installation planning separate from filesystem
 writes, and it only writes managed Skill files and managed MCP entries.
 
+## Roadmap to 1.0
+
+The [implementation roadmap](docs/roadmap/README.md) describes the proposed path from the current
+release to 1.0, with versioned milestones, bounded session tasks, acceptance criteria, and release
+gates. It prioritizes reliable diagnostics, explainable selection, project context, reproducibility,
+and measured usefulness while keeping Agentyx a project-local CLI.
+
 ## Development
 
 ```sh
