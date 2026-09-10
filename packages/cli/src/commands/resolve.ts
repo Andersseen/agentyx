@@ -31,6 +31,7 @@ export async function runResolveCommand(input: ResolveCommandInput): Promise<str
           section("Skills", resolved.skills),
           section("MCP", renderMcpLines(resolved.declaredMcpServers, resolved.mcpServers)),
           section("Tools", renderToolLines(resolved.declaredTools, resolved.tools)),
+          section("Hooks", renderToolLines(resolved.declaredHooks, resolved.hooks)),
         ].join("\n\n");
   }
 
@@ -56,6 +57,7 @@ export async function runResolveCommand(input: ResolveCommandInput): Promise<str
     section("Skills", resolved.skills),
     section("MCP", renderMcpLines(resolved.declaredMcpServers, resolved.mcpServers)),
     section("Tools", renderToolLines(resolved.declaredTools, resolved.tools)),
+    section("Hooks", renderToolLines(resolved.declaredHooks, resolved.hooks)),
   ].join("\n\n");
 }
 

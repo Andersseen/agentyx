@@ -8,7 +8,7 @@ import { createAdapterRegistry } from "../src/registry.js";
 const fakeAdapter = (id: string): AgentAdapter => ({
   id,
   name: id,
-  capabilities: { skills: true, mcp: { project: false, global: false } },
+  capabilities: { skills: true, mcp: { project: false, global: false }, hooks: false },
   skillsPath: (projectDir) => projectDir,
   detect: async (projectDir) => ({
     target: id,
@@ -61,18 +61,26 @@ describe("builtInAdapterRegistry", () => {
 
   it("names no provider in the type or content of a skill", () => {
     // The adapters carry an id, a name and a directory — never instructions.
+    // Which capability keys are present varies per provider (only Claude Code
+    // has hooks), but every key must come from this known, content-free set.
+    const allowedKeys = new Set([
+      "capabilities",
+      "detect",
+      "hooksConfigPath",
+      "id",
+      "mcpConfigPath",
+      "name",
+      "planFiles",
+      "planHookConfig",
+      "planMcpConfig",
+      "references",
+      "skillsPath",
+    ]);
+
     for (const adapter of builtInAdapters) {
-      expect(Object.keys(adapter).sort()).toEqual([
-        "capabilities",
-        "detect",
-        "id",
-        "mcpConfigPath",
-        "name",
-        "planFiles",
-        "planMcpConfig",
-        "references",
-        "skillsPath",
-      ]);
+      for (const key of Object.keys(adapter)) {
+        expect(allowedKeys.has(key)).toBe(true);
+      }
     }
   });
 });

@@ -1,3 +1,7 @@
+import { builtInHookRegistry } from "../hook/built-in.js";
+import type { HookRegistry } from "../hook/registry.js";
+import { collectPackHookReferences, filterEffectiveHooks } from "../hook/resolver.js";
+import type { HookReference } from "../hook/schema.js";
 import { builtInMcpServerRegistry } from "../mcp/built-in.js";
 import type { McpServerRegistry } from "../mcp/registry.js";
 import { collectPackMcpServerReferences, filterEffectiveMcpServers } from "../mcp/resolver.js";
@@ -29,6 +33,8 @@ export interface ResolvedAgentyxConfig {
   readonly mcpServers: readonly string[];
   readonly declaredTools: readonly ToolReference[];
   readonly tools: readonly string[];
+  readonly declaredHooks: readonly HookReference[];
+  readonly hooks: readonly string[];
   readonly enabled: readonly string[];
   readonly targets: readonly string[];
 }
@@ -46,16 +52,19 @@ export function resolveAgentyxConfig(
   skillRegistry: SkillRegistry = builtInSkillRegistry,
   mcpRegistry: McpServerRegistry = builtInMcpServerRegistry,
   toolRegistry: ToolRegistry = builtInToolRegistry,
+  hookRegistry: HookRegistry = builtInHookRegistry,
 ): ResolvedAgentyxConfig {
   const requestedPacks = [...config.packs];
   const resolvedPacks = resolvePacks(requestedPacks, registry);
   const declaredMcpServers = collectPackMcpServerReferences(resolvedPacks, registry, mcpRegistry);
   const declaredTools = collectPackToolReferences(resolvedPacks, registry, toolRegistry);
+  const declaredHooks = collectPackHookReferences(resolvedPacks, registry, hookRegistry);
   const knownOptionalCapabilities = [
     ...declaredMcpServers
       .filter((server) => server.activation === "optional")
       .map((server) => server.name),
     ...declaredTools.filter((tool) => tool.activation === "optional").map((tool) => tool.name),
+    ...declaredHooks.filter((hook) => hook.activation === "optional").map((hook) => hook.name),
   ];
 
   for (const capability of config.enable) {
@@ -72,6 +81,8 @@ export function resolveAgentyxConfig(
     mcpServers: filterEffectiveMcpServers(declaredMcpServers, config.enable),
     declaredTools,
     tools: filterEffectiveTools(declaredTools, config.enable),
+    declaredHooks,
+    hooks: filterEffectiveHooks(declaredHooks, config.enable),
     enabled: [...config.enable],
     targets: [...config.targets],
   };

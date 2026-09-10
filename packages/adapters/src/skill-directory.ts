@@ -1,7 +1,18 @@
 import { stat } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { formatSkillMarkdown } from "@agentyx/core";
-import type { AdapterContext, AgentAdapter, ExistingMcpConfig, PlannedFile } from "./adapter.js";
+import type {
+  AdapterContext,
+  AgentAdapter,
+  ExistingHookConfig,
+  ExistingMcpConfig,
+  PlannedFile,
+} from "./adapter.js";
+import {
+  CLAUDE_HOOKS_CONFIG_SEGMENTS,
+  claudeHooksConfigPath,
+  renderClaudeHooksConfig,
+} from "./hook-rendering.js";
 import {
   CLAUDE_MCP_CONFIG_SEGMENTS,
   CODEX_MCP_CONFIG_SEGMENTS,
@@ -47,6 +58,11 @@ export interface SkillDirectoryAdapterDefinition {
     | {
         readonly project: false;
       };
+  /** Present only for providers with a documented hook mechanism Agentyx can target. */
+  readonly hooks?: {
+    readonly config: "claude-settings-json";
+    readonly reference: string;
+  };
 }
 
 /**
@@ -72,7 +88,17 @@ export function createSkillDirectoryAdapter(
 ): AgentAdapter {
   const skillsPath = (projectDir: string): string =>
     resolve(projectDir, join(...definition.skillsDir));
-  const adapter: AgentAdapter = {
+  const references = [definition.reference];
+
+  if (definition.mcp?.project === true) {
+    references.push(definition.mcp.reference);
+  }
+
+  if (definition.hooks !== undefined) {
+    references.push(definition.hooks.reference);
+  }
+
+  let adapter: AgentAdapter = {
     id: definition.id,
     name: definition.name,
     capabilities: {
@@ -82,11 +108,9 @@ export function createSkillDirectoryAdapter(
         global: false,
         transports: definition.mcp?.project === true ? definition.mcp.transports : [],
       },
+      hooks: definition.hooks !== undefined,
     },
-    references:
-      definition.mcp?.project === true
-        ? [definition.reference, definition.mcp.reference]
-        : [definition.reference],
+    references,
     skillsPath,
     detect: async (projectDir) => {
       const path = skillsPath(projectDir);
@@ -105,45 +129,62 @@ export function createSkillDirectoryAdapter(
       })),
   };
 
-  if (definition.mcp?.project !== true) {
-    return adapter;
+  if (definition.mcp?.project === true) {
+    const config = definition.mcp.config;
+
+    const mcpConfigPath =
+      config === "codex-toml"
+        ? codexMcpConfigPath
+        : config === "claude-json"
+          ? claudeMcpConfigPath
+          : kimiMcpConfigPath;
+    const mcpConfigSegments =
+      config === "codex-toml"
+        ? CODEX_MCP_CONFIG_SEGMENTS
+        : config === "claude-json"
+          ? CLAUDE_MCP_CONFIG_SEGMENTS
+          : KIMI_MCP_CONFIG_SEGMENTS;
+    const renderMcpConfig =
+      config === "codex-toml"
+        ? renderCodexMcpConfig
+        : config === "claude-json"
+          ? renderClaudeMcpConfig
+          : renderKimiMcpConfig;
+
+    adapter = {
+      ...adapter,
+      mcpConfigPath,
+      planMcpConfig: (context: AdapterContext, existing: ExistingMcpConfig) => {
+        const rendered = renderMcpConfig(context.mcpServers ?? [], existing);
+
+        return {
+          segments: mcpConfigSegments,
+          content: rendered.content,
+          empty: rendered.empty,
+          servers: (context.mcpServers ?? []).map((server) => server.name),
+        };
+      },
+    };
   }
 
-  const config = definition.mcp.config;
+  if (definition.hooks !== undefined) {
+    adapter = {
+      ...adapter,
+      hooksConfigPath: claudeHooksConfigPath,
+      planHookConfig: (context: AdapterContext, existing: ExistingHookConfig) => {
+        const rendered = renderClaudeHooksConfig(context.hooks ?? [], existing);
 
-  const mcpConfigPath =
-    config === "codex-toml"
-      ? codexMcpConfigPath
-      : config === "claude-json"
-        ? claudeMcpConfigPath
-        : kimiMcpConfigPath;
-  const mcpConfigSegments =
-    config === "codex-toml"
-      ? CODEX_MCP_CONFIG_SEGMENTS
-      : config === "claude-json"
-        ? CLAUDE_MCP_CONFIG_SEGMENTS
-        : KIMI_MCP_CONFIG_SEGMENTS;
-  const renderMcpConfig =
-    config === "codex-toml"
-      ? renderCodexMcpConfig
-      : config === "claude-json"
-        ? renderClaudeMcpConfig
-        : renderKimiMcpConfig;
+        return {
+          segments: CLAUDE_HOOKS_CONFIG_SEGMENTS,
+          content: rendered.content,
+          empty: rendered.empty,
+          hooks: (context.hooks ?? []).map((hook) => hook.name),
+        };
+      },
+    };
+  }
 
-  return {
-    ...adapter,
-    mcpConfigPath,
-    planMcpConfig: (context: AdapterContext, existing: ExistingMcpConfig) => {
-      const rendered = renderMcpConfig(context.mcpServers ?? [], existing);
-
-      return {
-        segments: mcpConfigSegments,
-        content: rendered.content,
-        empty: rendered.empty,
-        servers: (context.mcpServers ?? []).map((server) => server.name),
-      };
-    },
-  };
+  return adapter;
 }
 
 /** True as soon as one marker exists, whether it is a file or a directory. */

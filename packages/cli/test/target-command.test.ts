@@ -35,6 +35,7 @@ describe("agentyx target show", () => {
         "Skills: .agents/skills (not present)",
         "MCP: .codex/config.toml",
         "MCP transports: stdio, http",
+        "Hooks: not supported (not supported)",
         "Reference: https://developers.openai.com/codex/skills",
         "Reference: https://developers.openai.com/codex/mcp",
       ].join("\n"),
@@ -46,8 +47,10 @@ describe("agentyx target show", () => {
         "Skills: .claude/skills (not present)",
         "MCP: .mcp.json",
         "MCP transports: stdio, http",
+        "Hooks: .claude/settings.json",
         "Reference: https://code.claude.com/docs/en/skills",
         "Reference: https://docs.anthropic.com/en/docs/claude-code/mcp",
+        "Reference: https://code.claude.com/docs/en/hooks.md",
       ].join("\n"),
     );
     expect(await runTargetShowCommand({ target: "kimi", json: false, cwd: projectDir })).toBe(
@@ -57,6 +60,7 @@ describe("agentyx target show", () => {
         "Skills: .agents/skills (not present)",
         "MCP: .kimi-code/mcp.json",
         "MCP transports: stdio, http",
+        "Hooks: not supported (not supported)",
         "Reference: https://www.kimi.com/code/docs/en/kimi-code-cli/customization/skills.html",
         "Reference: https://www.kimi.com/code/docs/en/kimi-code-cli/customization/mcp.html",
       ].join("\n"),
@@ -73,6 +77,7 @@ describe("agentyx target show", () => {
         "Skills: .agents/skills",
         "MCP: .codex/config.toml",
         "MCP transports: stdio, http",
+        "Hooks: not supported (not supported)",
         "Reference: https://developers.openai.com/codex/skills",
         "Reference: https://developers.openai.com/codex/mcp",
       ].join("\n"),
@@ -92,9 +97,14 @@ describe("agentyx target show", () => {
         path: ".mcp.json",
         transports: ["stdio", "http"],
       },
+      hooks: {
+        supported: true,
+        path: ".claude/settings.json",
+      },
       references: [
         "https://code.claude.com/docs/en/skills",
         "https://docs.anthropic.com/en/docs/claude-code/mcp",
+        "https://code.claude.com/docs/en/hooks.md",
       ],
     });
   });
@@ -103,6 +113,7 @@ describe("agentyx target show", () => {
     const output = await runTargetShowCommand({ target: "codex", json: true, cwd: projectDir });
 
     expect(Object.keys(JSON.parse(output)).sort()).toEqual([
+      "hooks",
       "id",
       "mcp",
       "name",

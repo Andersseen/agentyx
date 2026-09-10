@@ -110,6 +110,28 @@ export async function applyInstallPlan(
     written.push(operation.relativePath);
   }
 
+  for (const operation of plan.hookOperations) {
+    assertInside(operation.path, plan.projectDir);
+    await assertInsideRealPath(operation.path, plan.projectDir);
+
+    if (operation.status === "conflict") {
+      conflicts.push(operation.relativePath);
+      continue;
+    }
+
+    const key = operationKey(operation.path, operation.content);
+
+    if (operation.status === "unchanged" || applied.has(key)) {
+      unchanged.push(operation.relativePath);
+      continue;
+    }
+
+    await mkdir(dirname(operation.path), { recursive: true });
+    await writeFile(operation.path, operation.content, "utf8");
+    applied.add(key);
+    written.push(operation.relativePath);
+  }
+
   for (const operation of plan.deletions) {
     assertInside(operation.path, operation.kind === "skill" ? plan.skillsPath : plan.projectDir);
     await assertInsideRealPath(
@@ -232,6 +254,28 @@ function nextManifest(previous: InstallManifest, plans: readonly InstallPlan[]):
         ),
         hash: hashContent(operation.content),
         created: previousEntry?.kind === "mcp" ? previousEntry.created : operation.created,
+      });
+    }
+
+    for (const operation of plan.hookOperations) {
+      if (operation.status === "conflict") {
+        continue;
+      }
+
+      const previousEntry = previousByPath.get(operation.relativePath);
+
+      rewritten.set(operation.relativePath, {
+        kind: "hook",
+        path: operation.relativePath,
+        hooks: [...operation.hooks],
+        targets: retainedTargets(
+          operation.usedBy,
+          previousByPath,
+          operation.relativePath,
+          plannedTargets,
+        ),
+        hash: hashContent(operation.content),
+        created: previousEntry?.kind === "hook" ? previousEntry.created : operation.created,
       });
     }
   }

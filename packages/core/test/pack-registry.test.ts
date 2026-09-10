@@ -101,6 +101,7 @@ describe("createPackRegistry", () => {
       skills: [],
       mcpServers: [],
       tools: [],
+      hooks: [],
     });
   });
 

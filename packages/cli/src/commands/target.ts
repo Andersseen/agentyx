@@ -28,6 +28,10 @@ export async function runTargetShowCommand(input: TargetShowCommandInput): Promi
     adapter.mcpConfigPath === undefined
       ? undefined
       : relative(input.cwd, adapter.mcpConfigPath(input.cwd)).split(sep).join("/");
+  const hooksPath =
+    adapter.hooksConfigPath === undefined
+      ? undefined
+      : relative(input.cwd, adapter.hooksConfigPath(input.cwd)).split(sep).join("/");
 
   if (input.json) {
     return toJson({
@@ -40,6 +44,10 @@ export async function runTargetShowCommand(input: TargetShowCommandInput): Promi
         path: mcpPath,
         transports: adapter.capabilities.mcp.transports ?? [],
       },
+      hooks: {
+        supported: adapter.capabilities.hooks,
+        path: hooksPath,
+      },
       references: adapter.references ?? [],
     });
   }
@@ -50,6 +58,7 @@ export async function runTargetShowCommand(input: TargetShowCommandInput): Promi
     `Skills: ${skillsPath}${detection.present ? "" : " (not present)"}`,
     `MCP: ${mcpPath ?? "not supported"}${adapter.capabilities.mcp.project ? "" : " (not supported)"}`,
     `MCP transports: ${(adapter.capabilities.mcp.transports ?? []).join(", ") || "none"}`,
+    `Hooks: ${hooksPath ?? "not supported"}${adapter.capabilities.hooks ? "" : " (not supported)"}`,
     ...(adapter.references ?? []).map((reference) => `Reference: ${reference}`),
   ].join("\n");
 }

@@ -96,11 +96,17 @@ export async function loadInstallManifest(
  */
 export function formatInstallManifest(manifest: InstallManifest): string {
   const entries = [...manifest.entries]
-    .map((entry) =>
-      entry.kind === "skill"
-        ? { ...entry, targets: sorted(entry.targets) }
-        : { ...entry, targets: sorted(entry.targets), servers: sorted(entry.servers) },
-    )
+    .map((entry) => {
+      if (entry.kind === "skill") {
+        return { ...entry, targets: sorted(entry.targets) };
+      }
+
+      if (entry.kind === "mcp") {
+        return { ...entry, targets: sorted(entry.targets), servers: sorted(entry.servers) };
+      }
+
+      return { ...entry, targets: sorted(entry.targets), hooks: sorted(entry.hooks) };
+    })
     .sort((left, right) => left.path.localeCompare(right.path));
 
   return `${JSON.stringify({ version: manifest.version, entries }, null, 2)}\n`;

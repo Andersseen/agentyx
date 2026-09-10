@@ -57,10 +57,11 @@ export interface DeleteOperation {
   readonly type: "delete-file";
   readonly status: DeleteOperationStatus;
   /**
-   * What is being removed. A `skill` file is Agentyx's alone; an `mcp` file is
-   * only ever removed when Agentyx created it and nothing is left in it.
+   * What is being removed. A `skill` file is Agentyx's alone; an `mcp` or
+   * `hook` file is only ever removed when Agentyx created it and nothing is
+   * left in it.
    */
-  readonly kind: "skill" | "mcp";
+  readonly kind: "skill" | "mcp" | "hook";
   readonly path: string;
   readonly relativePath: string;
   /** The skill the file was generated from, for `skill` removals. */
@@ -75,6 +76,23 @@ export interface McpInstallOperation {
   readonly path: string;
   readonly relativePath: string;
   readonly servers: readonly string[];
+  readonly content: string;
+  /**
+   * Whether this file did not exist before the plan was made. Recorded in the
+   * manifest, because removing a shared config file is only ever safe for one
+   * Agentyx created.
+   */
+  readonly created: boolean;
+  /** Targets that are satisfied by this exact physical write. */
+  readonly usedBy: readonly string[];
+}
+
+export interface HookInstallOperation {
+  readonly type: "configure-hooks";
+  readonly status: InstallOperationStatus;
+  readonly path: string;
+  readonly relativePath: string;
+  readonly hooks: readonly string[];
   readonly content: string;
   /**
    * Whether this file did not exist before the plan was made. Recorded in the
@@ -102,6 +120,8 @@ export interface InstallPlan {
   readonly operations: readonly InstallOperation[];
   /** Project-local MCP configuration operation, when the target supports it. */
   readonly mcpOperations: readonly McpInstallOperation[];
+  /** Project-local hook configuration operation, when the target supports it. */
+  readonly hookOperations: readonly HookInstallOperation[];
   /** Managed files that are no longer wanted. Empty unless pruning was asked for. */
   readonly deletions: readonly DeleteOperation[];
   /** MCP servers that could not be installed into the requested project scope. */
@@ -123,7 +143,7 @@ export function summarizeInstallPlans(plans: readonly InstallPlan[]): InstallPla
   const seen = new Set<string>();
 
   for (const plan of plans) {
-    for (const operation of [...plan.operations, ...plan.mcpOperations]) {
+    for (const operation of [...plan.operations, ...plan.mcpOperations, ...plan.hookOperations]) {
       const key = operationKey(operation.path, operation.content);
       if (seen.has(key)) {
         continue;

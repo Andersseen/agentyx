@@ -58,9 +58,26 @@ export const mcpManifestEntrySchema = z.strictObject({
   created: z.boolean(),
 });
 
+/**
+ * A provider hook configuration file Agentyx contributed entries to.
+ *
+ * Shares the `mcp` entry's shape and rationale: the file is shared with the
+ * user, so the entry records the hook names Agentyx added rather than
+ * claiming the whole document.
+ */
+export const hookManifestEntrySchema = z.strictObject({
+  kind: z.literal("hook"),
+  path: managedPathSchema,
+  hooks: z.array(z.string().min(1, "Hook names must be non-empty strings.")),
+  targets: targetsSchema,
+  hash: contentHashSchema,
+  created: z.boolean(),
+});
+
 export const installManifestEntrySchema = z.discriminatedUnion("kind", [
   skillManifestEntrySchema,
   mcpManifestEntrySchema,
+  hookManifestEntrySchema,
 ]);
 
 /** The `.agentyx.lock.json` record of everything Agentyx installed into a project. */
@@ -71,6 +88,7 @@ export const installManifestSchema = z.strictObject({
 
 export type SkillManifestEntry = z.infer<typeof skillManifestEntrySchema>;
 export type McpManifestEntry = z.infer<typeof mcpManifestEntrySchema>;
+export type HookManifestEntry = z.infer<typeof hookManifestEntrySchema>;
 export type InstallManifestEntry = z.infer<typeof installManifestEntrySchema>;
 
 /** A validated manifest, with defaults applied. */

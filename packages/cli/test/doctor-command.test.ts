@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   createDoctorCommand,
   doctorExitCode,
+  renderDoctorHookOutput,
   renderDoctorReport,
   runDoctorCommand,
 } from "../src/commands/doctor.js";
@@ -145,6 +146,9 @@ describe("agentyx doctor", () => {
       activation: "optional",
       active: false,
     });
+    expect(report.resolution.hooks).toEqual([
+      { name: "session-doctor-bootstrap", activation: "default", active: true },
+    ]);
     expect(report.efficiency.codebaseMemory).toBe("enabled");
   });
 
@@ -275,6 +279,29 @@ describe("agentyx doctor install manifest", () => {
   });
 });
 
+describe("renderDoctorHookOutput", () => {
+  it("is empty for a healthy project — zero tokens added to session context", async () => {
+    await cp(join(fixturesPath, "typescript-project"), projectDir, { recursive: true });
+    await writeConfig({ packs: ["technical", "typescript"], targets: ["codex"] });
+
+    const report = await runDoctorCommand({ json: false, cwd: projectDir });
+
+    expect(report.status).toBe("healthy");
+    expect(renderDoctorHookOutput(report)).toBe("");
+  });
+
+  it("is one line pointing at `agentyx doctor`, never the full report", async () => {
+    await writeFile(join(projectDir, "package.json"), "{}\n", "utf8");
+
+    const report = await runDoctorCommand({ json: false, cwd: projectDir });
+    const output = renderDoctorHookOutput(report);
+
+    expect(report.status).toBe("warnings");
+    expect(output.split("\n")).toHaveLength(1);
+    expect(output).toBe("Agentyx: 1 warning — run `agentyx doctor` for details.");
+  });
+});
+
 describe("doctor command wiring", () => {
   it("is part of the top-level program", () => {
     expect(createAgentyxProgram().commands.map((command) => command.name())).toContain("doctor");
@@ -284,6 +311,7 @@ describe("doctor command wiring", () => {
     expect(createDoctorCommand().options.map((option) => option.long)).toEqual([
       "--json",
       "--check",
+      "--hook",
     ]);
   });
 

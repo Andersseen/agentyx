@@ -1,4 +1,4 @@
-import type { McpServerDefinition, SkillDefinition } from "@agentyx/core";
+import type { HookDefinition, McpServerDefinition, SkillDefinition } from "@agentyx/core";
 
 export interface AdapterCapabilities {
   readonly skills: boolean;
@@ -7,6 +7,7 @@ export interface AdapterCapabilities {
     readonly global: boolean;
     readonly transports?: readonly string[];
   };
+  readonly hooks: boolean;
 }
 
 /**
@@ -23,6 +24,8 @@ export interface AdapterContext {
   readonly skills: readonly SkillDefinition[];
   /** Resolved MCP servers, in resolution order. */
   readonly mcpServers?: readonly McpServerDefinition[];
+  /** Resolved hooks, in resolution order. */
+  readonly hooks?: readonly HookDefinition[];
 }
 
 /** A file an adapter wants to exist, described without touching the filesystem. */
@@ -65,6 +68,33 @@ export interface ExistingMcpConfig {
   readonly remove: readonly string[];
 }
 
+export interface PlannedHookConfig {
+  readonly segments: readonly string[];
+  readonly content: string;
+  readonly hooks: readonly string[];
+  /**
+   * Whether the rendered document has nothing left in it.
+   *
+   * Only the code that knows the file format can answer this, and it is what
+   * lets an uninstall remove a config file Agentyx created outright instead of
+   * leaving an empty shell behind.
+   */
+  readonly empty: boolean;
+}
+
+/**
+ * The state of a provider's hook config before Agentyx touches it, plus the
+ * hook names to take back out of it.
+ *
+ * These files are shared with the user, so Agentyx merges into them rather than
+ * owning them: `remove` names only hooks Agentyx itself added, and everything
+ * else in the document is carried through untouched.
+ */
+export interface ExistingHookConfig {
+  readonly content: string | undefined;
+  readonly remove: readonly string[];
+}
+
 /** What Agentyx can say about a provider in a project without changing anything. */
 export interface AdapterDetection {
   readonly target: string;
@@ -96,8 +126,9 @@ export interface AdapterDetection {
  *   is shared machinery (`planTargetInstall`, `applyInstallPlan`) that every
  *   adapter reuses instead of reimplementing.
  *
- * There is no MCP, hook or permission method here on purpose; skills are the
- * only thing Agentyx installs today.
+ * There is no permission method here on purpose; skills, MCP servers and hooks
+ * are what Agentyx installs today, each behind its own capability flag so a
+ * provider that supports only some of them never has to fake the rest.
  */
 export interface AgentAdapter {
   /** Stable identifier, matching the value used in `targets`. */
@@ -117,4 +148,8 @@ export interface AgentAdapter {
   mcpConfigPath?(projectDir: string): string;
   /** Merges resolved MCP servers into existing provider config content, minus any removals. */
   planMcpConfig?(context: AdapterContext, existing: ExistingMcpConfig): PlannedMcpConfig;
+  /** Path to the project-local hook config, when supported. */
+  hooksConfigPath?(projectDir: string): string;
+  /** Merges resolved hooks into existing provider config content, minus any removals. */
+  planHookConfig?(context: AdapterContext, existing: ExistingHookConfig): PlannedHookConfig;
 }

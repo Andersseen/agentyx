@@ -39,6 +39,15 @@ const mcpEntry: InstallManifestEntry = {
   created: true,
 };
 
+const hookEntry: InstallManifestEntry = {
+  kind: "hook",
+  path: ".claude/settings.json",
+  hooks: ["session-doctor-bootstrap"],
+  targets: ["claude"],
+  hash: hashContent("{}"),
+  created: true,
+};
+
 describe("hashContent", () => {
   it("is stable and distinguishes content", () => {
     expect(hashContent("a")).toBe(hashContent("a"));
@@ -48,13 +57,13 @@ describe("hashContent", () => {
 });
 
 describe("parseInstallManifest", () => {
-  it("accepts skill and MCP entries", () => {
+  it("accepts skill, MCP and hook entries", () => {
     const manifest = parseInstallManifest({
       version: INSTALL_MANIFEST_VERSION,
-      entries: [skillEntry, mcpEntry],
+      entries: [skillEntry, mcpEntry, hookEntry],
     });
 
-    expect(manifest.entries).toHaveLength(2);
+    expect(manifest.entries).toHaveLength(3);
   });
 
   it("defaults entries to an empty list", () => {
@@ -119,10 +128,21 @@ describe("formatInstallManifest", () => {
     expect(formatInstallManifest(unsorted)).toContain('"codebase-memory",\n        "context7"');
   });
 
+  it("sorts hook names the same way it sorts servers", () => {
+    const manifest: InstallManifest = {
+      version: INSTALL_MANIFEST_VERSION,
+      entries: [{ ...hookEntry, hooks: ["session-doctor-bootstrap", "another-hook"] }],
+    };
+
+    expect(formatInstallManifest(manifest)).toContain(
+      '"hooks": [\n        "another-hook",\n        "session-doctor-bootstrap"\n      ]',
+    );
+  });
+
   it("round-trips through the parser", () => {
     const manifest: InstallManifest = {
       version: INSTALL_MANIFEST_VERSION,
-      entries: [skillEntry, mcpEntry],
+      entries: [skillEntry, mcpEntry, hookEntry],
     };
 
     expect(parseInstallManifest(JSON.parse(formatInstallManifest(manifest)))).toEqual(

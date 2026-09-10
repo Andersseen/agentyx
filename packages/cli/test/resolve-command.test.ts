@@ -37,6 +37,9 @@ describe("agentyx resolve <pack>", () => {
         "",
         "Tools",
         "  (none)",
+        "",
+        "Hooks",
+        "  (none)",
       ].join("\n"),
     );
   });

@@ -2,6 +2,7 @@ import { mkdtemp, readdir, readFile, rm, stat, symlink, utimes, writeFile } from
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
+  builtInHookRegistry,
   builtInMcpServerRegistry,
   builtInSkillRegistry,
   formatSkillMarkdown,
@@ -268,6 +269,28 @@ describe("applyInstallPlans manifest", () => {
     });
   });
 
+  it("records the hook entry it wrote", async () => {
+    await applyInstallPlans(
+      await planInstall({
+        targets: ["claude"],
+        projectDir,
+        skills: [],
+        hooks: [builtInHookRegistry.get("session-doctor-bootstrap")],
+      }),
+    );
+
+    const manifest = await loadInstallManifest(projectDir);
+    const hookEntry = manifest.entries.find((entry) => entry.kind === "hook");
+
+    expect(hookEntry).toMatchObject({
+      kind: "hook",
+      path: ".claude/settings.json",
+      hooks: ["session-doctor-bootstrap"],
+      targets: ["claude"],
+      created: true,
+    });
+  });
+
   it("makes a reinstall a no-op instead of a conflict", async () => {
     await applyInstallPlans(await planInstall({ targets: ["codex"], projectDir, skills }));
 
@@ -347,6 +370,52 @@ describe("applyInstallPlans manifest", () => {
 
     const manifest = await loadInstallManifest(projectDir);
     const plans = await planUninstall({ targets: ["codex"], projectDir, manifest });
+    await applyInstallPlans(plans, { manifest });
+
+    expect(await readdir(projectDir)).toEqual([]);
+  });
+
+  it("writes the resolved hook into .claude/settings.json", async () => {
+    await applyInstallPlans(
+      await planInstall({
+        targets: ["claude"],
+        projectDir,
+        skills,
+        hooks: [builtInHookRegistry.get("session-doctor-bootstrap")],
+      }),
+    );
+
+    const settings = JSON.parse(
+      await readFile(join(projectDir, ".claude", "settings.json"), "utf8"),
+    );
+
+    expect(settings.hooks.SessionStart).toEqual([
+      {
+        matcher: "startup",
+        hooks: [
+          {
+            type: "command",
+            command: "npx",
+            args: ["agentyx", "doctor", "--hook"],
+            statusMessage: "agentyx:session-doctor-bootstrap",
+          },
+        ],
+      },
+    ]);
+  });
+
+  it("leaves an uninstalled hook config with no trace of itself", async () => {
+    await applyInstallPlans(
+      await planInstall({
+        targets: ["claude"],
+        projectDir,
+        skills,
+        hooks: [builtInHookRegistry.get("session-doctor-bootstrap")],
+      }),
+    );
+
+    const manifest = await loadInstallManifest(projectDir);
+    const plans = await planUninstall({ targets: ["claude"], projectDir, manifest });
     await applyInstallPlans(plans, { manifest });
 
     expect(await readdir(projectDir)).toEqual([]);

@@ -28,6 +28,9 @@ import {
  *   and user MCP scopes live in `~/.claude.json`, which Agentyx deliberately does not mutate.
  * - **Kimi Code MCP** supports project scope in `.kimi-code/mcp.json` with an `mcpServers` object.
  *   Kimi also supports SSE, but Agentyx's provider-neutral MCP model currently covers stdio and HTTP.
+ * - **Claude Code hooks** support a `SessionStart` event in `.claude/settings.json` under
+ *   `hooks.SessionStart`. Codex and Kimi Code have no documented equivalent, so only Claude Code
+ *   declares `hooks` here — nothing is invented for the other two.
  *
  * Each definition also names the project-local paths that only that provider
  * creates. `.agents/skills` is shared by Codex and Kimi Code, so it cannot say
@@ -63,6 +66,10 @@ export const builtInAdapterDefinitions: readonly SkillDirectoryAdapterDefinition
       config: "claude-json",
       transports: ["stdio", "http"],
       reference: "https://docs.anthropic.com/en/docs/claude-code/mcp",
+    },
+    hooks: {
+      config: "claude-settings-json",
+      reference: "https://code.claude.com/docs/en/hooks.md",
     },
   },
   {

@@ -2,6 +2,8 @@ import { readFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import {
   emptyInstallManifest,
+  type HookDefinition,
+  type HookManifestEntry,
   hashContent,
   type InstallManifest,
   type InstallManifestEntry,
@@ -18,6 +20,7 @@ import { assertInside, assertInsideRealPath, toDisplayPath } from "./path.js";
 import type {
   DeleteOperation,
   DeleteOperationStatus,
+  HookInstallOperation,
   InstallOperation,
   InstallOperationStatus,
   InstallPlan,
@@ -33,6 +36,8 @@ export interface PlanTargetInstallInput {
   readonly skills: readonly SkillDefinition[];
   /** Resolved MCP servers, in resolution order. */
   readonly mcpServers?: readonly McpServerDefinition[];
+  /** Resolved hooks, in resolution order. */
+  readonly hooks?: readonly HookDefinition[];
   /**
    * What Agentyx installed last time. Without it every existing file looks like
    * someone else's, which is the safe default but makes reinstalling impossible.
@@ -85,12 +90,20 @@ export async function planTargetInstall(input: PlanTargetInstallInput): Promise<
   const manifest = input.manifest ?? emptyInstallManifest();
   const recorded = manifestEntriesByPath(manifest);
   const mcpServers = input.mcpServers ?? [];
-  const context = { projectDir, skills: input.skills, mcpServers };
+  const hooks = input.hooks ?? [];
+  const context = { projectDir, skills: input.skills, mcpServers, hooks };
   const files = adapter.planFiles(context);
   const operations = await Promise.all(
     files.map((file) => planFile(file, projectDir, skillsPath, adapter.id, recorded, input.force)),
   );
   const mcp = await planMcp({
+    adapter,
+    context,
+    projectDir,
+    recorded,
+    prune: input.prune === true,
+  });
+  const hookConfig = await planHooks({
     adapter,
     context,
     projectDir,
@@ -107,6 +120,7 @@ export async function planTargetInstall(input: PlanTargetInstallInput): Promise<
           plannedTargets: new Set(input.plannedTargets ?? [input.target]),
         })),
         ...mcp.deletions,
+        ...hookConfig.deletions,
       ]
     : [];
 
@@ -118,6 +132,7 @@ export async function planTargetInstall(input: PlanTargetInstallInput): Promise<
     relativeSkillsPath: toDisplayPath(projectDir, skillsPath),
     operations,
     mcpOperations: mcp.operations,
+    hookOperations: hookConfig.operations,
     deletions,
     unsupportedMcp:
       mcpServers.length > 0 && !adapter.capabilities.mcp.project
@@ -160,9 +175,9 @@ export async function planInstall(input: PlanInstallInput): Promise<InstallPlan[
  * @throws {MissingInstallTargetsError} when no target is supplied.
  */
 export async function planUninstall(
-  input: Omit<PlanInstallInput, "skills" | "mcpServers" | "prune">,
+  input: Omit<PlanInstallInput, "skills" | "mcpServers" | "hooks" | "prune">,
 ): Promise<InstallPlan[]> {
-  return planInstall({ ...input, skills: [], mcpServers: [], prune: true });
+  return planInstall({ ...input, skills: [], mcpServers: [], hooks: [], prune: true });
 }
 
 async function planFile(
@@ -251,7 +266,7 @@ async function planMcp(input: PlanMcpInput): Promise<{
     return { operations: [], deletions: [] };
   }
 
-  const existingContent = await readExistingMcpConfig(configPath);
+  const existingContent = await readExistingProviderConfig(configPath);
   const planned = adapter.planMcpConfig(context, { content: existingContent, remove });
 
   if (planned.empty && recordedEntry?.created === true) {
@@ -284,6 +299,100 @@ async function planMcp(input: PlanMcpInput): Promise<{
         path,
         relativePath: toDisplayPath(projectDir, path),
         servers: planned.servers,
+        content: planned.content,
+        created: existingContent === undefined,
+        usedBy: [adapter.id],
+      },
+    ],
+    deletions: [],
+  };
+}
+
+interface PlanHooksInput {
+  readonly adapter: AgentAdapter;
+  readonly context: {
+    readonly projectDir: string;
+    readonly skills: readonly SkillDefinition[];
+    readonly hooks: readonly HookDefinition[];
+  };
+  readonly projectDir: string;
+  readonly recorded: ReadonlyMap<string, InstallManifestEntry>;
+  readonly prune: boolean;
+}
+
+/**
+ * Plans the provider's hook configuration.
+ *
+ * Mirrors `planMcp` exactly: the destination file belongs to the user, so
+ * Agentyx merges its own hook entries into whatever is there and carries
+ * everything else through untouched. Pruning removes only the hooks the
+ * manifest says Agentyx added, and the file itself is removed only when
+ * Agentyx created it and nothing is left in it.
+ */
+async function planHooks(input: PlanHooksInput): Promise<{
+  readonly operations: readonly HookInstallOperation[];
+  readonly deletions: readonly DeleteOperation[];
+}> {
+  const { adapter, context, projectDir, recorded, prune } = input;
+
+  if (!adapter.capabilities.hooks || adapter.planHookConfig === undefined) {
+    return { operations: [], deletions: [] };
+  }
+
+  const configPath = adapter.hooksConfigPath?.(projectDir);
+
+  if (configPath === undefined) {
+    return { operations: [], deletions: [] };
+  }
+
+  assertInside(configPath, projectDir);
+  await assertInsideRealPath(configPath, projectDir);
+
+  const relativePath = toDisplayPath(projectDir, configPath);
+  const entry = recorded.get(relativePath);
+  const recordedEntry: HookManifestEntry | undefined = entry?.kind === "hook" ? entry : undefined;
+  const desired = new Set(context.hooks.map((hook) => hook.name));
+  const remove = prune
+    ? (recordedEntry?.hooks ?? []).filter((name) => !desired.has(name))
+    : ([] as readonly string[]);
+
+  if (context.hooks.length === 0 && remove.length === 0) {
+    return { operations: [], deletions: [] };
+  }
+
+  const existingContent = await readExistingProviderConfig(configPath);
+  const planned = adapter.planHookConfig(context, { content: existingContent, remove });
+
+  if (planned.empty && recordedEntry?.created === true) {
+    return {
+      operations: [],
+      deletions: [
+        {
+          type: "delete-file",
+          status: await deletionStatusOf(configPath, recordedEntry.hash),
+          kind: "hook",
+          path: configPath,
+          relativePath,
+          skill: undefined,
+          usedBy: recordedEntry.targets,
+        },
+      ],
+    };
+  }
+
+  const path = resolve(projectDir, join(...planned.segments));
+
+  assertInside(path, projectDir);
+  await assertInsideRealPath(path, projectDir);
+
+  return {
+    operations: [
+      {
+        type: "configure-hooks",
+        status: await statusOf(path, planned.content, undefined, true),
+        path,
+        relativePath: toDisplayPath(projectDir, path),
+        hooks: planned.hooks,
         content: planned.content,
         created: existingContent === undefined,
         usedBy: [adapter.id],
@@ -343,7 +452,7 @@ async function planSkillDeletions(
   );
 }
 
-async function readExistingMcpConfig(path: string): Promise<string | undefined> {
+async function readExistingProviderConfig(path: string): Promise<string | undefined> {
   try {
     return await readFile(path, "utf8");
   } catch (cause) {
@@ -416,7 +525,7 @@ function annotateSharedOperations(plans: readonly InstallPlan[]): InstallPlan[] 
   const byPath = new Map<string, { readonly content: string; readonly targets: Set<string> }>();
 
   for (const plan of plans) {
-    for (const operation of [...plan.operations, ...plan.mcpOperations]) {
+    for (const operation of [...plan.operations, ...plan.mcpOperations, ...plan.hookOperations]) {
       const found = byPath.get(operation.path);
 
       if (found !== undefined && found.content !== operation.content) {
@@ -450,6 +559,10 @@ function annotateSharedOperations(plans: readonly InstallPlan[]): InstallPlan[] 
       usedBy: usedBy.get(operationKey(operation.path, operation.content)) ?? [plan.target],
     })),
     mcpOperations: plan.mcpOperations.map((operation) => ({
+      ...operation,
+      usedBy: usedBy.get(operationKey(operation.path, operation.content)) ?? [plan.target],
+    })),
+    hookOperations: plan.hookOperations.map((operation) => ({
       ...operation,
       usedBy: usedBy.get(operationKey(operation.path, operation.content)) ?? [plan.target],
     })),
