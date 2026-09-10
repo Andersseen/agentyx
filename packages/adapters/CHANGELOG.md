@@ -1,5 +1,29 @@
 # @agentyx/adapters
 
+## 0.6.0
+
+### Minor Changes
+
+- 56dcf02: Add hooks as a resolvable resource alongside MCP servers and tools. The `efficiency` pack now
+  contributes a `session-doctor-bootstrap` hook that Claude Code installs into
+  `.claude/settings.json` as a `SessionStart` hook: it runs `agentyx doctor --hook` at session start,
+  which stays silent when the project is healthy and prints one line pointing at `agentyx doctor`
+  otherwise. Codex and Kimi Code have no documented hook mechanism, so the capability is Claude Code
+  only for now. `agentyx doctor`, `resolve`, `pack show`, `install`, `uninstall` and `target show` all
+  report hooks the same way they already report MCP servers and tools.
+- d0c0de0: Make the first run reach installed skills on its own. `init` now detects the agents already used in
+  the project and offers them as targets instead of a fixed pair, explains every pack, capability and
+  MCP server with its own description, and finishes by installing — interactively by asking, or with
+  the new `--install` flag. `install --select` replaces its scrollable lists with searchable ones and
+  an optional pack filter, so choosing among the built-in skills no longer means scrolling through all
+  of them. Adapters gain `detectConfiguredTargets` and report `configured` alongside `present`.
+
+### Patch Changes
+
+- Updated dependencies [56dcf02]
+- Updated dependencies [5f9762b]
+  - @agentyx/core@0.6.0
+
 ## 0.5.0
 
 ### Minor Changes
