@@ -306,6 +306,42 @@ export async function runDoctorCommand(input: DoctorCommandInput): Promise<Docto
       activation: hook.activation,
       active: resolved?.hooks.includes(hook.name) ?? false,
     })) ?? [];
+  const summary = plans === undefined ? undefined : summarizeInstallPlans(plans);
+
+  if (resolved !== undefined && unknownTargets.length === 0 && resolved.targets.length === 0) {
+    diagnostics.push({
+      level: "warning",
+      code: "no_targets_configured",
+      message: "No targets are configured. Add a target to .agentyx.json, or pass --target.",
+    });
+  }
+
+  if (summary !== undefined && summary.create + summary.update > 0) {
+    diagnostics.push({
+      level: "warning",
+      code: "installation_pending",
+      message: `${summary.create} file(s) to create and ${summary.update} to update are not yet installed. Run agentyx install to apply them.`,
+    });
+  }
+
+  for (const tool of toolReports) {
+    if (!tool.active || tool.available) {
+      continue;
+    }
+
+    const installHint = builtInToolRegistry.get(tool.name).installHint;
+
+    diagnostics.push({
+      level: "warning",
+      code: "required_tool_missing",
+      message: [
+        `Tool "${tool.name}" is selected but its executable was not found on PATH.`,
+        installHint,
+      ]
+        .filter((part) => part !== undefined)
+        .join(" "),
+    });
+  }
 
   return {
     status: statusOf(diagnostics),
@@ -335,7 +371,7 @@ export async function runDoctorCommand(input: DoctorCommandInput): Promise<Docto
     },
     targets: targetReports,
     installation: {
-      summary: plans === undefined ? undefined : summarizeInstallPlans(plans),
+      summary,
       manifest: {
         present: manifestState.present,
         entries: manifest.entries.length,

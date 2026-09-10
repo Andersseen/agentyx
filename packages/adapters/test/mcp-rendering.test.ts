@@ -1,4 +1,5 @@
 import { builtInMcpServerRegistry, mcpServerDefinitionSchema } from "@agentyx/core";
+import { parse } from "@iarna/toml";
 import { describe, expect, it } from "vitest";
 import { ProviderConfigParseError } from "../src/errors.js";
 import {
@@ -114,6 +115,32 @@ describe("MCP provider rendering", () => {
     expect(parsed.mcpServers.context7).toEqual({
       url: "https://mcp.context7.com/mcp",
     });
+  });
+
+  it("preserves unrelated TOML values by value, not by exact formatting", () => {
+    const existing = [
+      "# a comment above an unrelated key",
+      "count = 1.0",
+      "",
+      "[mcp_servers.other]",
+      'command = "other"',
+      "args = []",
+      "enabled = true",
+      "",
+    ].join("\n");
+
+    const { content } = renderCodexMcpConfig([builtInMcpServerRegistry.get("context7")], {
+      content: existing,
+      remove: [],
+    });
+    const parsed = parse(content) as { count?: number };
+
+    // The value survives...
+    expect(parsed.count).toBe(1);
+    // ...but @iarna/toml's round trip does not keep the comment or the float
+    // literal's exact style — a documented, accepted limitation, not a defect.
+    expect(content).not.toContain("# a comment above an unrelated key");
+    expect(content).not.toContain("1.0");
   });
 
   it("does not silently repair malformed MCP sections", () => {

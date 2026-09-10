@@ -128,6 +128,45 @@ describe("applyInstallPlan", () => {
     expect(second.operations.every((operation) => operation.status === "unchanged")).toBe(true);
   });
 
+  it("does not rewrite unchanged MCP or hook config files", async () => {
+    const environment = {
+      target: "claude" as const,
+      projectDir,
+      skills: [],
+      mcpServers: [builtInMcpServerRegistry.get("context7")],
+      hooks: [builtInHookRegistry.get("session-doctor-bootstrap")],
+    };
+    await applyInstallPlan(await planTargetInstall(environment));
+
+    const mcpPath = join(projectDir, ".mcp.json");
+    const hooksPath = join(projectDir, ".claude", "settings.json");
+    const marker = new Date(Date.UTC(2020, 0, 1));
+    await utimes(mcpPath, marker, marker);
+    await utimes(hooksPath, marker, marker);
+
+    const result = await applyInstallPlan(await planTargetInstall(environment));
+
+    expect(result.written).toEqual([]);
+    expect((await stat(mcpPath)).mtime.getTime()).toBe(marker.getTime());
+    expect((await stat(hooksPath)).mtime.getTime()).toBe(marker.getTime());
+  });
+
+  it("writes a byte-identical lock file across two installs of the same configuration", async () => {
+    await applyInstallPlans(
+      await planInstall({ targets: ["codex", "claude"], projectDir, skills }),
+    );
+    const first = await readFile(join(projectDir, ".agentyx.lock.json"), "utf8");
+
+    const manifest = await loadInstallManifest(projectDir);
+    await applyInstallPlans(
+      await planInstall({ targets: ["codex", "claude"], projectDir, skills, manifest }),
+      { manifest },
+    );
+    const second = await readFile(join(projectDir, ".agentyx.lock.json"), "utf8");
+
+    expect(second).toBe(first);
+  });
+
   it("rejects an operation outside the target directory", async () => {
     const plan = await planTargetInstall({ target: "codex", projectDir, skills });
     const escaping: InstallOperation = {

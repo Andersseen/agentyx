@@ -70,6 +70,27 @@ describe("loadAgentyxProject", () => {
     await expect(loadAgentyxProject(projectDir)).rejects.toThrow(/outside the project/);
   });
 
+  it("rejects a SKILL.md symlinked outside the skill directory", async () => {
+    const skillDir = join(projectDir, ".agentyx", "skills", "escaping");
+    await mkdir(skillDir, { recursive: true });
+    await writeFile(
+      join(outsideDir, "SKILL.md"),
+      "---\nname: escaping\ndescription: Attempts to escape.\n---\n\nSecret content.\n",
+      "utf8",
+    );
+    await symlink(join(outsideDir, "SKILL.md"), join(skillDir, "SKILL.md"));
+    await writeFile(
+      join(projectDir, ".agentyx.json"),
+      JSON.stringify({ skillDirectories: [".agentyx/skills"] }),
+      "utf8",
+    );
+
+    await expect(loadAgentyxProject(projectDir)).rejects.toThrow(LocalSkillDirectoryError);
+    await expect(loadAgentyxProject(projectDir)).rejects.toThrow(
+      /escaping\/SKILL\.md resolves outside the skill directory/,
+    );
+  });
+
   it("requires the declared Skill name to match its directory", async () => {
     const skillDir = join(projectDir, ".agentyx", "skills", "team-review");
     await mkdir(skillDir, { recursive: true });

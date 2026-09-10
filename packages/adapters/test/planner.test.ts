@@ -19,6 +19,7 @@ import {
   SharedInstallConflictError,
   UnknownAdapterError,
 } from "../src/errors.js";
+import { collectInstallConflicts } from "../src/plan.js";
 import { planInstall, planTargetInstall, planUninstall } from "../src/planner.js";
 import { createAdapterRegistry } from "../src/registry.js";
 
@@ -85,6 +86,31 @@ describe("planTargetInstall", () => {
         servers: ["context7"],
       },
     ]);
+  });
+
+  /**
+   * MCP and hook config files are shared with the user, so they are merged, not
+   * ownership-checked: `planMcp`/`planHooks` always plan them with `force: true`,
+   * regardless of any manifest record. A write to one of these files must never
+   * surface as a conflict — only a `delete-file` operation for one can, when a
+   * hand-edited file Agentyx once created can no longer be safely removed.
+   */
+  it("never reports an MCP config write as a conflict, even with no manifest record", async () => {
+    await writeFile(
+      join(projectDir, ".mcp.json"),
+      JSON.stringify({ mcpServers: { other: { type: "stdio", command: "other", args: [] } } }),
+      "utf8",
+    );
+
+    const plan = await planTargetInstall({
+      target: "claude",
+      projectDir,
+      skills: [],
+      mcpServers: [builtInMcpServerRegistry.get("context7")],
+    });
+
+    expect(plan.mcpOperations[0]?.status).not.toBe("conflict");
+    expect(collectInstallConflicts([plan])).toEqual([]);
   });
 
   it("represents unsupported project MCP scope without failing skill planning", async () => {

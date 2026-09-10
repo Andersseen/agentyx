@@ -33,6 +33,17 @@ export interface RenderedMcpConfig {
   readonly empty: boolean;
 }
 
+/**
+ * Merges resolved servers into Codex's `.codex/config.toml`.
+ *
+ * Unrelated keys and servers survive by value, not by byte-identical
+ * formatting: `@iarna/toml` parses and re-serializes the whole document, which
+ * drops comments and normalizes numeric literal style (for example `1.0`
+ * becomes `1`). A surgical text-preserving TOML editor would avoid this, but
+ * would trade a documented, low-risk formatting difference for a hand-rolled,
+ * untested parser — not a worthwhile trade for a config file whose only
+ * Agentyx-owned content is `mcp_servers`.
+ */
 export function renderCodexMcpConfig(
   servers: readonly McpServerDefinition[],
   existing: ExistingMcpConfig,
