@@ -123,6 +123,23 @@ describe("detect", () => {
   });
 });
 
+describe("hooks capability", () => {
+  it("is declared only for Claude Code, which has a documented hook mechanism", () => {
+    expect(claude.capabilities.hooks).toBe(true);
+    expect(codex.capabilities.hooks).toBe(false);
+    expect(kimi.capabilities.hooks).toBe(false);
+  });
+
+  it("wires hooksConfigPath and planHookConfig only where the capability is declared", () => {
+    expect(claude.hooksConfigPath?.(projectDir)).toBe(join(projectDir, ".claude", "settings.json"));
+    expect(claude.planHookConfig).toBeDefined();
+    expect(codex.hooksConfigPath).toBeUndefined();
+    expect(codex.planHookConfig).toBeUndefined();
+    expect(kimi.hooksConfigPath).toBeUndefined();
+    expect(kimi.planHookConfig).toBeUndefined();
+  });
+});
+
 describe("createSkillDirectoryAdapter", () => {
   it("builds a third-party adapter from a directory alone", () => {
     const adapter = createSkillDirectoryAdapter({

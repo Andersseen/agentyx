@@ -25,7 +25,8 @@
       "Bash(git diff:*)",
       "Bash(git log:*)",
       "Bash(git show:*)",
-      "Bash(git branch:*)"
+      "Bash(git branch:*)",
+      "Bash(xargs grep -ln \"isCancel\")"
     ],
     "deny": [
       "Bash(pnpm publish:*)",

@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { UnknownAdapterError } from "@agentyx/adapters";
 import { UnknownPackError } from "@agentyx/core";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   createInitCommand,
   InitError,
@@ -12,6 +12,23 @@ import {
   runInitCommand,
 } from "../src/commands/init.js";
 import { createAgentyxProgram } from "../src/index.js";
+
+/**
+ * A minimal `@clack/prompts` double, hoisted so `vi.mock` below can reference
+ * it. `isCancel` here checks against our own symbol rather than the library's
+ * private one, since `@clack/core`'s cancel symbol is never exported.
+ */
+const clackMocks = vi.hoisted(() => ({
+  CANCEL: Symbol("test-cancel"),
+  confirm: vi.fn(),
+}));
+
+vi.mock("@clack/prompts", () => ({
+  autocompleteMultiselect: vi.fn(),
+  multiselect: vi.fn(),
+  confirm: clackMocks.confirm,
+  isCancel: (value: unknown) => value === clackMocks.CANCEL,
+}));
 
 const fixturesPath = fileURLToPath(
   new URL("../../../packages/core/test/fixtures", import.meta.url),
@@ -25,6 +42,7 @@ beforeEach(async () => {
 
 afterEach(async () => {
   await rm(projectDir, { recursive: true, force: true });
+  clackMocks.confirm.mockReset();
 });
 
 describe("agentyx init --yes", () => {
@@ -156,6 +174,34 @@ describe("agentyx init --yes", () => {
         "utf8",
       ),
     ).toBe("hand-written, not Agentyx's\n");
+  });
+
+  /**
+   * The interactive flow asks twice: once to create the config, once to install
+   * it. Cancelling either one must leave the project exactly as it was — the
+   * config is only written after every prompt has resolved without cancelling.
+   */
+  it("writes nothing when the install prompt is cancelled after confirming creation", async () => {
+    await cp(join(fixturesPath, "typescript-project"), projectDir, { recursive: true });
+    clackMocks.confirm
+      .mockResolvedValueOnce(true) // "Create .agentyx.json?"
+      .mockResolvedValueOnce(clackMocks.CANCEL); // "Install the skills ... now?"
+
+    await expect(
+      runInitCommand({
+        packs: ["technical"],
+        enable: [],
+        targets: ["codex"],
+        yes: false,
+        force: false,
+        json: false,
+        cwd: projectDir,
+      }),
+    ).rejects.toThrow(InitError);
+
+    expect(await readdir(projectDir)).not.toContain(".agentyx.json");
+    expect(await readdir(projectDir)).not.toContain(".agents");
+    expect(clackMocks.confirm).toHaveBeenCalledTimes(2);
   });
 
   it("infers Angular packs safely but still requires explicit targets", async () => {

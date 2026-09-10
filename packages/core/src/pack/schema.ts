@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { hookReferenceSchema } from "../hook/schema.js";
 import { mcpServerReferenceSchema } from "../mcp/schema.js";
 import { skillNameSchema } from "../skill/schema.js";
 import { toolReferenceSchema } from "../tool/schema.js";
@@ -41,6 +42,10 @@ export const packDefinitionSchema = z.strictObject({
   tools: z
     .array(toolReferenceSchema)
     .describe("Local tools this pack contributes, in declaration order.")
+    .default([]),
+  hooks: z
+    .array(hookReferenceSchema)
+    .describe("Provider lifecycle hooks this pack contributes, in declaration order.")
     .default([]),
 });
 

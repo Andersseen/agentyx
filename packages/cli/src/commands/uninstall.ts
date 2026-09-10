@@ -119,6 +119,11 @@ function renderJson(input: UninstallCommandInput, plans: readonly InstallPlan[])
         servers: operation.servers,
         path: operation.relativePath,
       })),
+      hookOperations: plan.hookOperations.map((operation) => ({
+        status: operation.status,
+        hooks: operation.hooks,
+        path: operation.relativePath,
+      })),
     })),
     summary: summarizeInstallPlans(plans),
   });
@@ -130,7 +135,7 @@ function collectTarget(value: string, previous: string[]): string[] {
 
 export function createUninstallCommand(): Command {
   return new Command("uninstall")
-    .description("Remove the skills and MCP entries Agentyx installed into this project.")
+    .description("Remove the skills, MCP entries and hooks Agentyx installed into this project.")
     .option(
       "--target <id>",
       "uninstall only this target instead of every recorded one; repeatable",

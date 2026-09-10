@@ -140,6 +140,37 @@
               ]
             },
             "description": "Local tools this pack contributes, in declaration order."
+          },
+          "hooks": {
+            "type": "array",
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 1,
+                  "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "type": "string",
+                      "minLength": 1,
+                      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+                      "description": "Hook identifier."
+                    },
+                    "activation": {
+                      "default": "default",
+                      "type": "string",
+                      "enum": ["default", "optional"]
+                    }
+                  },
+                  "required": ["name"],
+                  "additionalProperties": false
+                }
+              ]
+            },
+            "description": "Provider lifecycle hooks this pack contributes, in declaration order."
           }
         },
         "required": ["name"],

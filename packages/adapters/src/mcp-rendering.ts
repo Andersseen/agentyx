@@ -3,12 +3,11 @@ import type { McpServerDefinition } from "@agentyx/core";
 import { parse, stringify } from "@iarna/toml";
 import type { ExistingMcpConfig } from "./adapter.js";
 import { ProviderConfigParseError } from "./errors.js";
+import { type JsonRecord, optionalRecord, parseJsonObject, sortRecord } from "./json-config.js";
 
 export const CODEX_MCP_CONFIG_SEGMENTS = [".codex", "config.toml"] as const;
 export const CLAUDE_MCP_CONFIG_SEGMENTS = [".mcp.json"] as const;
 export const KIMI_MCP_CONFIG_SEGMENTS = [".kimi-code", "mcp.json"] as const;
-
-type JsonRecord = Record<string, unknown>;
 
 export function codexMcpConfigPath(projectDir: string): string {
   return resolve(projectDir, ...CODEX_MCP_CONFIG_SEGMENTS);
@@ -34,6 +33,17 @@ export interface RenderedMcpConfig {
   readonly empty: boolean;
 }
 
+/**
+ * Merges resolved servers into Codex's `.codex/config.toml`.
+ *
+ * Unrelated keys and servers survive by value, not by byte-identical
+ * formatting: `@iarna/toml` parses and re-serializes the whole document, which
+ * drops comments and normalizes numeric literal style (for example `1.0`
+ * becomes `1`). A surgical text-preserving TOML editor would avoid this, but
+ * would trade a documented, low-risk formatting difference for a hand-rolled,
+ * untested parser — not a worthwhile trade for a config file whose only
+ * Agentyx-owned content is `mcp_servers`.
+ */
 export function renderCodexMcpConfig(
   servers: readonly McpServerDefinition[],
   existing: ExistingMcpConfig,
@@ -217,24 +227,6 @@ function renderPlainEnv(env: Record<string, { fromEnv: string }>): Record<string
   );
 }
 
-function parseJsonObject(content: string | undefined, path: string): JsonRecord {
-  if (content === undefined) {
-    return {};
-  }
-
-  try {
-    const parsed = JSON.parse(content) as unknown;
-
-    if (!isRecord(parsed)) {
-      throw new Error("expected a JSON object");
-    }
-
-    return parsed;
-  } catch (cause) {
-    throw new ProviderConfigParseError(path, cause);
-  }
-}
-
 function parseTomlObject(content: string | undefined, path: string): JsonRecord {
   if (content === undefined) {
     return {};
@@ -245,28 +237,4 @@ function parseTomlObject(content: string | undefined, path: string): JsonRecord 
   } catch (cause) {
     throw new ProviderConfigParseError(path, cause);
   }
-}
-
-function optionalRecord(value: unknown, path: string, field: string): JsonRecord {
-  if (value === undefined) {
-    return {};
-  }
-
-  if (isRecord(value)) {
-    return value;
-  }
-
-  throw new ProviderConfigParseError(path, new Error(`${field} must be an object`));
-}
-
-function isRecord(value: unknown): value is JsonRecord {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-function sortRecord(record: JsonRecord): JsonRecord {
-  return Object.fromEntries(
-    Object.entries(record)
-      .sort(([left], [right]) => left.localeCompare(right))
-      .map(([key, value]) => [key, isRecord(value) ? sortRecord(value) : value]),
-  );
 }

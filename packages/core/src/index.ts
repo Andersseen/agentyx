@@ -25,6 +25,38 @@ export {
   skillDirectorySchema,
 } from "./config/schema.js";
 export { AgentyxError } from "./errors.js";
+export { builtInHookNames, builtInHookRegistry } from "./hook/built-in.js";
+export {
+  DuplicateHookError,
+  InvalidHookError,
+  UnknownHookError,
+} from "./hook/errors.js";
+export type { HookMetadata, HookRegistry, HookSource } from "./hook/registry.js";
+export { createHookRegistry } from "./hook/registry.js";
+export {
+  collectPackHookReferences,
+  collectPackHooks,
+  filterEffectiveHooks,
+  resolvePackHookReferences,
+  resolvePackHooks,
+} from "./hook/resolver.js";
+export type {
+  HookActivationLevel,
+  HookDefinition,
+  HookDefinitionInput,
+  HookEvent,
+  HookReference,
+  HookReferenceInput,
+} from "./hook/schema.js";
+export {
+  HOOK_ACTIVATION_LEVELS,
+  HOOK_EVENTS,
+  hookActivationLevelSchema,
+  hookDefinitionSchema,
+  hookEventSchema,
+  hookNameSchema,
+  hookReferenceSchema,
+} from "./hook/schema.js";
 export type { AgentyxIssue } from "./issues.js";
 export { AgentyxManifestParseError, AgentyxManifestValidationError } from "./manifest/errors.js";
 export {
@@ -38,6 +70,7 @@ export {
   parseInstallManifest,
 } from "./manifest/io.js";
 export type {
+  HookManifestEntry,
   InstallManifest,
   InstallManifestEntry,
   InstallManifestInput,
@@ -45,6 +78,7 @@ export type {
   SkillManifestEntry,
 } from "./manifest/schema.js";
 export {
+  hookManifestEntrySchema,
   INSTALL_MANIFEST_VERSION,
   installManifestEntrySchema,
   installManifestSchema,

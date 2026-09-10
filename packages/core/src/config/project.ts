@@ -88,15 +88,30 @@ async function loadLocalSkillSources(
       }
 
       const filePath = join(rootRealPath, entry.name, "SKILL.md");
-      let markdown: string;
+      let realFilePath: string;
 
       try {
-        markdown = await readFile(filePath, "utf8");
+        realFilePath = await realpath(filePath);
       } catch (cause) {
         if (cause instanceof Error && (cause as NodeJS.ErrnoException).code === "ENOENT") {
           continue;
         }
 
+        throw localDirectoryError(directory, `cannot read ${entry.name}/SKILL.md`, cause);
+      }
+
+      if (!isInside(realFilePath, rootRealPath)) {
+        throw new LocalSkillDirectoryError(
+          directory,
+          `${entry.name}/SKILL.md resolves outside the skill directory`,
+        );
+      }
+
+      let markdown: string;
+
+      try {
+        markdown = await readFile(realFilePath, "utf8");
+      } catch (cause) {
         throw localDirectoryError(directory, `cannot read ${entry.name}/SKILL.md`, cause);
       }
 

@@ -17,6 +17,7 @@ import {
   AgentyxManifestParseError,
   AgentyxManifestValidationError,
   type AgentyxProject,
+  builtInHookRegistry,
   builtInMcpServerRegistry,
   builtInSkillRegistry,
   builtInToolRegistry,
@@ -72,6 +73,11 @@ export interface DoctorReport {
       readonly activation: string;
       readonly active: boolean;
       readonly available: boolean;
+    }[];
+    readonly hooks: readonly {
+      readonly name: string;
+      readonly activation: string;
+      readonly active: boolean;
     }[];
   };
   readonly targets: readonly {
@@ -237,6 +243,7 @@ export async function runDoctorCommand(input: DoctorCommandInput): Promise<Docto
         (configState.project?.skillRegistry ?? builtInSkillRegistry).get(name),
       ),
       mcpServers: resolved.mcpServers.map((name) => builtInMcpServerRegistry.get(name)),
+      hooks: resolved.hooks.map((name) => builtInHookRegistry.get(name)),
       manifest,
       prune: true,
     });
@@ -293,6 +300,48 @@ export async function runDoctorCommand(input: DoctorCommandInput): Promise<Docto
       activation: server.activation,
       active: resolved?.mcpServers.includes(server.name) ?? false,
     })) ?? [];
+  const hookReports =
+    resolved?.declaredHooks.map((hook) => ({
+      name: hook.name,
+      activation: hook.activation,
+      active: resolved?.hooks.includes(hook.name) ?? false,
+    })) ?? [];
+  const summary = plans === undefined ? undefined : summarizeInstallPlans(plans);
+
+  if (resolved !== undefined && unknownTargets.length === 0 && resolved.targets.length === 0) {
+    diagnostics.push({
+      level: "warning",
+      code: "no_targets_configured",
+      message: "No targets are configured. Add a target to .agentyx.json, or pass --target.",
+    });
+  }
+
+  if (summary !== undefined && summary.create + summary.update > 0) {
+    diagnostics.push({
+      level: "warning",
+      code: "installation_pending",
+      message: `${summary.create} file(s) to create and ${summary.update} to update are not yet installed. Run agentyx install to apply them.`,
+    });
+  }
+
+  for (const tool of toolReports) {
+    if (!tool.active || tool.available) {
+      continue;
+    }
+
+    const installHint = builtInToolRegistry.get(tool.name).installHint;
+
+    diagnostics.push({
+      level: "warning",
+      code: "required_tool_missing",
+      message: [
+        `Tool "${tool.name}" is selected but its executable was not found on PATH.`,
+        installHint,
+      ]
+        .filter((part) => part !== undefined)
+        .join(" "),
+    });
+  }
 
   return {
     status: statusOf(diagnostics),
@@ -318,10 +367,11 @@ export async function runDoctorCommand(input: DoctorCommandInput): Promise<Docto
       skillsCount: resolved?.skills.length ?? 0,
       mcp: mcpReports,
       tools: toolReports,
+      hooks: hookReports,
     },
     targets: targetReports,
     installation: {
-      summary: plans === undefined ? undefined : summarizeInstallPlans(plans),
+      summary,
       manifest: {
         present: manifestState.present,
         entries: manifest.entries.length,
@@ -390,6 +440,11 @@ export function renderDoctorReport(report: DoctorReport, json: boolean): string 
           )
           .join(", ") || "none"
       }`,
+      `hooks: ${
+        report.resolution.hooks
+          .map((hook) => `${hook.name} (${hook.active ? "active" : "disabled"})`)
+          .join(", ") || "none"
+      }`,
     ]),
     section(
       "Targets",
@@ -432,6 +487,30 @@ export function renderDoctorReport(report: DoctorReport, json: boolean): string 
       ),
     ),
   ].join("\n");
+}
+
+/**
+ * The `SessionStart` hook's own output: silent when healthy, one short line
+ * otherwise.
+ *
+ * A `SessionStart` hook's stdout is injected into the agent's context verbatim
+ * on exit 0 — empty stdout adds nothing, so a healthy project costs zero
+ * tokens at session start. A problem gets exactly one line pointing at
+ * `agentyx doctor` for the full report, never the report itself.
+ */
+export function renderDoctorHookOutput(report: DoctorReport): string {
+  if (report.status === "healthy") {
+    return "";
+  }
+
+  const errors = report.diagnostics.filter((diagnostic) => diagnostic.level === "error").length;
+  const warnings = report.diagnostics.filter((diagnostic) => diagnostic.level === "warning").length;
+  const parts = [
+    errors > 0 ? `${errors} error${errors === 1 ? "" : "s"}` : undefined,
+    warnings > 0 ? `${warnings} warning${warnings === 1 ? "" : "s"}` : undefined,
+  ].filter((part) => part !== undefined);
+
+  return `Agentyx: ${parts.join(", ")} — run \`agentyx doctor\` for details.`;
 }
 
 export function doctorExitCode(report: DoctorReport, check: boolean): number | undefined {
@@ -595,8 +674,23 @@ export function createDoctorCommand(): Command {
     .description("Inspect Agentyx configuration, resolution, targets and installability.")
     .option("--json", "print machine-readable JSON only", false)
     .option("--check", "exit with code 1 on warnings as well as errors", false)
-    .action(async (options: { json: boolean; check: boolean }) => {
+    .option(
+      "--hook",
+      "print a one-line SessionStart hook summary instead of the full report; nothing when healthy",
+      false,
+    )
+    .action(async (options: { json: boolean; check: boolean; hook: boolean }) => {
       const report = await runDoctorCommand({ json: options.json, cwd: process.cwd() });
+
+      if (options.hook) {
+        const output = renderDoctorHookOutput(report);
+
+        if (output.length > 0) {
+          process.stdout.write(`${output}\n`);
+        }
+
+        return;
+      }
 
       process.stdout.write(`${renderDoctorReport(report, options.json)}\n`);
 

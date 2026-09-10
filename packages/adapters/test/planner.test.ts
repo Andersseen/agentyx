@@ -2,6 +2,7 @@ import { mkdir, mkdtemp, readdir, readFile, rm, symlink, writeFile } from "node:
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
+  builtInHookRegistry,
   builtInMcpServerRegistry,
   builtInSkillRegistry,
   formatSkillMarkdown,
@@ -18,6 +19,7 @@ import {
   SharedInstallConflictError,
   UnknownAdapterError,
 } from "../src/errors.js";
+import { collectInstallConflicts } from "../src/plan.js";
 import { planInstall, planTargetInstall, planUninstall } from "../src/planner.js";
 import { createAdapterRegistry } from "../src/registry.js";
 
@@ -86,12 +88,37 @@ describe("planTargetInstall", () => {
     ]);
   });
 
+  /**
+   * MCP and hook config files are shared with the user, so they are merged, not
+   * ownership-checked: `planMcp`/`planHooks` always plan them with `force: true`,
+   * regardless of any manifest record. A write to one of these files must never
+   * surface as a conflict — only a `delete-file` operation for one can, when a
+   * hand-edited file Agentyx once created can no longer be safely removed.
+   */
+  it("never reports an MCP config write as a conflict, even with no manifest record", async () => {
+    await writeFile(
+      join(projectDir, ".mcp.json"),
+      JSON.stringify({ mcpServers: { other: { type: "stdio", command: "other", args: [] } } }),
+      "utf8",
+    );
+
+    const plan = await planTargetInstall({
+      target: "claude",
+      projectDir,
+      skills: [],
+      mcpServers: [builtInMcpServerRegistry.get("context7")],
+    });
+
+    expect(plan.mcpOperations[0]?.status).not.toBe("conflict");
+    expect(collectInstallConflicts([plan])).toEqual([]);
+  });
+
   it("represents unsupported project MCP scope without failing skill planning", async () => {
     const registry = createAdapterRegistry([
       {
         id: "acme",
         name: "Acme",
-        capabilities: { skills: true, mcp: { project: false, global: false } },
+        capabilities: { skills: true, mcp: { project: false, global: false }, hooks: false },
         skillsPath: (dir) => join(dir, ".acme"),
         detect: async (dir) => ({
           target: "acme",
@@ -273,7 +300,7 @@ describe("planTargetInstall", () => {
       {
         id: "acme",
         name: "Acme",
-        capabilities: { skills: true, mcp: { project: false, global: false } },
+        capabilities: { skills: true, mcp: { project: false, global: false }, hooks: false },
         skillsPath: (dir) => join(dir, ".acme"),
         detect: async (dir) => ({
           target: "acme",
@@ -321,7 +348,7 @@ describe("planTargetInstall containment", () => {
   const escaping = (segments: readonly string[]): AgentAdapter => ({
     id: "escaping",
     name: "Escaping",
-    capabilities: { skills: true, mcp: { project: false, global: false } },
+    capabilities: { skills: true, mcp: { project: false, global: false }, hooks: false },
     skillsPath: (dir) => join(dir, ".escaping"),
     detect: async (dir) => ({
       target: "escaping",
@@ -354,7 +381,7 @@ describe("planTargetInstall containment", () => {
       withAdapter({
         id: "escaping",
         name: "Escaping",
-        capabilities: { skills: true, mcp: { project: false, global: false } },
+        capabilities: { skills: true, mcp: { project: false, global: false }, hooks: false },
         skillsPath: () => tmpdir(),
         detect: async () => ({
           target: "escaping",
@@ -372,7 +399,7 @@ describe("planTargetInstall containment", () => {
       withAdapter({
         id: "escaping",
         name: "Escaping",
-        capabilities: { skills: true, mcp: { project: false, global: false } },
+        capabilities: { skills: true, mcp: { project: false, global: false }, hooks: false },
         skillsPath: (dir) => dir,
         detect: async (dir) => ({
           target: "escaping",
@@ -524,7 +551,7 @@ describe("planInstall", () => {
     const shared = (id: string, content: string): AgentAdapter => ({
       id,
       name: id,
-      capabilities: { skills: true, mcp: { project: false, global: false } },
+      capabilities: { skills: true, mcp: { project: false, global: false }, hooks: false },
       skillsPath: (dir) => join(dir, ".agents", "skills"),
       detect: async (dir) => ({
         target: id,
@@ -778,6 +805,187 @@ describe("pruning", () => {
 
     expect(plan.deletions).toEqual([]);
     expect(plan.mcpOperations[0]?.content).toBe("{}\n");
+  });
+
+  it("plans hook configuration beside skill files", async () => {
+    const plan = await planTargetInstall({
+      target: "claude",
+      projectDir,
+      skills,
+      hooks: [builtInHookRegistry.get("session-doctor-bootstrap")],
+    });
+
+    expect(plan.operations).toHaveLength(2);
+    expect(plan.hookOperations).toMatchObject([
+      {
+        type: "configure-hooks",
+        status: "create",
+        relativePath: ".claude/settings.json",
+        hooks: ["session-doctor-bootstrap"],
+      },
+    ]);
+  });
+
+  it("takes back only the hook it added", async () => {
+    await mkdir(join(projectDir, ".claude"), { recursive: true });
+    await writeFile(
+      join(projectDir, ".claude", "settings.json"),
+      `${JSON.stringify(
+        {
+          hooks: {
+            SessionStart: [
+              {
+                matcher: "startup",
+                hooks: [
+                  { type: "command", command: "echo", args: ["mine"] },
+                  {
+                    type: "command",
+                    command: "npx",
+                    args: ["agentyx", "doctor", "--hook"],
+                    statusMessage: "agentyx:session-doctor-bootstrap",
+                  },
+                ],
+              },
+            ],
+          },
+        },
+        null,
+        2,
+      )}\n`,
+      "utf8",
+    );
+
+    const plan = await planTargetInstall({
+      target: "claude",
+      projectDir,
+      skills,
+      hooks: [],
+      prune: true,
+      manifest: {
+        version: INSTALL_MANIFEST_VERSION,
+        entries: [
+          {
+            kind: "hook",
+            path: ".claude/settings.json",
+            hooks: ["session-doctor-bootstrap"],
+            targets: ["claude"],
+            hash: hashContent("irrelevant"),
+            created: false,
+          },
+        ],
+      },
+    });
+
+    const parsed = JSON.parse(plan.hookOperations[0]?.content ?? "{}");
+
+    expect(parsed.hooks.SessionStart).toEqual([
+      { matcher: "startup", hooks: [{ type: "command", command: "echo", args: ["mine"] }] },
+    ]);
+    expect(plan.deletions).toEqual([]);
+  });
+
+  it("removes a hook config it created once nothing is left in it", async () => {
+    const content = `${JSON.stringify(
+      {
+        hooks: {
+          SessionStart: [
+            {
+              matcher: "startup",
+              hooks: [
+                {
+                  type: "command",
+                  command: "npx",
+                  args: ["agentyx", "doctor", "--hook"],
+                  statusMessage: "agentyx:session-doctor-bootstrap",
+                },
+              ],
+            },
+          ],
+        },
+      },
+      null,
+      2,
+    )}\n`;
+    await mkdir(join(projectDir, ".claude"), { recursive: true });
+    await writeFile(join(projectDir, ".claude", "settings.json"), content, "utf8");
+
+    const plan = await planTargetInstall({
+      target: "claude",
+      projectDir,
+      skills,
+      hooks: [],
+      prune: true,
+      manifest: {
+        version: INSTALL_MANIFEST_VERSION,
+        entries: [
+          {
+            kind: "hook",
+            path: ".claude/settings.json",
+            hooks: ["session-doctor-bootstrap"],
+            targets: ["claude"],
+            hash: hashContent(content),
+            created: true,
+          },
+        ],
+      },
+    });
+
+    expect(plan.hookOperations).toEqual([]);
+    expect(plan.deletions[0]).toMatchObject({
+      kind: "hook",
+      status: "delete",
+      relativePath: ".claude/settings.json",
+    });
+  });
+
+  it("keeps a hook config the user already had, even when emptied", async () => {
+    const content = `${JSON.stringify(
+      {
+        hooks: {
+          SessionStart: [
+            {
+              matcher: "startup",
+              hooks: [
+                {
+                  type: "command",
+                  command: "npx",
+                  args: ["agentyx", "doctor", "--hook"],
+                  statusMessage: "agentyx:session-doctor-bootstrap",
+                },
+              ],
+            },
+          ],
+        },
+      },
+      null,
+      2,
+    )}\n`;
+    await mkdir(join(projectDir, ".claude"), { recursive: true });
+    await writeFile(join(projectDir, ".claude", "settings.json"), content, "utf8");
+
+    const plan = await planTargetInstall({
+      target: "claude",
+      projectDir,
+      skills,
+      hooks: [],
+      prune: true,
+      manifest: {
+        version: INSTALL_MANIFEST_VERSION,
+        entries: [
+          {
+            kind: "hook",
+            path: ".claude/settings.json",
+            hooks: ["session-doctor-bootstrap"],
+            targets: ["claude"],
+            hash: hashContent(content),
+            created: false,
+          },
+        ],
+      },
+    });
+
+    expect(plan.deletions).toEqual([]);
+    expect(plan.hookOperations[0]?.content).toBe("{}\n");
   });
 });
 

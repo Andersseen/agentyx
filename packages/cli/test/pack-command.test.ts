@@ -36,6 +36,7 @@ describe("agentyx pack show", () => {
     expect(output).toContain("context-efficient-development");
     expect(output).toContain("codebase-memory    optional");
     expect(output).toContain("rtk    optional");
+    expect(output).toContain("session-doctor-bootstrap    default");
   });
 
   it("prints JSON", () => {

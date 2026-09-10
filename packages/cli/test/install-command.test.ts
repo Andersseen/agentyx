@@ -124,6 +124,48 @@ describe("agentyx install <pack>", () => {
   });
 });
 
+describe("agentyx install hooks", () => {
+  it("writes the efficiency pack's SessionStart hook into .claude/settings.json", async () => {
+    await runInstallCommand({
+      ...baseInput,
+      packs: ["efficiency"],
+      targets: ["claude"],
+      cwd: projectDir,
+    });
+
+    const settings = JSON.parse(
+      await readFile(join(projectDir, ".claude", "settings.json"), "utf8"),
+    );
+
+    expect(settings.hooks.SessionStart).toEqual([
+      {
+        matcher: "startup",
+        hooks: [
+          {
+            type: "command",
+            command: "npx",
+            args: ["agentyx", "doctor", "--hook"],
+            statusMessage: "agentyx:session-doctor-bootstrap",
+          },
+        ],
+      },
+    ]);
+  });
+
+  it("skips hooks under --skills-only", async () => {
+    const output = await runInstallCommand({
+      ...baseInput,
+      packs: ["efficiency"],
+      targets: ["claude"],
+      skillsOnly: true,
+      dryRun: true,
+      cwd: projectDir,
+    });
+
+    expect(output).not.toContain("session-doctor-bootstrap");
+  });
+});
+
 describe("agentyx install --skill/--mcp", () => {
   it("installs selected skills and MCP servers manually", async () => {
     const output = await runInstallCommand({

@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   createDoctorCommand,
   doctorExitCode,
+  renderDoctorHookOutput,
   renderDoctorReport,
   runDoctorCommand,
 } from "../src/commands/doctor.js";
@@ -46,13 +47,19 @@ async function writeConfig(config: Record<string, unknown>): Promise<void> {
 }
 
 describe("agentyx doctor", () => {
-  it("reports a healthy project", async () => {
+  it("warns that a resolvable configuration is not yet installed", async () => {
     await cp(join(fixturesPath, "typescript-project"), projectDir, { recursive: true });
     await writeConfig({ packs: ["technical", "typescript"], targets: ["codex"] });
 
     const report = await runDoctorCommand({ json: false, cwd: projectDir });
 
-    expect(report.status).toBe("healthy");
+    expect(report.status).toBe("warnings");
+    expect(report.diagnostics).toContainEqual({
+      level: "warning",
+      code: "installation_pending",
+      message:
+        "7 file(s) to create and 0 to update are not yet installed. Run agentyx install to apply them.",
+    });
     expect(report.project).toMatchObject({
       packageManager: "pnpm",
       detectedPacks: ["typescript"],
@@ -114,6 +121,59 @@ describe("agentyx doctor", () => {
     });
   });
 
+  it("warns when no targets are configured", async () => {
+    await writeConfig({ packs: ["technical"], targets: [] });
+
+    const report = await runDoctorCommand({ json: false, cwd: projectDir });
+
+    expect(report.status).toBe("warnings");
+    expect(report.diagnostics).toContainEqual({
+      level: "warning",
+      code: "no_targets_configured",
+      message: "No targets are configured. Add a target to .agentyx.json, or pass --target.",
+    });
+  });
+
+  it("warns when a selected tool's executable is not on PATH", async () => {
+    await writeConfig({ packs: ["efficiency"], enable: ["rtk"], targets: ["codex"] });
+    const originalPath = process.env.PATH;
+    process.env.PATH = "";
+
+    try {
+      const report = await runDoctorCommand({ json: false, cwd: projectDir });
+
+      expect(report.resolution.tools).toContainEqual({
+        name: "rtk",
+        activation: "optional",
+        active: true,
+        available: false,
+      });
+      expect(report.status).toBe("warnings");
+      expect(report.diagnostics).toContainEqual({
+        level: "warning",
+        code: "required_tool_missing",
+        message:
+          'Tool "rtk" is selected but its executable was not found on PATH. Install from the rtk-ai/rtk project if your local workflow benefits from it.',
+      });
+    } finally {
+      if (originalPath === undefined) {
+        delete process.env.PATH;
+      } else {
+        process.env.PATH = originalPath;
+      }
+    }
+  });
+
+  it("does not warn about a disabled optional tool that is absent", async () => {
+    await writeConfig({ packs: ["efficiency"], targets: ["codex"] });
+
+    const report = await runDoctorCommand({ json: false, cwd: projectDir });
+
+    expect(
+      report.diagnostics.some((diagnostic) => diagnostic.code === "required_tool_missing"),
+    ).toBe(false);
+  });
+
   it("warns when Angular is detected but only TypeScript is configured", async () => {
     await cp(join(fixturesPath, "angular-project"), projectDir, { recursive: true });
     await writeConfig({ packs: ["technical", "typescript"], targets: ["codex"] });
@@ -145,6 +205,9 @@ describe("agentyx doctor", () => {
       activation: "optional",
       active: false,
     });
+    expect(report.resolution.hooks).toEqual([
+      { name: "session-doctor-bootstrap", activation: "default", active: true },
+    ]);
     expect(report.efficiency.codebaseMemory).toBe("enabled");
   });
 
@@ -275,6 +338,30 @@ describe("agentyx doctor install manifest", () => {
   });
 });
 
+describe("renderDoctorHookOutput", () => {
+  it("is empty for a healthy project — zero tokens added to session context", async () => {
+    await cp(join(fixturesPath, "typescript-project"), projectDir, { recursive: true });
+    await writeConfig({ packs: ["technical", "typescript"], targets: ["codex"] });
+    await runInstallCommand({ ...installInput, cwd: projectDir });
+
+    const report = await runDoctorCommand({ json: false, cwd: projectDir });
+
+    expect(report.status).toBe("healthy");
+    expect(renderDoctorHookOutput(report)).toBe("");
+  });
+
+  it("is one line pointing at `agentyx doctor`, never the full report", async () => {
+    await writeFile(join(projectDir, "package.json"), "{}\n", "utf8");
+
+    const report = await runDoctorCommand({ json: false, cwd: projectDir });
+    const output = renderDoctorHookOutput(report);
+
+    expect(report.status).toBe("warnings");
+    expect(output.split("\n")).toHaveLength(1);
+    expect(output).toBe("Agentyx: 1 warning — run `agentyx doctor` for details.");
+  });
+});
+
 describe("doctor command wiring", () => {
   it("is part of the top-level program", () => {
     expect(createAgentyxProgram().commands.map((command) => command.name())).toContain("doctor");
@@ -284,6 +371,7 @@ describe("doctor command wiring", () => {
     expect(createDoctorCommand().options.map((option) => option.long)).toEqual([
       "--json",
       "--check",
+      "--hook",
     ]);
   });
 

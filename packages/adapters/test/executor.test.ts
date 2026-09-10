@@ -2,6 +2,7 @@ import { mkdtemp, readdir, readFile, rm, stat, symlink, utimes, writeFile } from
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
+  builtInHookRegistry,
   builtInMcpServerRegistry,
   builtInSkillRegistry,
   formatSkillMarkdown,
@@ -125,6 +126,45 @@ describe("applyInstallPlan", () => {
     const second = await planTargetInstall({ target: "claude", projectDir, skills });
 
     expect(second.operations.every((operation) => operation.status === "unchanged")).toBe(true);
+  });
+
+  it("does not rewrite unchanged MCP or hook config files", async () => {
+    const environment = {
+      target: "claude" as const,
+      projectDir,
+      skills: [],
+      mcpServers: [builtInMcpServerRegistry.get("context7")],
+      hooks: [builtInHookRegistry.get("session-doctor-bootstrap")],
+    };
+    await applyInstallPlan(await planTargetInstall(environment));
+
+    const mcpPath = join(projectDir, ".mcp.json");
+    const hooksPath = join(projectDir, ".claude", "settings.json");
+    const marker = new Date(Date.UTC(2020, 0, 1));
+    await utimes(mcpPath, marker, marker);
+    await utimes(hooksPath, marker, marker);
+
+    const result = await applyInstallPlan(await planTargetInstall(environment));
+
+    expect(result.written).toEqual([]);
+    expect((await stat(mcpPath)).mtime.getTime()).toBe(marker.getTime());
+    expect((await stat(hooksPath)).mtime.getTime()).toBe(marker.getTime());
+  });
+
+  it("writes a byte-identical lock file across two installs of the same configuration", async () => {
+    await applyInstallPlans(
+      await planInstall({ targets: ["codex", "claude"], projectDir, skills }),
+    );
+    const first = await readFile(join(projectDir, ".agentyx.lock.json"), "utf8");
+
+    const manifest = await loadInstallManifest(projectDir);
+    await applyInstallPlans(
+      await planInstall({ targets: ["codex", "claude"], projectDir, skills, manifest }),
+      { manifest },
+    );
+    const second = await readFile(join(projectDir, ".agentyx.lock.json"), "utf8");
+
+    expect(second).toBe(first);
   });
 
   it("rejects an operation outside the target directory", async () => {
@@ -268,6 +308,28 @@ describe("applyInstallPlans manifest", () => {
     });
   });
 
+  it("records the hook entry it wrote", async () => {
+    await applyInstallPlans(
+      await planInstall({
+        targets: ["claude"],
+        projectDir,
+        skills: [],
+        hooks: [builtInHookRegistry.get("session-doctor-bootstrap")],
+      }),
+    );
+
+    const manifest = await loadInstallManifest(projectDir);
+    const hookEntry = manifest.entries.find((entry) => entry.kind === "hook");
+
+    expect(hookEntry).toMatchObject({
+      kind: "hook",
+      path: ".claude/settings.json",
+      hooks: ["session-doctor-bootstrap"],
+      targets: ["claude"],
+      created: true,
+    });
+  });
+
   it("makes a reinstall a no-op instead of a conflict", async () => {
     await applyInstallPlans(await planInstall({ targets: ["codex"], projectDir, skills }));
 
@@ -347,6 +409,52 @@ describe("applyInstallPlans manifest", () => {
 
     const manifest = await loadInstallManifest(projectDir);
     const plans = await planUninstall({ targets: ["codex"], projectDir, manifest });
+    await applyInstallPlans(plans, { manifest });
+
+    expect(await readdir(projectDir)).toEqual([]);
+  });
+
+  it("writes the resolved hook into .claude/settings.json", async () => {
+    await applyInstallPlans(
+      await planInstall({
+        targets: ["claude"],
+        projectDir,
+        skills,
+        hooks: [builtInHookRegistry.get("session-doctor-bootstrap")],
+      }),
+    );
+
+    const settings = JSON.parse(
+      await readFile(join(projectDir, ".claude", "settings.json"), "utf8"),
+    );
+
+    expect(settings.hooks.SessionStart).toEqual([
+      {
+        matcher: "startup",
+        hooks: [
+          {
+            type: "command",
+            command: "npx",
+            args: ["agentyx", "doctor", "--hook"],
+            statusMessage: "agentyx:session-doctor-bootstrap",
+          },
+        ],
+      },
+    ]);
+  });
+
+  it("leaves an uninstalled hook config with no trace of itself", async () => {
+    await applyInstallPlans(
+      await planInstall({
+        targets: ["claude"],
+        projectDir,
+        skills,
+        hooks: [builtInHookRegistry.get("session-doctor-bootstrap")],
+      }),
+    );
+
+    const manifest = await loadInstallManifest(projectDir);
+    const plans = await planUninstall({ targets: ["claude"], projectDir, manifest });
     await applyInstallPlans(plans, { manifest });
 
     expect(await readdir(projectDir)).toEqual([]);

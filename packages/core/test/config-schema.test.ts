@@ -30,6 +30,7 @@ describe("agentyxConfigSchema", () => {
           skills: ["team-review"],
           mcpServers: [],
           tools: [],
+          hooks: [],
         },
       ],
       trustedSources: [

@@ -61,6 +61,7 @@ export const builtInPacks: readonly PackDefinitionInput[] = [
     ],
     mcpServers: [{ name: "codebase-memory", activation: "optional" }],
     tools: [{ name: "rtk", activation: "optional" }],
+    hooks: [{ name: "session-doctor-bootstrap", activation: "default" }],
   },
   {
     name: "agentic",
