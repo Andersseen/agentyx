@@ -1,5 +1,24 @@
 # @agentyx/core
 
+## 0.6.0
+
+### Minor Changes
+
+- 56dcf02: Add hooks as a resolvable resource alongside MCP servers and tools. The `efficiency` pack now
+  contributes a `session-doctor-bootstrap` hook that Claude Code installs into
+  `.claude/settings.json` as a `SessionStart` hook: it runs `agentyx doctor --hook` at session start,
+  which stays silent when the project is healthy and prints one line pointing at `agentyx doctor`
+  otherwise. Codex and Kimi Code have no documented hook mechanism, so the capability is Claude Code
+  only for now. `agentyx doctor`, `resolve`, `pack show`, `install`, `uninstall` and `target show` all
+  report hooks the same way they already report MCP servers and tools.
+
+### Patch Changes
+
+- 5f9762b: Fix a local Skill directory escape: a `SKILL.md` that is itself a symlink pointing outside its
+  configured skill directory is now rejected with `LocalSkillDirectoryError` instead of being read
+  and parsed. The directory containing each skill was already verified real; the file inside it was
+  not.
+
 ## 0.5.0
 
 ### Minor Changes
