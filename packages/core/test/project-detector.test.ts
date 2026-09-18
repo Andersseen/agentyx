@@ -8,7 +8,7 @@ import { buildAgentyxConfig, detectProject, formatAgentyxConfig } from "../src/i
 const fixturesPath = fileURLToPath(new URL("fixtures", import.meta.url));
 
 describe("detectProject", () => {
-  it("detects a TypeScript project and recommends the TypeScript pack", async () => {
+  it("detects a TypeScript project", async () => {
     const detection = await detectProject(join(fixturesPath, "typescript-project"));
 
     expect(detection.packageJson.present).toBe(true);
@@ -18,11 +18,14 @@ describe("detectProject", () => {
       ambiguous: false,
       lockfiles: ["pnpm-lock.yaml"],
     });
-    expect(detection.detectedPacks).toEqual(["typescript"]);
-    expect(detection.recommendedPacks).toEqual(["technical", "typescript"]);
+    expect(detection.signals.typescript).toMatchObject({
+      dependency: { dependency: "typescript", field: "devDependencies" },
+      tsconfig: true,
+    });
+    expect(detection.signals.angular).toBeUndefined();
   });
 
-  it("detects Angular from package metadata and recommends the Angular pack", async () => {
+  it("detects Angular from package metadata", async () => {
     const detection = await detectProject(join(fixturesPath, "angular-project"));
 
     expect(detection.packageManager).toMatchObject({
@@ -31,8 +34,14 @@ describe("detectProject", () => {
       ambiguous: false,
       lockfiles: ["package-lock.json"],
     });
-    expect(detection.detectedPacks).toEqual(["typescript", "angular"]);
-    expect(detection.recommendedPacks).toEqual(["technical", "typescript", "angular"]);
+    expect(detection.signals.angular).toEqual({
+      dependency: "@angular/core",
+      field: "dependencies",
+    });
+    expect(detection.signals.typescript.dependency).toEqual({
+      dependency: "typescript",
+      field: "devDependencies",
+    });
   });
 
   it("reports ambiguous lockfiles without guessing", async () => {
@@ -65,8 +74,64 @@ describe("detectProject", () => {
 
       const detection = await detectProject(projectDir);
 
-      expect(detection.detectedPacks).toEqual(["typescript"]);
-      expect(detection.recommendedPacks).toEqual(["technical", "typescript"]);
+      expect(detection.signals.typescript).toEqual({ dependency: undefined, tsconfig: true });
+    } finally {
+      await rm(projectDir, { recursive: true, force: true });
+    }
+  });
+
+  it("detects known devops, testing, observability and data signals", async () => {
+    const projectDir = await mkdtemp(join(tmpdir(), "agentyx-detect-"));
+
+    try {
+      await writeFile(
+        join(projectDir, "package.json"),
+        JSON.stringify({
+          devDependencies: { vitest: "^2.0.0", "@playwright/test": "^1.0.0" },
+          dependencies: { "@sentry/node": "^8.0.0", "@supabase/supabase-js": "^2.0.0" },
+        }),
+        "utf8",
+      );
+      await writeFile(join(projectDir, "Dockerfile"), "FROM node\n", "utf8");
+
+      const detection = await detectProject(projectDir);
+
+      expect(detection.signals.testFrameworks.map((match) => match.dependency)).toEqual([
+        "vitest",
+        "@playwright/test",
+      ]);
+      expect(detection.signals.browserTesting.map((match) => match.dependency)).toEqual([
+        "@playwright/test",
+      ]);
+      expect(detection.signals.observability).toEqual([
+        { dependency: "@sentry/node", field: "dependencies" },
+      ]);
+      expect(detection.signals.dataTooling).toEqual([
+        { dependency: "@supabase/supabase-js", field: "dependencies" },
+      ]);
+      expect(detection.signals.containers).toEqual({ dockerfile: true, compose: false });
+    } finally {
+      await rm(projectDir, { recursive: true, force: true });
+    }
+  });
+
+  it("detects monorepo markers", async () => {
+    const projectDir = await mkdtemp(join(tmpdir(), "agentyx-detect-"));
+
+    try {
+      await writeFile(join(projectDir, "package.json"), "{}\n", "utf8");
+      await writeFile(
+        join(projectDir, "pnpm-workspace.yaml"),
+        "packages:\n  - packages/*\n",
+        "utf8",
+      );
+
+      const detection = await detectProject(projectDir);
+
+      expect(detection.signals.monorepo).toEqual({
+        detected: true,
+        markers: ["pnpm-workspace.yaml"],
+      });
     } finally {
       await rm(projectDir, { recursive: true, force: true });
     }

@@ -23,6 +23,7 @@ export function runMcpShowCommand(input: McpShowCommandInput): string {
     server.description,
     `transport: ${server.transport}`,
     `context cost: ${server.contextCost ?? "unspecified"}`,
+    `runtime: ${runtimeDescription(server.runtime)}`,
   ];
 
   if (server.transport === "stdio") {
@@ -71,4 +72,16 @@ export function createMcpCommand(): Command {
 
 function redactedServer(server: ReturnType<typeof builtInMcpServerRegistry.get>) {
   return server;
+}
+
+function runtimeDescription(runtime: string | undefined): string {
+  if (runtime === "may-download") {
+    return "may-download — launching this server can fetch a package on first use";
+  }
+
+  if (runtime === "local") {
+    return "local — no package download on launch";
+  }
+
+  return "unspecified";
 }

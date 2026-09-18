@@ -10,13 +10,15 @@ import {
   detectProject,
   formatAgentyxConfig,
   parseAgentyxConfig,
+  recommendCapabilities,
   resolveAgentyxConfig,
 } from "@agentyx/core";
 import { autocompleteMultiselect, confirm, isCancel, multiselect } from "@clack/prompts";
 import { Command } from "commander";
 import { emit, section, toJson } from "../output.js";
-import { formatPackName, packOptions, targetOptions } from "../prompts.js";
+import { packOptions, targetOptions } from "../prompts.js";
 import { executeInstall, type InstallOutcome, type InstallReport } from "./install.js";
+import { detectedLabels } from "./recommend.js";
 
 export interface InitCommandInput {
   readonly packs: readonly string[];
@@ -125,7 +127,10 @@ export async function planNonInteractiveInit(input: InitCommandInput): Promise<I
     );
   }
 
-  const packs = input.packs.length > 0 ? [...input.packs] : [...detection.recommendedPacks];
+  const packs =
+    input.packs.length > 0
+      ? [...input.packs]
+      : recommendCapabilities(detection.signals).packs.map((pack) => pack.name);
 
   if (packs.length === 0) {
     throw new InitError("init_pack_required", "Pass at least one --pack.");
@@ -169,8 +174,13 @@ async function planInteractiveInit(input: InitCommandInput): Promise<InitPlan> {
     );
   }
 
+  const recommendation = recommendCapabilities(detection.signals);
+  const recommendedPackNames = recommendation.packs.map((pack) => pack.name);
+  const recommendedReasons = new Map(
+    recommendation.packs.map((pack) => [pack.name, pack.reasons[0] ?? ""] as const),
+  );
   const detected = [
-    ...detection.detectedPacks.map(formatPackName),
+    ...detectedLabels(detection.signals),
     detection.packageManager.name ??
       (detection.packageManager.ambiguous ? "ambiguous package manager" : undefined),
   ].filter((value): value is string => value !== undefined);
@@ -180,11 +190,11 @@ async function planInteractiveInit(input: InitCommandInput): Promise<InitPlan> {
       : await promptValue(
           autocompleteMultiselect({
             message: ["Agentyx", "", section("Detected", detected), "", "Packs"].join("\n"),
-            initialValues: [...detection.recommendedPacks],
+            initialValues: recommendedPackNames,
             required: true,
             maxItems: 10,
             placeholder: "Type to search packs...",
-            options: [...packOptions()],
+            options: [...packOptions(recommendedReasons)],
           }),
         );
   const configured = await detectConfiguredTargets(input.cwd);
@@ -244,7 +254,7 @@ async function planInteractiveInit(input: InitCommandInput): Promise<InitPlan> {
     input.install ??
     (await promptValue(
       confirm({
-        message: `Install the skills into ${formatTargetNames(targets)} now?`,
+        message: `Install into ${formatTargetNames(targets)} now?`,
         initialValue: true,
       }),
     ));
@@ -287,7 +297,9 @@ function renderInitText(plan: InitPlan, install: string | undefined): string {
     section("Enabled", plan.enable),
     section("Targets", plan.targets),
     ...(install === undefined
-      ? [`Next: agentyx install — writes these skills into ${formatTargetNames(plan.targets)}.`]
+      ? [
+          `Next: agentyx install — writes Skills, MCP and hooks into ${formatTargetNames(plan.targets)}.`,
+        ]
       : ["", install, "", "Next: agentyx doctor"]),
   ].join("\n");
 }
@@ -379,10 +391,22 @@ function optionalCapabilitiesFor(packs: readonly string[]): readonly {
  * An optional MCP server's own description, or `undefined` when it is not a
  * built-in one. A pack may reference a server Agentyx does not ship, and that
  * must not stop the prompt from offering it.
+ *
+ * A server whose launch can fetch a package on first use says so here, at the point where enabling
+ * it is one keystroke away — not only in `mcp show` after the fact.
  */
 function describeMcpServer(name: string): string | undefined {
-  return builtInMcpServerRegistry.listMetadata().find((server) => server.name === name)
-    ?.description;
+  const server = builtInMcpServerRegistry
+    .listMetadata()
+    .find((candidate) => candidate.name === name);
+
+  if (server === undefined) {
+    return undefined;
+  }
+
+  return server.runtime === "may-download"
+    ? `${server.description} (runtime may fetch a package on first launch)`
+    : server.description;
 }
 
 export function createInitCommand(): Command {

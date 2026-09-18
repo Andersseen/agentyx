@@ -66,19 +66,45 @@ Current optional capabilities:
 
 - `rtk`: Rust Token Killer executable, detected as `rtk` on PATH.
 - `codebase-memory`: structural code-intelligence MCP backed by a persistent knowledge graph.
-- `playwright`: browser automation MCP, declared by `testing`.
+- `playwright`: browser automation MCP, declared by `testing`. Runtime: may fetch a package on
+  first launch.
 - `chrome-devtools`: performance tracing and page inspection MCP, declared by `performance` and
-  `accessibility`.
+  `accessibility`. Runtime: may fetch a package on first launch.
 - `sentry`: production issue and stack trace MCP, declared by `observability`.
 - `supabase`: project schema and log MCP, declared by `data`. Reads `SUPABASE_ACCESS_TOKEN` from the
-  environment.
+  environment. Runtime: may fetch a package on first launch.
 - `github`: repository, issue and pull-request MCP, declared by `git`.
 
 Remote MCP servers are declared without credentials so the agent performs its own authorization
 flow. Agentyx never writes a token into a provider configuration file.
 
 Agentyx never downloads binaries, runs installers, edits PATH, or installs third-party runtime
-Skills for these capabilities.
+Skills for these capabilities. Some capabilities do launch a command that can — an MCP server
+started through `npx` can fetch that package from the registry the first time a provider runs it.
+That is a property of the command itself, not of Agentyx, and every server that runs one is marked
+"may fetch a package on first launch" above; `agentyx mcp show <name>` and `agentyx pack show <pack>`
+print the same distinction (`runtime: local` vs `runtime: may-download`) before you enable anything.
+
+## Discovery
+
+Agentyx ships more packs and capabilities than any project needs. `recommend` reads this project's
+`package.json` and a small set of known files — Dockerfile, CI workflow directory, workspace
+markers — and suggests which built-in packs and optional capabilities fit, each with a reason:
+
+```sh
+pnpm dlx @agentyx/cli recommend
+pnpm dlx @agentyx/cli recommend --json
+```
+
+This is deterministic detection, not an AI feature: no network request, no telemetry, and no LLM
+call decides a recommendation. `recommend` never writes anything — no `.agentyx.json`, no installed
+files, no enabled MCP server or hook. `init` uses the same engine to pick sensible defaults, but you
+choose what's actually selected either way:
+
+```sh
+pnpm dlx @agentyx/cli recommend
+pnpm dlx @agentyx/cli init
+```
 
 ## Usage
 

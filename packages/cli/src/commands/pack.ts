@@ -1,4 +1,4 @@
-import { builtInPackRegistry, UnknownPackError } from "@agentyx/core";
+import { builtInMcpServerRegistry, builtInPackRegistry, UnknownPackError } from "@agentyx/core";
 import { Command } from "commander";
 import { emit, section, toJson } from "../output.js";
 
@@ -31,7 +31,9 @@ export function runPackShowCommand(input: PackShowCommandInput): string {
     section("Skills", pack.skills),
     section(
       "MCP",
-      pack.mcpServers.map((server) => `${server.name}    ${server.activation}`),
+      pack.mcpServers.map(
+        (server) => `${server.name}    ${server.activation}${mayDownloadHint(server.name)}`,
+      ),
     ),
     section(
       "Tools",
@@ -64,4 +66,15 @@ export function createPackCommand(): Command {
     });
 
   return pack;
+}
+
+/** A short warning for an MCP capability whose launch can fetch a package on first use. */
+function mayDownloadHint(name: string): string {
+  if (!builtInMcpServerRegistry.has(name)) {
+    return "";
+  }
+
+  return builtInMcpServerRegistry.get(name).runtime === "may-download"
+    ? " (runtime may fetch a package on first launch)"
+    : "";
 }

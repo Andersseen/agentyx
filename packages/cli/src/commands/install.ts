@@ -497,7 +497,7 @@ function unique(values: readonly string[]): readonly string[] {
 
 export function createInstallCommand(): Command {
   return new Command("install")
-    .description("Install the resolved skills into each target agent.")
+    .description("Install the resolved skills, MCP servers and hooks into each target agent.")
     .argument("[packs...]", "install these packs instead of the ones in .agentyx.json")
     .option(
       "--enable <id>",

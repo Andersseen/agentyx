@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { builtInHookRegistry } from "../src/hook/built-in.js";
 import { builtInMcpServerRegistry } from "../src/mcp/built-in.js";
 import { DuplicatePackError } from "../src/pack/errors.js";
 import { builtInPackRegistry, builtInPacks, createPackRegistry } from "../src/pack/registry.js";
@@ -38,6 +39,57 @@ describe("built-in pack registry", () => {
   it("describes every built-in pack", () => {
     for (const pack of builtInPacks) {
       expect(pack.description).toBeTruthy();
+    }
+  });
+
+  /**
+   * A description explains what the pack is for, not how great it is. This is a light heuristic,
+   * not a style linter: it catches the obvious failure mode (marketing copy pasted into product
+   * data) without policing prose.
+   */
+  it("keeps pack descriptions purpose-focused rather than promotional", () => {
+    const marketingWords =
+      /\b(amazing|revolutionary|best[- ]in[- ]class|game[- ]changing|cutting[- ]edge|world[- ]class)\b/i;
+
+    for (const pack of builtInPackRegistry.values()) {
+      const description = pack.description ?? "";
+
+      expect(
+        description.length,
+        `${pack.name} description is too short to be meaningful`,
+      ).toBeGreaterThan(15);
+      expect(description, `${pack.name} description reads as marketing copy`).not.toMatch(
+        marketingWords,
+      );
+      expect(description, `${pack.name} description should not shout`).not.toMatch(/!/);
+    }
+  });
+
+  it("only references hooks the built-in hook registry provides", () => {
+    for (const pack of builtInPackRegistry.values()) {
+      for (const hook of pack.hooks) {
+        expect(builtInHookRegistry.has(hook.name), `${pack.name} references ${hook.name}`).toBe(
+          true,
+        );
+      }
+    }
+  });
+
+  it("names an optional capability in exactly one activation, never both default and optional", () => {
+    for (const pack of builtInPackRegistry.values()) {
+      for (const kind of ["mcpServers", "tools", "hooks"] as const) {
+        const activations = new Map<string, string>();
+
+        for (const reference of pack[kind]) {
+          const existing = activations.get(reference.name);
+
+          expect(
+            existing === undefined || existing === reference.activation,
+            `${pack.name} declares ${reference.name} as both ${existing} and ${reference.activation}`,
+          ).toBe(true);
+          activations.set(reference.name, reference.activation);
+        }
+      }
     }
   });
 

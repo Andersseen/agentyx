@@ -8,6 +8,18 @@ export const MCP_CONTEXT_COSTS = ["low", "medium", "high"] as const;
 
 export const mcpContextCostSchema = z.enum(MCP_CONTEXT_COSTS);
 
+/**
+ * Whether *launching* this server, as configured, can by itself fetch a package from a registry.
+ *
+ * Agentyx itself never downloads or installs anything. This describes the command a provider would
+ * run once the server is enabled: `"local"` only ever runs an already-local binary or calls a
+ * remote HTTP endpoint; `"may-download"` shells out through something like `npx`, which can fetch a
+ * package on first launch even when Agentyx did nothing but write the configuration.
+ */
+export const MCP_RUNTIMES = ["local", "may-download"] as const;
+
+export const mcpRuntimeSchema = z.enum(MCP_RUNTIMES);
+
 export const mcpServerNameSchema = z
   .string()
   .min(1, "MCP server names must be non-empty strings.")
@@ -30,6 +42,9 @@ const commonMcpServerDefinitionSchema = z.strictObject({
   transport: z.enum(["stdio", "http"]),
   contextCost: mcpContextCostSchema
     .describe("Qualitative context/tool-schema overhead classification; not token accounting.")
+    .optional(),
+  runtime: mcpRuntimeSchema
+    .describe("Whether launching this server can fetch a package on first use; see MCP_RUNTIMES.")
     .optional(),
 });
 
@@ -80,6 +95,7 @@ export const mcpServerDefinitionSchema = z.discriminatedUnion("transport", [
 export type McpEnvReference = z.infer<typeof mcpEnvReferenceSchema>;
 export type McpCapabilityLevel = z.infer<typeof mcpCapabilityLevelSchema>;
 export type McpContextCost = z.infer<typeof mcpContextCostSchema>;
+export type McpRuntime = z.infer<typeof mcpRuntimeSchema>;
 export type McpServerDefinition = z.infer<typeof mcpServerDefinitionSchema>;
 export type McpServerDefinitionInput = z.input<typeof mcpServerDefinitionSchema>;
 export type McpServerReference = z.infer<typeof mcpServerReferenceSchema>;

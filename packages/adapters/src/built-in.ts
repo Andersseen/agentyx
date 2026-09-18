@@ -28,9 +28,16 @@ import {
  *   and user MCP scopes live in `~/.claude.json`, which Agentyx deliberately does not mutate.
  * - **Kimi Code MCP** supports project scope in `.kimi-code/mcp.json` with an `mcpServers` object.
  *   Kimi also supports SSE, but Agentyx's provider-neutral MCP model currently covers stdio and HTTP.
- * - **Claude Code hooks** support a `SessionStart` event in `.claude/settings.json` under
- *   `hooks.SessionStart`. Codex and Kimi Code have no documented equivalent, so only Claude Code
- *   declares `hooks` here — nothing is invented for the other two.
+ * - **Claude Code hooks** support a `SessionStart` event in project-local `.claude/settings.json`
+ *   under `hooks.SessionStart`, so Agentyx can install a hook the same way it installs a Skill:
+ *   inside the project, tracked by the manifest, removable by `uninstall`.
+ * - **Codex** has no documented hook mechanism at all, so nothing is invented for it.
+ * - **Kimi Code does document lifecycle hooks**, but its hook configuration is user-level
+ *   (`~/.kimi-code/config.toml`), not project-local. "Kimi Code supports hooks" and "Agentyx has a
+ *   safe project-local hook installation strategy for Kimi Code" are different claims: only the
+ *   first is true today. Agentyx never writes under `$HOME` (rule 8), so it does not declare
+ *   `hooks` for Kimi Code until a project-local mechanism exists to install them into — this is a
+ *   gap in Agentyx's installer, not a gap in what Kimi Code itself supports.
  *
  * Each definition also names the project-local paths that only that provider
  * creates. `.agents/skills` is shared by Codex and Kimi Code, so it cannot say
