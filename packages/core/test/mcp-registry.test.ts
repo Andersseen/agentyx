@@ -31,12 +31,14 @@ describe("builtInMcpServerRegistry", () => {
         description: "Fetch up-to-date library documentation from Context7.",
         transport: "http",
         contextCost: "medium",
+        runtime: "local",
       },
       {
         name: "playwright",
         description: "Automate and inspect browsers through Playwright MCP.",
         transport: "stdio",
         contextCost: "high",
+        runtime: "may-download",
       },
       {
         name: "codebase-memory",
@@ -44,30 +46,35 @@ describe("builtInMcpServerRegistry", () => {
           "Structural code-intelligence MCP backed by a persistent code knowledge graph.",
         transport: "stdio",
         contextCost: "high",
+        runtime: "local",
       },
       {
         name: "github",
         description: "Read repositories, issues, pull requests and workflow runs on GitHub.",
         transport: "http",
         contextCost: "high",
+        runtime: "local",
       },
       {
         name: "sentry",
         description: "Inspect production issues, events and stack traces recorded by Sentry.",
         transport: "http",
         contextCost: "medium",
+        runtime: "local",
       },
       {
         name: "chrome-devtools",
         description: "Record performance traces and inspect pages through Chrome DevTools.",
         transport: "stdio",
         contextCost: "high",
+        runtime: "may-download",
       },
       {
         name: "supabase",
         description: "Inspect and query Supabase project schemas, tables and logs.",
         transport: "stdio",
         contextCost: "high",
+        runtime: "may-download",
       },
     ]);
   });

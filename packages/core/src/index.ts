@@ -150,6 +150,33 @@ export {
   formatAgentyxConfig,
   PACKAGE_MANAGERS,
 } from "./project/detector.js";
+export { isExecutableOnPath } from "./project/executable.js";
+export type {
+  Recommendation,
+  RecommendationConfidence,
+  RecommendationKind,
+  RecommendationResult,
+} from "./project/recommend.js";
+export {
+  CODEBASE_MEMORY_FILE_THRESHOLD,
+  CODEBASE_MEMORY_MONOREPO_FILE_THRESHOLD,
+  RECOMMENDATION_CONFIDENCES,
+  recommendCapabilities,
+} from "./project/recommend.js";
+export type {
+  CiFileSignals,
+  ContainerFileSignals,
+  DependencyField,
+  MonorepoSignal,
+  ProjectSignals,
+  RepositorySizeSignal,
+  TechnologyMatch,
+} from "./project/signals.js";
+export {
+  collectProjectSignals,
+  REPOSITORY_SCAN_ENTRY_LIMIT,
+  scanRepositorySize,
+} from "./project/signals.js";
 export { builtInSkillNames, builtInSkillRegistry } from "./skill/built-in.js";
 export {
   DuplicateSkillError,

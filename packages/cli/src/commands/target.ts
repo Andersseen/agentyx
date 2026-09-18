@@ -75,7 +75,7 @@ export function createTargetCommand(): Command {
 
   target
     .command("show")
-    .description("Print one target and where it installs skills.")
+    .description("Print one target and where it installs skills, MCP config and hooks.")
     .argument("<target>", "target id, for example codex")
     .option("--json", "print machine-readable JSON only", false)
     .action(async (id: string, options: { json: boolean }) => {

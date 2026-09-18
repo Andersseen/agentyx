@@ -27,6 +27,7 @@ describe("agentyx mcp show", () => {
         "Fetch up-to-date library documentation from Context7.",
         "transport: http",
         "context cost: medium",
+        "runtime: local — no package download on launch",
         "url: https://mcp.context7.com/mcp",
         "required environment",
         "  (none)",
@@ -39,8 +40,11 @@ describe("agentyx mcp show", () => {
 
     expect(output).toContain("transport: stdio");
     expect(output).toContain("context cost: high");
+    expect(output).toContain(
+      "runtime: may-download — launching this server can fetch a package on first use",
+    );
     expect(output).toContain("command: npx");
-    expect(output).toContain("  @playwright/mcp@latest");
+    expect(output).toContain("  @playwright/mcp@0.0.81");
   });
 
   it("prints JSON", () => {
@@ -49,6 +53,7 @@ describe("agentyx mcp show", () => {
       description: "Fetch up-to-date library documentation from Context7.",
       transport: "http",
       contextCost: "medium",
+      runtime: "local",
       url: "https://mcp.context7.com/mcp",
       headers: {},
     });

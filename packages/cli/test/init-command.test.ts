@@ -21,11 +21,13 @@ import { createAgentyxProgram } from "../src/index.js";
 const clackMocks = vi.hoisted(() => ({
   CANCEL: Symbol("test-cancel"),
   confirm: vi.fn(),
+  autocompleteMultiselect: vi.fn(),
+  multiselect: vi.fn(),
 }));
 
 vi.mock("@clack/prompts", () => ({
-  autocompleteMultiselect: vi.fn(),
-  multiselect: vi.fn(),
+  autocompleteMultiselect: clackMocks.autocompleteMultiselect,
+  multiselect: clackMocks.multiselect,
   confirm: clackMocks.confirm,
   isCancel: (value: unknown) => value === clackMocks.CANCEL,
 }));
@@ -43,6 +45,8 @@ beforeEach(async () => {
 afterEach(async () => {
   await rm(projectDir, { recursive: true, force: true });
   clackMocks.confirm.mockReset();
+  clackMocks.autocompleteMultiselect.mockReset();
+  clackMocks.multiselect.mockReset();
 });
 
 describe("agentyx init --yes", () => {
@@ -72,7 +76,7 @@ describe("agentyx init --yes", () => {
         "Targets",
         "  codex",
         "  kimi",
-        "Next: agentyx install — writes these skills into Codex and Kimi Code.",
+        "Next: agentyx install — writes Skills, MCP and hooks into Codex and Kimi Code.",
       ].join("\n"),
     );
     expect(JSON.parse(await readFile(join(projectDir, ".agentyx.json"), "utf8"))).toEqual({
@@ -230,6 +234,65 @@ describe("agentyx init --yes", () => {
     });
 
     expect(plan.packs).toEqual(["technical", "typescript", "angular"]);
+  });
+
+  it("pre-selects recommended packs interactively but lets the user deselect one", async () => {
+    await cp(join(fixturesPath, "angular-project"), projectDir, { recursive: true });
+    clackMocks.autocompleteMultiselect.mockImplementationOnce(async (options) => {
+      expect(options.initialValues).toEqual(["technical", "typescript", "angular"]);
+      const angularOption = options.options.find(
+        (option: { value: string }) => option.value === "angular",
+      );
+      expect(angularOption?.label).toContain("recommended");
+      // The user deselects Angular despite it being recommended.
+      return ["technical", "typescript"];
+    });
+    clackMocks.multiselect.mockResolvedValueOnce(["codex"]);
+    clackMocks.confirm.mockResolvedValueOnce(true).mockResolvedValueOnce(false);
+
+    const output = await runInitCommand({
+      packs: [],
+      enable: [],
+      targets: [],
+      yes: false,
+      force: false,
+      json: false,
+      cwd: projectDir,
+    });
+
+    expect(output).toContain("Packs");
+    expect(JSON.parse(await readFile(join(projectDir, ".agentyx.json"), "utf8")).packs).toEqual([
+      "technical",
+      "typescript",
+    ]);
+  });
+
+  it("lets the user select a pack that was not recommended", async () => {
+    await writeFile(join(projectDir, "package.json"), "{}\n", "utf8");
+    clackMocks.autocompleteMultiselect.mockImplementationOnce(async (options) => {
+      // Even with nothing detected, every pack remains selectable.
+      expect(options.options.map((option: { value: string }) => option.value)).toContain(
+        "security",
+      );
+      return ["technical", "security"];
+    });
+    clackMocks.multiselect.mockResolvedValueOnce(["codex"]);
+    clackMocks.confirm.mockResolvedValueOnce(true).mockResolvedValueOnce(false);
+
+    await runInitCommand({
+      packs: [],
+      enable: [],
+      targets: [],
+      yes: false,
+      force: false,
+      json: false,
+      cwd: projectDir,
+    });
+
+    expect(JSON.parse(await readFile(join(projectDir, ".agentyx.json"), "utf8")).packs).toEqual([
+      "technical",
+      "security",
+    ]);
   });
 
   it("refuses an existing config unless forced", async () => {

@@ -1,6 +1,5 @@
-import { constants } from "node:fs";
 import { access } from "node:fs/promises";
-import { delimiter, relative, sep } from "node:path";
+import { join, relative, sep } from "node:path";
 import {
   builtInAdapterRegistry,
   collectInstallConflicts,
@@ -24,9 +23,12 @@ import {
   detectProject,
   emptyInstallManifest,
   type InstallManifest,
+  isExecutableOnPath,
   loadAgentyxProject,
   loadInstallManifest,
   manifestEntriesByPath,
+  type Recommendation,
+  recommendCapabilities,
   resolveAgentyxConfig,
 } from "@agentyx/core";
 import { Command } from "commander";
@@ -79,6 +81,14 @@ export interface DoctorReport {
       readonly activation: string;
       readonly active: boolean;
     }[];
+  };
+  /**
+   * Advisory only: packs `recommendCapabilities` suggests but the configuration does not select.
+   * Surfaced as `info` diagnostics, never `warning` or `error` — not selecting a suggestion is not
+   * a health problem.
+   */
+  readonly recommendations: {
+    readonly missingPacks: readonly Recommendation[];
   };
   readonly targets: readonly {
     readonly id: string;
@@ -181,8 +191,18 @@ export async function runDoctorCommand(input: DoctorCommandInput): Promise<Docto
     }
   }
 
+  const recommendation = recommendCapabilities(project.signals, {
+    configuredPacks: configState.config?.packs,
+  });
+  const recommendedPacks = recommendation.packs.map((pack) => pack.name);
+  const detectedPacks = recommendedPacks.filter((name) => name !== "technical");
+  const missingPacks =
+    resolved === undefined
+      ? []
+      : recommendation.packs.filter((pack) => !resolved.resolvedPacks.includes(pack.name));
+
   if (
-    project.detectedPacks.includes("angular") &&
+    detectedPacks.includes("angular") &&
     resolved?.requestedPacks.includes("typescript") === true &&
     !resolved.requestedPacks.includes("angular")
   ) {
@@ -191,6 +211,30 @@ export async function runDoctorCommand(input: DoctorCommandInput): Promise<Docto
       code: "detected_angular_configured_typescript",
       message: "Angular detected but project config uses only `typescript`.",
     });
+  }
+
+  for (const pack of missingPacks) {
+    diagnostics.push({
+      level: "info",
+      code: "recommended_pack_available",
+      message: `Pack "${pack.name}" is recommended but not configured: ${pack.reasons.join(" ")}`,
+    });
+  }
+
+  if (resolved?.hooks.includes("session-doctor-bootstrap") === true) {
+    const hookRuntimeAvailable = await projectLocalBinaryAvailable(input.cwd, "agentyx");
+
+    if (!hookRuntimeAvailable) {
+      diagnostics.push({
+        level: "warning",
+        code: "hook_runtime_unavailable",
+        message:
+          "session-doctor-bootstrap runs `npx --no-install agentyx doctor --hook`, which needs " +
+          "@agentyx/cli installed as a project dependency (for example `pnpm add -D @agentyx/cli`) " +
+          "so npx can resolve node_modules/.bin/agentyx. Running Agentyx only through " +
+          "`pnpm dlx @agentyx/cli` does not install it, so the hook will not run at session start.",
+      });
+    }
   }
 
   const configuredTargets = resolved?.targets ?? configState.config?.targets ?? [];
@@ -291,7 +335,7 @@ export async function runDoctorCommand(input: DoctorCommandInput): Promise<Docto
             name: tool.name,
             activation: tool.activation,
             active: resolved.tools.includes(tool.name),
-            available: await executableAvailable(builtInToolRegistry.get(tool.name).command),
+            available: await isExecutableOnPath(builtInToolRegistry.get(tool.name).command),
           })),
         );
   const mcpReports =
@@ -349,8 +393,8 @@ export async function runDoctorCommand(input: DoctorCommandInput): Promise<Docto
       packageManager: project.packageManager.name,
       packageManagerAmbiguous: project.packageManager.ambiguous,
       packageManagerLockfiles: project.packageManager.lockfiles,
-      detectedPacks: project.detectedPacks,
-      recommendedPacks: project.recommendedPacks,
+      detectedPacks,
+      recommendedPacks,
       config: {
         path: ".agentyx.json",
         present: configState.present,
@@ -369,6 +413,7 @@ export async function runDoctorCommand(input: DoctorCommandInput): Promise<Docto
       tools: toolReports,
       hooks: hookReports,
     },
+    recommendations: { missingPacks },
     targets: targetReports,
     installation: {
       summary,
@@ -446,6 +491,10 @@ export function renderDoctorReport(report: DoctorReport, json: boolean): string 
           .join(", ") || "none"
       }`,
     ]),
+    section(
+      "Suggestions",
+      report.recommendations.missingPacks.map((pack) => `${pack.name} — ${pack.reasons.join(" ")}`),
+    ),
     section(
       "Targets",
       report.targets.map(
@@ -638,31 +687,21 @@ async function fileExists(path: string): Promise<boolean> {
   }
 }
 
-async function executableAvailable(command: string): Promise<boolean> {
-  if (command.includes("/")) {
-    return fileExecutable(command);
-  }
+/**
+ * Whether `npx` would find `bin` without a registry lookup: a direct check of
+ * `node_modules/.bin`, the same place `npx` resolves a project-local binary from before ever
+ * considering a download.
+ */
+async function projectLocalBinaryAvailable(projectDir: string, bin: string): Promise<boolean> {
+  const candidates = process.platform === "win32" ? [bin, `${bin}.cmd`, `${bin}.CMD`] : [bin];
 
-  for (const directory of (process.env.PATH ?? "").split(delimiter)) {
-    if (directory.length === 0) {
-      continue;
-    }
-
-    if (await fileExecutable(`${directory}/${command}`)) {
+  for (const candidate of candidates) {
+    if (await fileExists(join(projectDir, "node_modules", ".bin", candidate))) {
       return true;
     }
   }
 
   return false;
-}
-
-async function fileExecutable(path: string): Promise<boolean> {
-  try {
-    await access(path, constants.X_OK);
-    return true;
-  } catch {
-    return false;
-  }
 }
 
 function displayPath(from: string, to: string): string {

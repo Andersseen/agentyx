@@ -188,6 +188,57 @@ describe("agentyx doctor", () => {
     });
   });
 
+  it("suggests a detected but unconfigured pack as info, not a warning", async () => {
+    await cp(join(fixturesPath, "angular-project"), projectDir, { recursive: true });
+    await writeConfig({ packs: ["technical", "typescript"], targets: ["codex"] });
+
+    const report = await runDoctorCommand({ json: false, cwd: projectDir });
+
+    expect(report.recommendations.missingPacks.map((pack) => pack.name)).toContain("angular");
+    expect(report.diagnostics).toContainEqual(
+      expect.objectContaining({ level: "info", code: "recommended_pack_available" }),
+    );
+    expect(renderDoctorReport(report, false)).toContain("Suggestions");
+  });
+
+  it("does not suggest a pack that is already configured", async () => {
+    await cp(join(fixturesPath, "typescript-project"), projectDir, { recursive: true });
+    await writeConfig({ packs: ["technical", "typescript"], targets: ["codex"] });
+
+    const report = await runDoctorCommand({ json: false, cwd: projectDir });
+
+    expect(report.recommendations.missingPacks).toEqual([]);
+    expect(
+      report.diagnostics.some((diagnostic) => diagnostic.code === "recommended_pack_available"),
+    ).toBe(false);
+  });
+
+  it("warns when the session-doctor-bootstrap hook has no local agentyx binary to run", async () => {
+    await writeConfig({ packs: ["efficiency"], targets: ["codex"] });
+
+    const report = await runDoctorCommand({ json: false, cwd: projectDir });
+
+    expect(report.diagnostics).toContainEqual(
+      expect.objectContaining({ level: "warning", code: "hook_runtime_unavailable" }),
+    );
+  });
+
+  it("does not warn about the hook runtime when a local agentyx binary exists", async () => {
+    await writeConfig({ packs: ["efficiency"], targets: ["codex"] });
+    await mkdir(join(projectDir, "node_modules", ".bin"), { recursive: true });
+    await writeFile(
+      join(projectDir, "node_modules", ".bin", "agentyx"),
+      "#!/usr/bin/env node\n",
+      "utf8",
+    );
+
+    const report = await runDoctorCommand({ json: false, cwd: projectDir });
+
+    expect(
+      report.diagnostics.some((diagnostic) => diagnostic.code === "hook_runtime_unavailable"),
+    ).toBe(false);
+  });
+
   it("reports optional efficiency capabilities", async () => {
     await writeConfig({
       packs: ["efficiency"],

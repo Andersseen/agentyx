@@ -16,6 +16,7 @@ export interface McpServerMetadata {
   readonly description: string;
   readonly transport: McpServerDefinition["transport"];
   readonly contextCost?: McpServerDefinition["contextCost"];
+  readonly runtime?: McpServerDefinition["runtime"];
 }
 
 export interface McpServerRegistry {
@@ -85,6 +86,7 @@ export function createMcpServerRegistry(sources: Iterable<McpServerSource>): Mcp
           description: server.description,
           transport: server.transport,
           contextCost: server.contextCost,
+          runtime: server.runtime,
         };
       }),
     get,

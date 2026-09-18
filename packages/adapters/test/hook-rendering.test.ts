@@ -32,7 +32,7 @@ describe("Claude Code hook rendering", () => {
           {
             type: "command",
             command: "npx",
-            args: ["agentyx", "doctor", "--hook"],
+            args: ["--no-install", "agentyx", "doctor", "--hook"],
             statusMessage: "agentyx:session-doctor-bootstrap",
           },
         ],
@@ -58,7 +58,7 @@ describe("Claude Code hook rendering", () => {
               {
                 type: "command",
                 command: "npx",
-                args: ["agentyx", "doctor", "--hook"],
+                args: ["--no-install", "agentyx", "doctor", "--hook"],
                 statusMessage: "agentyx:session-doctor-bootstrap",
               },
             ],
@@ -88,7 +88,7 @@ describe("Claude Code hook rendering", () => {
               {
                 type: "command",
                 command: "npx",
-                args: ["agentyx", "doctor", "--hook"],
+                args: ["--no-install", "agentyx", "doctor", "--hook"],
                 statusMessage: "agentyx:session-doctor-bootstrap",
               },
             ],

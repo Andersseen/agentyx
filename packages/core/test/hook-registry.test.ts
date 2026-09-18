@@ -16,7 +16,7 @@ describe("builtInHookRegistry", () => {
       name: "session-doctor-bootstrap",
       event: "SessionStart",
       command: "npx",
-      args: ["agentyx", "doctor", "--hook"],
+      args: ["--no-install", "agentyx", "doctor", "--hook"],
     });
     expect(builtInHookRegistry.listMetadata()).toEqual([
       {

@@ -435,7 +435,7 @@ describe("applyInstallPlans manifest", () => {
           {
             type: "command",
             command: "npx",
-            args: ["agentyx", "doctor", "--hook"],
+            args: ["--no-install", "agentyx", "doctor", "--hook"],
             statusMessage: "agentyx:session-doctor-bootstrap",
           },
         ],

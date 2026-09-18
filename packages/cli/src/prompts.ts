@@ -20,13 +20,37 @@ export interface PromptOption {
   readonly hint?: string;
 }
 
-/** Every built-in pack, with its description as the hint. */
-export function packOptions(): readonly PromptOption[] {
-  return builtInPacks.map((pack) => ({
-    value: pack.name,
-    label: `${formatPackName(pack.name)} (${pack.category ?? "engineering"})`,
-    ...(pack.description === undefined ? {} : { hint: pack.description }),
-  }));
+/**
+ * Every built-in pack, with its description as the hint.
+ *
+ * `recommended` maps a pack name to the one-line reason it was recommended. When given, those
+ * packs sort first and show that reason as the hint instead of the pack's static description — the
+ * concrete "why" is more useful at selection time than the generic blurb. Called with nothing, the
+ * order and hints are exactly what they were before recommendations existed.
+ */
+export function packOptions(
+  recommended: ReadonlyMap<string, string> = new Map(),
+): readonly PromptOption[] {
+  const ordered =
+    recommended.size === 0
+      ? builtInPacks
+      : [
+          ...builtInPacks.filter((pack) => recommended.has(pack.name)),
+          ...builtInPacks.filter((pack) => !recommended.has(pack.name)),
+        ];
+
+  return ordered.map((pack) => {
+    const reason = recommended.get(pack.name);
+    const hint = reason ?? pack.description;
+
+    return {
+      value: pack.name,
+      label: `${formatPackName(pack.name)} (${pack.category ?? "engineering"})${
+        reason === undefined ? "" : " — recommended"
+      }`,
+      ...(hint === undefined ? {} : { hint }),
+    };
+  });
 }
 
 /**
