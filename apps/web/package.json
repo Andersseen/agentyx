@@ -13,7 +13,7 @@
   },
   "dependencies": {
     "@analogjs/content": "2.7.1",
-    "@analogjs/router": "2.6.4",
+    "@analogjs/router": "2.7.2",
     "@angular/animations": "21.2.19",
     "@angular/cdk": "21.2.14",
     "@angular/common": "21.2.19",
