@@ -37,11 +37,11 @@
   "devDependencies": {
     "@analogjs/platform": "2.7.2",
     "@analogjs/vite-plugin-angular": "2.7.2",
-    "@angular/build": "22.1.7",
+    "@angular/build": "22.1.8",
     "@angular/compiler-cli": "21.2.19",
     "@playwright/test": "^1.63.0",
     "@tailwindcss/vite": "4.3.3",
-    "@types/node": "^26.6.1",
+    "@types/node": "^26.6.2",
     "marked-highlight": "^2.2.3",
     "shiki": "^1.29.2",
     "tailwindcss": "4.3.3",

@@ -36,13 +36,13 @@
     "version-packages": "changeset version"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.5.12",
+    "@biomejs/biome": "^2.5.14",
     "@changesets/cli": "^2.31.1",
-    "@types/node": "^26.6.1",
-    "tsdown": "^0.22.14",
+    "@types/node": "^26.6.2",
+    "tsdown": "^0.23.0",
     "typescript": "^5.9.2",
     "vitest": "^3.2.4",
-    "wrangler": "4.130.0"
+    "wrangler": "4.136.3"
   },
   "pnpm": {
     "overrides": {
