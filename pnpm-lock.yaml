@@ -39,8 +39,8 @@ importers:
         specifier: 2.7.1
         version: 2.7.1(b9ee931a10ef2b412bdf065a7ec5c6e5)
       '@analogjs/router':
-        specifier: 2.6.4
-        version: 2.6.4(@analogjs/content@2.7.1(b9ee931a10ef2b412bdf065a7ec5c6e5))(@angular/core@21.2.19(@angular/compiler@22.1.7)(rxjs@7.8.2)(zone.js@0.15.1))(@angular/router@21.2.19(@angular/common@22.2.1(@angular/core@21.2.19(@angular/compiler@22.1.7)(rxjs@7.8.2)(zone.js@0.15.1))(rxjs@7.8.2))(@angular/core@21.2.19(@angular/compiler@22.1.7)(rxjs@7.8.2)(zone.js@0.15.1))(@angular/platform-browser@21.2.19(@angular/animations@21.2.19(@angular/core@21.2.19(@angular/compiler@22.1.7)(rxjs@7.8.2)(zone.js@0.15.1)))(@angular/common@22.2.1(@angular/core@21.2.19(@angular/compiler@22.1.7)(rxjs@7.8.2)(zone.js@0.15.1))(rxjs@7.8.2))(@angular/core@21.2.19(@angular/compiler@22.1.7)(rxjs@7.8.2)(zone.js@0.15.1)))(rxjs@7.8.2))
+        specifier: 2.8.0
+        version: 2.8.0(@analogjs/content@2.7.1(b9ee931a10ef2b412bdf065a7ec5c6e5))(@angular/core@21.2.19(@angular/compiler@22.1.7)(rxjs@7.8.2)(zone.js@0.15.1))(@angular/router@21.2.19(@angular/common@22.2.1(@angular/core@21.2.19(@angular/compiler@22.1.7)(rxjs@7.8.2)(zone.js@0.15.1))(rxjs@7.8.2))(@angular/core@21.2.19(@angular/compiler@22.1.7)(rxjs@7.8.2)(zone.js@0.15.1))(@angular/platform-browser@21.2.19(@angular/animations@21.2.19(@angular/core@21.2.19(@angular/compiler@22.1.7)(rxjs@7.8.2)(zone.js@0.15.1)))(@angular/common@22.2.1(@angular/core@21.2.19(@angular/compiler@22.1.7)(rxjs@7.8.2)(zone.js@0.15.1))(rxjs@7.8.2))(@angular/core@21.2.19(@angular/compiler@22.1.7)(rxjs@7.8.2)(zone.js@0.15.1)))(rxjs@7.8.2))
       '@angular/animations':
         specifier: 21.2.19
         version: 21.2.19(@angular/core@21.2.19(@angular/compiler@22.1.7)(rxjs@7.8.2)(zone.js@0.15.1))
@@ -233,12 +233,16 @@ packages:
       shiki:
         optional: true
 
-  '@analogjs/router@2.6.4':
-    resolution: {integrity: sha512-5L1c1deD+vRNPLCHz6u0ikrHLnJXhkSZp99Ccf8U7C0tI7mhCnorSFwcS9Qelcfjd06zDmC9YmjMl1Ee8QgMBA==}
+  '@analogjs/router@2.8.0':
+    resolution: {integrity: sha512-GGqrcWYQE7E/aAIKbxeOS1CPZbTnfNAebKBeZC7y6j/e3shxKNdt2TofflECrHXiXFNverIZUpOwrwMT7wMAcA==}
     peerDependencies:
-      '@analogjs/content': ^2.6.4
+      '@analogjs/content': ^2.8.0
       '@angular/core': ^17.0.0 || ^18.0.0 || ^19.0.0 || ^20.0.0 || ^21.0.0 || ^22.0.0
       '@angular/router': ^17.0.0 || ^18.0.0 || ^19.0.0 || ^20.0.0 || ^21.0.0 || ^22.0.0
+      '@tanstack/angular-query-experimental': ^5.80.0
+    peerDependenciesMeta:
+      '@tanstack/angular-query-experimental':
+        optional: true
 
   '@analogjs/vite-plugin-angular@2.7.2':
     resolution: {integrity: sha512-AmJCuz6D20XGnFPL/UWW+ZzeMDEHKb6+hefbV9HEbXlMoUZWqr2u8uxQqaUQgnDV3yl8HMazFnxWfTPrKLPPzA==}
@@ -5699,7 +5703,7 @@ snapshots:
       - webpack
       - xml2js
 
-  '@analogjs/router@2.6.4(@analogjs/content@2.7.1(b9ee931a10ef2b412bdf065a7ec5c6e5))(@angular/core@21.2.19(@angular/compiler@22.1.7)(rxjs@7.8.2)(zone.js@0.15.1))(@angular/router@21.2.19(@angular/common@22.2.1(@angular/core@21.2.19(@angular/compiler@22.1.7)(rxjs@7.8.2)(zone.js@0.15.1))(rxjs@7.8.2))(@angular/core@21.2.19(@angular/compiler@22.1.7)(rxjs@7.8.2)(zone.js@0.15.1))(@angular/platform-browser@21.2.19(@angular/animations@21.2.19(@angular/core@21.2.19(@angular/compiler@22.1.7)(rxjs@7.8.2)(zone.js@0.15.1)))(@angular/common@22.2.1(@angular/core@21.2.19(@angular/compiler@22.1.7)(rxjs@7.8.2)(zone.js@0.15.1))(rxjs@7.8.2))(@angular/core@21.2.19(@angular/compiler@22.1.7)(rxjs@7.8.2)(zone.js@0.15.1)))(rxjs@7.8.2))':
+  '@analogjs/router@2.8.0(@analogjs/content@2.7.1(b9ee931a10ef2b412bdf065a7ec5c6e5))(@angular/core@21.2.19(@angular/compiler@22.1.7)(rxjs@7.8.2)(zone.js@0.15.1))(@angular/router@21.2.19(@angular/common@22.2.1(@angular/core@21.2.19(@angular/compiler@22.1.7)(rxjs@7.8.2)(zone.js@0.15.1))(rxjs@7.8.2))(@angular/core@21.2.19(@angular/compiler@22.1.7)(rxjs@7.8.2)(zone.js@0.15.1))(@angular/platform-browser@21.2.19(@angular/animations@21.2.19(@angular/core@21.2.19(@angular/compiler@22.1.7)(rxjs@7.8.2)(zone.js@0.15.1)))(@angular/common@22.2.1(@angular/core@21.2.19(@angular/compiler@22.1.7)(rxjs@7.8.2)(zone.js@0.15.1))(rxjs@7.8.2))(@angular/core@21.2.19(@angular/compiler@22.1.7)(rxjs@7.8.2)(zone.js@0.15.1)))(rxjs@7.8.2))':
     dependencies:
       '@analogjs/content': 2.7.1(b9ee931a10ef2b412bdf065a7ec5c6e5)
       '@angular/core': 21.2.19(@angular/compiler@22.1.7)(rxjs@7.8.2)(zone.js@0.15.1)
