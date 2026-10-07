@@ -1,5 +1,11 @@
 # @agentyx/core
 
+## 0.8.0
+
+### Minor Changes
+
+- 65a4adb: Add provider-neutral project context and semantic Project Graph commands with text, JSON, Mermaid, and SVG outputs.
+
 ## 0.7.0
 
 ### Minor Changes
