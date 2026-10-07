@@ -12,7 +12,7 @@
     "serve": "vite preview"
   },
   "dependencies": {
-    "@analogjs/content": "2.7.1",
+    "@analogjs/content": "2.8.0",
     "@analogjs/router": "2.8.0",
     "@angular/animations": "21.2.19",
     "@angular/cdk": "21.2.14",
