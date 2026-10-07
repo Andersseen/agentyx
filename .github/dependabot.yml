@@ -7,8 +7,14 @@ updates:
       interval: weekly
     open-pull-requests-limit: 5
     groups:
+      # Angular packages must share one version; a split bump breaks the production bundle.
+      angular:
+        patterns:
+          - "@angular/*"
       dev-dependencies:
         dependency-type: development
+        exclude-patterns:
+          - "@angular/*"
         update-types:
           - minor
           - patch
