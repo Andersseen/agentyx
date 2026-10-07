@@ -45,7 +45,6 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          wranglerVersion: "4.120.0"
           command: pages project create agentyx --production-branch=main
 
       - name: Deploy to Cloudflare Pages
@@ -55,5 +54,4 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           gitHubToken: ${{ secrets.GITHUB_TOKEN }}
-          wranglerVersion: "4.120.0"
           command: pages deploy apps/web/dist/analog/public --project-name=agentyx --branch=main
