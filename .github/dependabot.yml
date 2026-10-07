@@ -21,3 +21,8 @@ updates:
       interval: monthly
     commit-message:
       prefix: chore
+    ignore:
+      # changesets/action v2 requires @changesets/cli v3; we are on v2.
+      - dependency-name: changesets/action
+        update-types:
+          - version-update:semver-major
