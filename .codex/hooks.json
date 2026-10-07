@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "jq -r '.tool_input.file_path // .tool_response.filePath // empty' | { read -r f; [ -n \"$f\" ] && pnpm exec biome check --write --files-ignore-unknown=true --no-errors-on-unmatched \"$f\"; } >/dev/null 2>&1 || true",
+            "statusMessage": "Formatting with Biome"
+          }
+        ]
+      }
+    ]
+  }
+}
