@@ -4,6 +4,7 @@ export {
   AgentyxConfigParseError,
   AgentyxConfigValidationError,
   LocalSkillDirectoryError,
+  ProjectContextPathError,
   UnknownEnabledCapabilityError,
 } from "./config/errors.js";
 export { AGENTYX_CONFIG_SCHEMA_ID, buildAgentyxConfigJsonSchema } from "./config/json-schema.js";
@@ -17,11 +18,21 @@ export type { AgentyxProject } from "./config/project.js";
 export { loadAgentyxProject } from "./config/project.js";
 export type { ResolvedAgentyxConfig } from "./config/resolver.js";
 export { resolveAgentyxConfig } from "./config/resolver.js";
-export type { AgentyxConfig, AgentyxConfigInput } from "./config/schema.js";
+export type {
+  AgentyxConfig,
+  AgentyxConfigInput,
+  ProjectContext,
+  ProjectMetadata,
+  ProjectRelation,
+} from "./config/schema.js";
 export {
   agentyxConfigSchema,
   agentyxTargetSchema,
   enabledCapabilityNameSchema,
+  projectContextSchema,
+  projectMetadataSchema,
+  projectRelationSchema,
+  projectRelationTypeSchema,
   skillDirectorySchema,
 } from "./config/schema.js";
 export { AgentyxError } from "./errors.js";
@@ -177,6 +188,16 @@ export {
   REPOSITORY_SCAN_ENTRY_LIMIT,
   scanRepositorySize,
 } from "./project/signals.js";
+export type { ProjectGraph } from "./project-graph.js";
+export {
+  createProjectGraph,
+  findProjectCapabilityOwners,
+  ProjectGraphNotConfiguredError,
+  renderProjectGraphJson,
+  renderProjectGraphMermaid,
+  renderProjectGraphSvg,
+  renderProjectGraphText,
+} from "./project-graph.js";
 export { builtInSkillNames, builtInSkillRegistry } from "./skill/built-in.js";
 export {
   DuplicateSkillError,

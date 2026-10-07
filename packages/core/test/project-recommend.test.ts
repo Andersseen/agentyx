@@ -16,6 +16,7 @@ function baseSignals(overrides: Partial<ProjectSignals> = {}): ProjectSignals {
       path: "/project/package.json",
       name: "fixture",
       packageManager: undefined,
+      scripts: {},
       error: undefined,
     },
     packageManager: { name: undefined, source: undefined, lockfiles: [], ambiguous: false },

@@ -236,6 +236,84 @@ describe("agentyx init --yes", () => {
     expect(plan.packs).toEqual(["technical", "typescript", "angular"]);
   });
 
+  it("keeps project command suggestions out of non-interactive init", async () => {
+    await writeFile(
+      join(projectDir, "package.json"),
+      JSON.stringify({ packageManager: "pnpm@10.0.0", scripts: { check: "echo should-not-run" } }),
+    );
+    const plan = await planNonInteractiveInit({
+      packs: ["technical"],
+      enable: [],
+      targets: ["codex"],
+      yes: true,
+      force: false,
+      json: false,
+      cwd: projectDir,
+    });
+    expect(plan.content).not.toContain("context");
+    expect(plan.projectCommands).toEqual([]);
+  });
+
+  it("offers exact package scripts interactively and only stores selected commands", async () => {
+    await writeFile(
+      join(projectDir, "package.json"),
+      JSON.stringify({
+        packageManager: "pnpm@10.0.0",
+        scripts: { check: "echo should-not-run", test: "vitest", unknown: "deploy" },
+      }),
+    );
+    clackMocks.multiselect.mockImplementationOnce(async (options) => {
+      expect(options.initialValues).toEqual([]);
+      expect(options.options.map((option: { value: string }) => option.value)).toEqual([
+        "verify",
+        "test",
+      ]);
+      return ["verify"];
+    });
+    clackMocks.confirm.mockResolvedValueOnce(true).mockResolvedValueOnce(false);
+    const output = await runInitCommand({
+      packs: ["technical"],
+      enable: [],
+      targets: ["codex"],
+      yes: false,
+      force: false,
+      json: false,
+      cwd: projectDir,
+    });
+    const config = JSON.parse(await readFile(join(projectDir, ".agentyx.json"), "utf8"));
+    expect(config.context.commands).toEqual({ verify: { command: "pnpm run check", cwd: "." } });
+    expect(output).toContain("Project commands");
+    expect(JSON.stringify(config)).not.toContain("should-not-run");
+  });
+
+  it("explains when package scripts cannot be suggested because the manager is ambiguous", async () => {
+    await writeFile(
+      join(projectDir, "package.json"),
+      JSON.stringify({ scripts: { check: "true" } }),
+    );
+    await writeFile(join(projectDir, "pnpm-lock.yaml"), "lockfileVersion: '9.0'\n");
+    await writeFile(join(projectDir, "package-lock.json"), "{}\n");
+    clackMocks.confirm
+      .mockImplementationOnce(async (options) => {
+        expect(options.message).toContain("multiple package managers were detected");
+        return true;
+      })
+      .mockResolvedValueOnce(false);
+    await runInitCommand({
+      packs: ["technical"],
+      enable: [],
+      targets: ["codex"],
+      yes: false,
+      force: false,
+      json: false,
+      cwd: projectDir,
+    });
+    expect(
+      JSON.parse(await readFile(join(projectDir, ".agentyx.json"), "utf8")).context,
+    ).toBeUndefined();
+    expect(clackMocks.multiselect).not.toHaveBeenCalled();
+  });
+
   it("pre-selects recommended packs interactively but lets the user deselect one", async () => {
     await cp(join(fixturesPath, "angular-project"), projectDir, { recursive: true });
     clackMocks.autocompleteMultiselect.mockImplementationOnce(async (options) => {

@@ -80,9 +80,73 @@ await run(
   ],
   projectDir,
 );
+const configPath = join(projectDir, ".agentyx.json");
+const config = JSON.parse(await readFile(configPath, "utf8"));
+config.project = { id: "smoke-web", name: "Smoke Web", owns: ["frontend"] };
+config.relations = [
+  {
+    id: "smoke-api",
+    name: "Smoke API",
+    type: "consumes",
+    role: "backend-api",
+    owns: ["backend-api"],
+  },
+];
+config.context = { constraints: ["Commands and graph metadata are descriptive."] };
+await writeFile(configPath, `${JSON.stringify(config, null, 2)}\n`);
 await run(join(projectDir, "node_modules", ".bin", agentyx), ["resolve"], projectDir);
+assertIncludes(
+  await run(join(projectDir, "node_modules", ".bin", agentyx), ["graph"], projectDir),
+  "consumes [backend-api]",
+);
+assertIncludes(
+  await run(join(projectDir, "node_modules", ".bin", agentyx), ["graph", "--json"], projectDir),
+  '"id": "smoke-api"',
+);
+assertIncludes(
+  await run(
+    join(projectDir, "node_modules", ".bin", agentyx),
+    ["graph", "--format", "mermaid"],
+    projectDir,
+  ),
+  "graph LR",
+);
+await run(
+  join(projectDir, "node_modules", ".bin", agentyx),
+  ["graph", "--format", "svg", "--output", "project-graph.svg"],
+  projectDir,
+);
+assertIncludes(
+  await run(
+    join(projectDir, "node_modules", ".bin", agentyx),
+    ["graph", "show", "smoke-api"],
+    projectDir,
+  ),
+  "Smoke API",
+);
+assertIncludes(
+  await run(
+    join(projectDir, "node_modules", ".bin", agentyx),
+    ["graph", "owner", "backend-api"],
+    projectDir,
+  ),
+  "Smoke API",
+);
 await run(join(projectDir, "node_modules", ".bin", agentyx), ["doctor"], projectDir);
 await run(join(projectDir, "node_modules", ".bin", agentyx), ["install", "--dry-run"], projectDir);
+await run(join(projectDir, "node_modules", ".bin", agentyx), ["install"], projectDir);
+const claudeContext = await readFile(
+  join(projectDir, ".claude/skills/agentyx-project-context/SKILL.md"),
+  "utf8",
+);
+const sharedContext = await readFile(
+  join(projectDir, ".agents/skills/agentyx-project-context/SKILL.md"),
+  "utf8",
+);
+if (claudeContext !== sharedContext)
+  throw new Error("Provider project context Skills are not byte-identical.");
+if (!claudeContext.includes("backend-api"))
+  throw new Error("Packaged project context omitted graph ownership.");
 
 const projectRequire = createRequire(join(projectDir, "package.json"));
 const cliPackagePath = await findPackageJson(projectRequire.resolve("@agentyx/cli"));
@@ -100,6 +164,7 @@ assertPublishedDependency(cliPackage, "@agentyx/core");
 assertPublishedDependency(cliPackage, "@agentyx/adapters");
 assertPublishedDependency(adaptersPackage, "@agentyx/core");
 await readFile(join(corePackageRoot, "skills", "planning", "SKILL.md"), "utf8");
+await readFile(join(corePackageRoot, "templates", "project-context.md"), "utf8");
 await readFile(join(corePackageRoot, "schema", "agentyx.schema.json"), "utf8");
 await readFile(join(cliPackageRoot, "dist", "index.mjs"), "utf8");
 await readFile(join(adaptersPackageRoot, "dist", "index.mjs"), "utf8");
@@ -136,6 +201,14 @@ function assertPublishedDependency(packageJson, dependency) {
 
   if (typeof version !== "string" || version.startsWith("workspace:")) {
     throw new Error(`${packageJson.name} has unpublished dependency ${dependency}: ${version}`);
+  }
+}
+
+function assertIncludes(result, expected) {
+  if (!result.stdout.includes(expected)) {
+    throw new Error(
+      `Expected command output to include ${JSON.stringify(expected)}; got:\n${result.stdout}`,
+    );
   }
 }
 

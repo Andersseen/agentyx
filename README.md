@@ -286,6 +286,47 @@ Agentyx created it and nothing is left in it.
 
 `doctor` reports all of this — files that are stale, edited since install, or not Agentyx's to write.
 
+## Project Graph
+
+Repositories rarely live alone. A frontend may rely on a backend, auth service and design system
+even when they are stored separately. Agentyx can describe those architectural relationships so
+humans and coding agents know where responsibilities live. Project Graph is not a package dependency
+graph; Agentyx 0.8 does not clone or index related repositories.
+
+Add direct relationships to `.agentyx.json`:
+
+```json
+{
+  "project": { "id": "web", "name": "Web", "owns": ["frontend"] },
+  "relations": [
+    {
+      "id": "api",
+      "name": "API",
+      "type": "consumes",
+      "role": "backend-api",
+      "repository": "https://github.com/acme/api",
+      "owns": ["backend-api"]
+    }
+  ]
+}
+```
+
+```sh
+agentyx graph
+agentyx graph --json
+agentyx graph --format mermaid
+agentyx graph --format svg --output docs/project-graph.svg
+agentyx graph show api
+agentyx graph owner backend-api
+```
+
+Project identity, relationships, and the optional `context` facts generate one canonical
+`agentyx-project-context` Skill. The existing adapters install identical Skill content for Claude,
+Codex and Kimi. Repository and docs links are descriptive references; Agentyx does not fetch them,
+call declared MCP servers, or infer relationships from package dependencies. Interactive `init` can
+offer existing `check`, `test`, `build`, and `lint` scripts as project commands when one package
+manager is clear; none are selected by default, and non-interactive init does not synthesize context.
+
 ## Configuration
 
 `.agentyx.json` fields:
@@ -299,6 +340,9 @@ Agentyx created it and nothing is left in it.
 | `skillDirectories` | `string[]` | none | Project-relative roots containing local Skills |
 | `localPacks` | `Pack[]` | none | Project-owned packs composed from known Skills |
 | `trustedSources` | `TrustedSource[]` | none | Pinned local checkouts of known external sources |
+| `project` | `Project` | none | This repository's identity and owned capabilities |
+| `relations` | `Relation[]` | `[]` | Direct semantic relationships to other projects |
+| `context` | `Context` | none | Explicit commands, areas and constraints for its agents |
 
 Unknown packs and unknown enabled capabilities fail with explicit Agentyx errors.
 

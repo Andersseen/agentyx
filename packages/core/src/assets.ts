@@ -14,3 +14,6 @@ import { fileURLToPath } from "node:url";
  * `dist/`.
  */
 export const BUILT_IN_SKILLS_PATH = fileURLToPath(new URL("../skills", import.meta.url));
+export const PROJECT_CONTEXT_TEMPLATE_PATH = fileURLToPath(
+  new URL("../templates/project-context.md", import.meta.url),
+);

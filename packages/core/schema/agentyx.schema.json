@@ -205,6 +205,193 @@
         "additionalProperties": false
       },
       "description": "Pinned local checkouts of known external skill/plugin sources."
+    },
+    "project": {
+      "description": "Identity and ownership for this project.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+          "description": "Stable, human-authored project identifier in kebab-case."
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Human-readable project name."
+        },
+        "description": {
+          "description": "Short description of this project.",
+          "type": "string",
+          "minLength": 1
+        },
+        "repository": {
+          "description": "Repository URL; descriptive and never fetched.",
+          "type": "string",
+          "format": "uri"
+        },
+        "docs": {
+          "default": [],
+          "description": "Documentation URLs; descriptive only.",
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "uri"
+          }
+        },
+        "mcp": {
+          "default": [],
+          "description": "MCP server identifiers available to consult.",
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "owns": {
+          "default": [],
+          "description": "Architectural capabilities owned by this project.",
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+          }
+        }
+      },
+      "required": ["id", "name"],
+      "additionalProperties": false
+    },
+    "relations": {
+      "description": "Direct architectural relationships.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+            "description": "Stable identifier for the related project."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Human-readable related project name."
+          },
+          "type": {
+            "type": "string",
+            "enum": ["uses", "integrates", "consumes", "extends"],
+            "description": "How the current project relates to this project."
+          },
+          "role": {
+            "type": "string",
+            "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+            "description": "Architectural role of the related project."
+          },
+          "repository": {
+            "description": "Repository URL; descriptive and never fetched.",
+            "type": "string",
+            "format": "uri"
+          },
+          "docs": {
+            "default": [],
+            "description": "Documentation URLs; descriptive only.",
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uri"
+            }
+          },
+          "mcp": {
+            "default": [],
+            "description": "MCP server identifiers available to consult.",
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "owns": {
+            "default": [],
+            "description": "Architectural capabilities owned by this project.",
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+            }
+          },
+          "guidance": {
+            "default": [],
+            "description": "Human-authored guidance for agents.",
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        },
+        "required": ["id", "name", "type", "role"],
+        "additionalProperties": false
+      }
+    },
+    "context": {
+      "type": "object",
+      "properties": {
+        "commands": {
+          "default": {},
+          "type": "object",
+          "propertyNames": {
+            "type": "string",
+            "minLength": 1
+          },
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "command": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Suggested command; Agentyx never executes it."
+              },
+              "cwd": {
+                "default": ".",
+                "description": "Project-relative working directory.",
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "required": ["command"],
+            "additionalProperties": false
+          }
+        },
+        "areas": {
+          "default": [],
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "path": {
+                "type": "string",
+                "minLength": 1
+              },
+              "purpose": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "required": ["path", "purpose"],
+            "additionalProperties": false
+          }
+        },
+        "constraints": {
+          "default": [],
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      },
+      "additionalProperties": false,
+      "description": "Explicit repository-local facts for the generated project context Skill."
     }
   },
   "additionalProperties": false

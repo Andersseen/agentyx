@@ -1,7 +1,6 @@
 # Agentyx roadmap to 1.0
 
-Status: proposed implementation plan. No product changes are implemented by this document.
-Baseline inspected: 2026-09-07; package manifests report `0.5.0`.
+Status: proposed implementation plan, updated for the 0.7.0 source baseline and expanded 0.8 scope.
 
 ## Product outcome
 
@@ -67,7 +66,7 @@ SemVer allows `0.10.0` after `0.9.x`; do not compress validation into 1.0 to avo
 | [0.6.2, conditional](0.6-onboarding-and-corrections.md) | Fix demonstrated ownership or lifecycle defects | R062-01 | R061-01 |
 | [0.7.0](0.7-explain-and-select.md) | Explain selection, exclude capabilities, report local readiness accurately | R070-01 to R070-04 | R061-01; any confirmed safety fix |
 | 0.7.1, conditional | Correct regressions in 0.7 behavior only | Incident-specific task | 0.7.0 feedback |
-| [0.8.0](0.8-project-context.md) | Carry explicit project facts into the installed environment | R080-01 to R080-03 | R070-04 |
+| [0.8.0](0.8-project-context.md) | Carry explicit project facts and direct architectural relationships into the installed environment | R080-01 to R080-03 | Current project loader/resolver/install lifecycle |
 | 0.8.1, conditional | Correct context rendering, detection, or lifecycle regressions | Incident-specific task | 0.8.0 feedback |
 | [0.9.0](0.9-reproducibility.md) | Verify and restore a locked environment with explicit migration | R090-01 to R090-04 | R080-03 |
 | 0.9.1, conditional | Correct migration or frozen-install regressions | Incident-specific task | 0.9.0 feedback |
@@ -106,6 +105,10 @@ Before 1.0, do not add:
 Project context in 0.8 is an explicit extension of configuration, not a new agent runtime.
 Reproducibility in 0.9 is an explicit extension of the existing lock, not a package registry.
 Neither authorizes other roadmap ideas that remain excluded in `AGENTS.md`.
+
+0.8's progression remains: understand this repository and direct relationships (0.8), make the
+environment reproducible (0.9), validate compatibility and usefulness (0.10), then publish a stable
+compatibility contract (1.0). The context/graph model remains local and explicit.
 
 ## How to use this plan in a development session
 

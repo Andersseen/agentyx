@@ -32,7 +32,19 @@ agentyx mcp list
 agentyx target list
 agentyx source show superpowers
 agentyx source inspect superpowers
+agentyx graph
+agentyx graph --format mermaid
+agentyx graph owner authentication
 ```
+
+Project Graph records direct architectural relationships in `.agentyx.json` and exposes text,
+JSON, Mermaid and SVG projections. It is not a package dependency graph. Repository/docs/MCP
+references are descriptive: Agentyx does not fetch or index related repositories. Configured
+project facts and optional internal context are installed as one provider-neutral
+`agentyx-project-context` Skill through the normal adapter lifecycle.
+Interactive `init` offers existing `check`, `test`, `build`, and `lint` scripts only when the
+package manager is unambiguous. Suggestions start unselected, are stored as instruction data, and
+are never run by Agentyx. Non-interactive `init` leaves context absent.
 
 `doctor --check` keeps normal human or JSON output, but exits with code 1 on warnings as well as
 errors so CI can fail before install drift turns into a broken run.

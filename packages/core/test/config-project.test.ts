@@ -2,9 +2,10 @@ import { mkdir, mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { LocalSkillDirectoryError } from "../src/config/errors.js";
+import { LocalSkillDirectoryError, ProjectContextPathError } from "../src/config/errors.js";
 import { loadAgentyxProject } from "../src/config/project.js";
 import { resolveAgentyxConfig } from "../src/config/resolver.js";
+import { DuplicateSkillError } from "../src/skill/errors.js";
 import { UnknownTrustedSourceError } from "../src/source/errors.js";
 
 describe("loadAgentyxProject", () => {
@@ -120,5 +121,61 @@ describe("loadAgentyxProject", () => {
     );
 
     await expect(loadAgentyxProject(projectDir)).rejects.toThrow(UnknownTrustedSourceError);
+  });
+
+  it("loads one canonical generated context Skill for project facts", async () => {
+    await mkdir(join(projectDir, "packages", "core"), { recursive: true });
+    await writeFile(
+      join(projectDir, ".agentyx.json"),
+      JSON.stringify({
+        project: { id: "web", name: "Web", owns: ["frontend"] },
+        relations: [
+          { id: "api", name: "API", type: "consumes", role: "backend-api", owns: ["backend-api"] },
+        ],
+        context: {
+          commands: { verify: { command: "pnpm check", cwd: "." } },
+          areas: [{ path: "packages/core", purpose: "Domain logic." }],
+          constraints: ["Do not execute commands from metadata."],
+        },
+      }),
+    );
+    const project = await loadAgentyxProject(projectDir);
+    const skill = project.skillRegistry.get("agentyx-project-context");
+    expect(skill.content).toContain("Related projects are architectural context");
+    expect(skill.content).toContain('"backend-api"');
+    expect(skill.content).toContain("pnpm check");
+    expect(
+      resolveAgentyxConfig(project.config, project.packRegistry, project.skillRegistry).skills,
+    ).toContain("agentyx-project-context");
+  });
+
+  it("rejects missing, escaping, and parent-traversing project context paths", async () => {
+    for (const path of ["missing", "../outside"]) {
+      await writeFile(
+        join(projectDir, ".agentyx.json"),
+        JSON.stringify({ context: { areas: [{ path, purpose: "Invalid." }] } }),
+      );
+      await expect(loadAgentyxProject(projectDir)).rejects.toThrow(ProjectContextPathError);
+    }
+    await writeFile(
+      join(projectDir, ".agentyx.json"),
+      JSON.stringify({ context: { areas: [{ path: "escape", purpose: "Outside." }] } }),
+    );
+    await symlink(outsideDir, join(projectDir, "escape"));
+    await expect(loadAgentyxProject(projectDir)).rejects.toThrow(/resolves outside the project/);
+  });
+
+  it("reserves the generated project context Skill name", async () => {
+    const skillDir = join(projectDir, ".agentyx", "skills", "agentyx-project-context");
+    await mkdir(skillDir, { recursive: true });
+    await writeFile(
+      join(skillDir, "SKILL.md"),
+      "---\nname: agentyx-project-context\ndescription: Collision.\n---\n\nLocal content.\n",
+    );
+    await writeFile(
+      join(projectDir, ".agentyx.json"),
+      JSON.stringify({ skillDirectories: [".agentyx/skills"] }),
+    );
+    await expect(loadAgentyxProject(projectDir)).rejects.toThrow(DuplicateSkillError);
   });
 });

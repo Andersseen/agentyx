@@ -7,6 +7,7 @@ import { agentyxCoreName } from "@agentyx/core";
 import { Command } from "commander";
 import { z } from "zod";
 import { createDoctorCommand } from "./commands/doctor.js";
+import { createGraphCommand } from "./commands/graph.js";
 import { createInitCommand } from "./commands/init.js";
 import { createInstallCommand } from "./commands/install.js";
 import { createMcpCommand } from "./commands/mcp.js";
@@ -42,6 +43,7 @@ export function createAgentyxProgram(): Command {
     .description("Agentyx — provider-agnostic tooling for coding agents.")
     .version(cliVersion)
     .addCommand(createInitCommand())
+    .addCommand(createGraphCommand())
     .addCommand(createDoctorCommand())
     .addCommand(createRecommendCommand())
     .addCommand(createResolveCommand())

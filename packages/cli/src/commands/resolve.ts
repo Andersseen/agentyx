@@ -22,6 +22,7 @@ export async function runResolveCommand(input: ResolveCommandInput): Promise<str
       packs: [...input.packs],
       enable: [...(input.enable ?? [])],
       targets: [],
+      relations: [],
     });
 
     return input.json
