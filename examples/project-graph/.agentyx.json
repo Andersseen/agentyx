@@ -1,0 +1,36 @@
+{
+  "$schema": "../../packages/core/schema/agentyx.schema.json",
+  "packs": [],
+  "targets": ["codex", "claude", "kimi"],
+  "project": {
+    "id": "web-app",
+    "name": "Web App",
+    "owns": ["frontend"]
+  },
+  "relations": [
+    {
+      "id": "backend-api",
+      "name": "Backend API",
+      "type": "consumes",
+      "role": "backend-api",
+      "repository": "https://github.com/acme/backend-api",
+      "owns": ["backend-api"]
+    },
+    {
+      "id": "design-system",
+      "name": "Design System",
+      "type": "uses",
+      "role": "design-system",
+      "repository": "https://github.com/acme/design-system",
+      "owns": ["ui-components"]
+    },
+    {
+      "id": "auth-service",
+      "name": "Auth Service",
+      "type": "integrates",
+      "role": "authentication",
+      "repository": "https://github.com/acme/auth-service",
+      "owns": ["authentication"]
+    }
+  ]
+}

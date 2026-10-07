@@ -15,6 +15,10 @@ describe("agentyxConfigSchema", () => {
       trustedSources: [
         { name: "superpowers", path: ".agentyx/sources/superpowers", ref: "v5.1.0" },
       ],
+      project: { id: "web", name: "Web", owns: ["frontend"] },
+      relations: [
+        { id: "api", name: "API", type: "consumes", role: "backend-api", owns: ["backend-api"] },
+      ],
     });
 
     expect(config).toEqual({
@@ -35,6 +39,19 @@ describe("agentyxConfigSchema", () => {
       ],
       trustedSources: [
         { name: "superpowers", path: ".agentyx/sources/superpowers", ref: "v5.1.0" },
+      ],
+      project: { id: "web", name: "Web", docs: [], mcp: [], owns: ["frontend"] },
+      relations: [
+        {
+          id: "api",
+          name: "API",
+          type: "consumes",
+          role: "backend-api",
+          docs: [],
+          mcp: [],
+          owns: ["backend-api"],
+          guidance: [],
+        },
       ],
     });
   });
@@ -116,6 +133,25 @@ describe("parseAgentyxConfig", () => {
 
   it("rejects unknown top-level keys", () => {
     expect(() => parseAgentyxConfig({ skills: ["angular"] })).toThrow(AgentyxConfigValidationError);
+  });
+
+  it("rejects invalid graph identity, relationships, resources, and ownership", () => {
+    const base = { project: { id: "web", name: "Web" } };
+    for (const relations of [
+      [{ id: "web", name: "Self", type: "uses", role: "ui" }],
+      [{ id: "api", name: "API", type: "calls", role: "backend" }],
+      [
+        { id: "api", name: "API", type: "uses", role: " " },
+        { id: "api", name: "API 2", type: "uses", role: "api" },
+      ],
+      [{ id: "api", name: "API", type: "uses", role: "api", repository: "not a url" }],
+      [{ id: "api", name: "API", type: "uses", role: "api", owns: ["backend", "backend"] }],
+      [{ id: "api", name: "API\u001b[31m", type: "uses", role: "api" }],
+    ]) {
+      expect(() => parseAgentyxConfig({ ...base, relations })).toThrow(
+        AgentyxConfigValidationError,
+      );
+    }
   });
 
   it("mentions the source file when one is supplied", () => {

@@ -1,14 +1,17 @@
 import type { Dirent } from "node:fs";
-import { readdir, readFile, realpath } from "node:fs/promises";
+import { readFileSync } from "node:fs";
+import { readdir, readFile, realpath, stat } from "node:fs/promises";
 import { isAbsolute, join, relative, resolve, sep } from "node:path";
+import { PROJECT_CONTEXT_TEMPLATE_PATH } from "../assets.js";
 import type { PackRegistry } from "../pack/registry.js";
 import { builtInPackRegistry, builtInPacks, createPackRegistry } from "../pack/registry.js";
 import { builtInSkillRegistry } from "../skill/built-in.js";
+import { DuplicateSkillError } from "../skill/errors.js";
 import { parseSkillMarkdown } from "../skill/markdown.js";
 import { createSkillRegistry, type SkillRegistry, type SkillSource } from "../skill/registry.js";
 import type { SkillDefinition } from "../skill/schema.js";
 import { getTrustedSourceDefinition } from "../source/registry.js";
-import { LocalSkillDirectoryError } from "./errors.js";
+import { LocalSkillDirectoryError, ProjectContextPathError } from "./errors.js";
 import { loadAgentyxConfig } from "./loader.js";
 import type { AgentyxConfig } from "./schema.js";
 
@@ -17,6 +20,7 @@ export interface AgentyxProject {
   readonly config: AgentyxConfig;
   readonly packRegistry: PackRegistry;
   readonly skillRegistry: SkillRegistry;
+  readonly graph: import("../project-graph.js").ProjectGraph | undefined;
 }
 
 /**
@@ -31,11 +35,19 @@ export async function loadAgentyxProject(
 ): Promise<AgentyxProject> {
   const projectDir = resolve(projectPath);
   const config = await loadAgentyxConfig(projectDir);
+  await validateContextPaths(projectDir, config.context);
   for (const source of config.trustedSources ?? []) {
     getTrustedSourceDefinition(source);
   }
 
   const localSources = await loadLocalSkillSources(projectDir, config.skillDirectories ?? []);
+  if (localSources.some((source) => source.name === "agentyx-project-context")) {
+    throw new DuplicateSkillError("agentyx-project-context");
+  }
+  const generatedSources =
+    config.project !== undefined || (config.context !== undefined && hasContext(config.context))
+      ? [createProjectContextSkill(config.project, config.relations ?? [], config.context)]
+      : [];
   const skillRegistry = createSkillRegistry([
     ...builtInSkillRegistry.names.map(
       (name): SkillSource => ({
@@ -44,13 +56,89 @@ export async function loadAgentyxProject(
       }),
     ),
     ...localSources,
+    ...generatedSources,
   ]);
   const packRegistry =
     config.localPacks === undefined
       ? builtInPackRegistry
       : createPackRegistry([...builtInPacks, ...config.localPacks]);
 
-  return { config, packRegistry, skillRegistry };
+  const graph =
+    config.project === undefined
+      ? undefined
+      : { project: config.project, relations: config.relations ?? [] };
+  return { config, packRegistry, skillRegistry, graph };
+}
+
+function createProjectContextSkill(
+  project: import("./schema.js").ProjectMetadata | undefined,
+  relations: readonly import("./schema.js").ProjectRelation[],
+  context: import("./schema.js").ProjectContext | undefined,
+): SkillSource {
+  return {
+    name: "agentyx-project-context",
+    load: () => {
+      const template = readFileSync(PROJECT_CONTEXT_TEMPLATE_PATH, "utf8").trim();
+      const data = JSON.stringify({ project, relations, context }, null, 2);
+      const longestFence = Math.max(
+        0,
+        ...Array.from(data.matchAll(/`+/g), (match) => match[0].length),
+      );
+      const fence = "`".repeat(Math.max(3, longestFence + 1));
+      return {
+        name: "agentyx-project-context",
+        description: "Repository facts and direct architectural relationships.",
+        content: template.replace("{{PROJECT_FACTS}}", `${fence}json\n${data}\n${fence}`),
+      };
+    },
+  };
+}
+
+function hasContext(context: import("./schema.js").ProjectContext): boolean {
+  return (
+    Object.keys(context.commands).length > 0 ||
+    context.areas.length > 0 ||
+    context.constraints.length > 0
+  );
+}
+
+async function validateContextPaths(
+  projectDir: string,
+  context: import("./schema.js").ProjectContext | undefined,
+): Promise<void> {
+  if (context === undefined) return;
+  const paths = [
+    ...Object.values(context.commands).map(({ cwd }) => cwd),
+    ...context.areas.map(({ path }) => path),
+  ];
+  const projectRealPath = await realpath(projectDir);
+  for (const path of paths) {
+    if (/^(?:\/|[A-Za-z]:)|\\|(?:^|\/)\.\.(?:\/|$)/.test(path)) {
+      throw new ProjectContextPathError(
+        path,
+        "it must be project-relative and cannot traverse parents",
+      );
+    }
+    const resolvedPath = resolve(projectDir, path);
+    let resolvedRealPath: string;
+    try {
+      resolvedRealPath = await realpath(resolvedPath);
+      const pathStat = await stat(resolvedRealPath);
+      if (!pathStat.isDirectory()) {
+        throw new ProjectContextPathError(path, "it must name a directory");
+      }
+    } catch (cause) {
+      if (cause instanceof ProjectContextPathError) throw cause;
+      throw new ProjectContextPathError(
+        path,
+        "it does not exist or cannot be read",
+        cause instanceof Error ? { cause } : undefined,
+      );
+    }
+    if (!isInside(resolvedRealPath, projectRealPath)) {
+      throw new ProjectContextPathError(path, "it resolves outside the project");
+    }
+  }
 }
 
 async function loadLocalSkillSources(

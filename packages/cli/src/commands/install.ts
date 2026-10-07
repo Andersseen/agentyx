@@ -202,6 +202,7 @@ async function resolveEnvironment(input: InstallCommandInput): Promise<ResolvedE
       packs: [...input.packs],
       enable: [...(input.enable ?? [])],
       targets: [],
+      relations: [],
     });
 
     return {

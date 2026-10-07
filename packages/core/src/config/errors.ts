@@ -76,3 +76,18 @@ export class LocalSkillDirectoryError extends AgentyxError {
     this.directory = directory;
   }
 }
+
+/** Raised when a configured project-context path is missing or escapes the project. */
+export class ProjectContextPathError extends AgentyxError {
+  readonly path: string;
+
+  constructor(path: string, reason: string, options?: ErrorOptions) {
+    super(
+      "project_context_path_error",
+      `Invalid project context path "${path}": ${reason}.`,
+      options,
+    );
+    this.name = "ProjectContextPathError";
+    this.path = path;
+  }
+}

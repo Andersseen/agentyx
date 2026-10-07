@@ -76,7 +76,14 @@ export function resolveAgentyxConfig(
   return {
     requestedPacks,
     resolvedPacks,
-    skills: collectPackSkills(resolvedPacks, registry, skillRegistry),
+    skills: unique([
+      ...collectPackSkills(resolvedPacks, registry, skillRegistry),
+      ...(config.project !== undefined ||
+      (config.relations?.length ?? 0) > 0 ||
+      hasProjectContext(config.context)
+        ? ["agentyx-project-context"]
+        : []),
+    ]),
     declaredMcpServers,
     mcpServers: filterEffectiveMcpServers(declaredMcpServers, config.enable),
     declaredTools,
@@ -86,4 +93,17 @@ export function resolveAgentyxConfig(
     enabled: [...config.enable],
     targets: [...config.targets],
   };
+}
+
+function hasProjectContext(context: AgentyxConfig["context"]): boolean {
+  return (
+    context !== undefined &&
+    (Object.keys(context.commands).length > 0 ||
+      context.areas.length > 0 ||
+      context.constraints.length > 0)
+  );
+}
+
+function unique(values: readonly string[]): string[] {
+  return [...new Set(values)];
 }

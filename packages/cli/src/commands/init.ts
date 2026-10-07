@@ -46,6 +46,7 @@ export interface InitPlan {
   readonly replaced: boolean;
   /** Whether this run should go on to install, decided before anything is written. */
   readonly install: boolean;
+  readonly projectCommands: readonly string[];
 }
 
 export class InitError extends AgentyxError {
@@ -159,6 +160,7 @@ export async function planNonInteractiveInit(input: InitCommandInput): Promise<I
     content: formatAgentyxConfig(config),
     replaced: exists,
     install: input.install === true,
+    projectCommands: [],
   };
 }
 
@@ -231,7 +233,28 @@ async function planInteractiveInit(input: InitCommandInput): Promise<InitPlan> {
             })),
           }),
         );
-  const config = buildAgentyxConfig({ packs, enable, targets });
+  const suggestions = projectCommandSuggestions(detection);
+  const projectCommands =
+    suggestions.options.length === 0
+      ? []
+      : await promptValue(
+          multiselect({
+            message: "Project commands (optional; none selected by default)",
+            initialValues: [],
+            options: suggestions.options,
+          }),
+        );
+  const contextCommands: Record<string, { command: string; cwd: string }> = {};
+  for (const name of projectCommands) {
+    const command = suggestions.commands[name];
+    if (command !== undefined) contextCommands[name] = command;
+  }
+  const context =
+    Object.keys(contextCommands).length > 0 ? { commands: contextCommands } : undefined;
+  const config = {
+    ...buildAgentyxConfig({ packs, enable, targets }),
+    ...(context === undefined ? {} : { context }),
+  };
   const parsed = parseAgentyxConfig(config);
   resolveAgentyxConfig(parsed);
   const content = formatAgentyxConfig(config);
@@ -241,6 +264,7 @@ async function planInteractiveInit(input: InitCommandInput): Promise<InitPlan> {
         exists ? "Replace .agentyx.json?" : "Create .agentyx.json?",
         "",
         content.trimEnd(),
+        ...(suggestions.omittedReason === undefined ? [] : ["", suggestions.omittedReason]),
       ].join("\n"),
       initialValue: true,
     }),
@@ -267,7 +291,48 @@ async function planInteractiveInit(input: InitCommandInput): Promise<InitPlan> {
     content,
     replaced: exists,
     install,
+    projectCommands,
   };
+}
+
+function projectCommandSuggestions(detection: Awaited<ReturnType<typeof detectProject>>): {
+  readonly commands: Record<string, { command: string; cwd: string }>;
+  readonly options: { value: string; label: string; hint: string }[];
+  readonly omittedReason: string | undefined;
+} {
+  const scripts = detection.packageJson.scripts;
+  const available = ["check", "test", "build", "lint"].filter(
+    (script) => scripts[script]?.trim() !== undefined && scripts[script]?.trim() !== "",
+  );
+  if (available.length === 0) return { commands: {}, options: [], omittedReason: undefined };
+  const manager = detection.packageManager;
+  if (manager.name === undefined || manager.ambiguous) {
+    return {
+      commands: {},
+      options: [],
+      omittedReason: manager.ambiguous
+        ? "Project command suggestions omitted because multiple package managers were detected."
+        : "Project command suggestions omitted because no package manager was detected.",
+    };
+  }
+  const commandNames: Record<string, string> = {
+    check: "verify",
+    test: "test",
+    build: "build",
+    lint: "lint",
+  };
+  const commands = Object.fromEntries(
+    available.map((script) => [
+      commandNames[script] ?? script,
+      { command: `${manager.name} run ${script}`, cwd: "." },
+    ]),
+  );
+  const options = Object.entries(commands).map(([name, command]) => ({
+    value: name,
+    label: name,
+    hint: command.command,
+  }));
+  return { commands, options, omittedReason: undefined };
 }
 
 /** Provider names as a reader would say them, for a question about them. */
@@ -296,6 +361,9 @@ function renderInitText(plan: InitPlan, install: string | undefined): string {
     section("Packs", plan.packs),
     section("Enabled", plan.enable),
     section("Targets", plan.targets),
+    ...(plan.projectCommands.length === 0
+      ? []
+      : [section("Project commands", plan.projectCommands)]),
     ...(install === undefined
       ? [
           `Next: agentyx install — writes Skills, MCP and hooks into ${formatTargetNames(plan.targets)}.`,

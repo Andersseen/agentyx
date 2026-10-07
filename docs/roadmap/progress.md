@@ -129,3 +129,47 @@ Next task: R070-01 (0.7.0, not started)
 Release status: not published. All three tasks above, plus the unrelated `hooks` feature (see
 `.changeset/quiet-hooks-bootstrap.md`) and the pre-existing onboarding changeset
 (`.changeset/spotty-agents-onboard.md`), sit on `feature/session-start-hooks` awaiting push and PR.
+
+## R080-01 — Deliver Project Context & Project Graph
+
+Status: complete
+Commit: working tree
+Prerequisites checked: package manifests report `0.7.0`; CLI/core/adapters layering and Zod-only
+core confirmed. R070-01 through R070-04 are not recorded complete and their features are absent;
+the graph/context implementation uses existing project-loading and install lifecycles without them.
+
+Behavior delivered:
+- Added optional project identity, direct semantic relations, ownership, and explicit internal
+  context to `.agentyx.json`; old parsed configurations retain their previous shape.
+- Preserved conservative context setup: interactive init offers only locally declared common
+  package scripts under a detected package manager, leaves all choices unchecked, and never runs
+  them; non-interactive init does not synthesize context.
+- Added core text, JSON, Mermaid, and deterministic dependency-free SVG projections plus project
+  context Skill rendering.
+- Added `graph`, `graph show`, and `graph owner`; SVG writes only to a new in-project output path.
+- Routed one canonical project-context Skill through existing provider adapters and manifest
+  lifecycle. Claude, Codex, and Kimi destinations were verified byte-identical.
+- Expanded the 0.8 roadmap to Project Context & Project Graph and added a generic example fixture.
+
+Files changed:
+- `packages/core`, `packages/cli`, `packages/core/schema/agentyx.schema.json`
+- `README.md`, `packages/cli/README.md`, `docs/roadmap/README.md`,
+  `docs/roadmap/0.8-project-context.md`, `examples/project-graph/.agentyx.json`
+- `.changeset/curvy-pigs-plan.md`
+
+Verification:
+- `pnpm format` — passed.
+- `pnpm check` — passed; 48 test files and 491 tests, with typecheck and all workspace builds.
+- Core build followed by schema regeneration — passed; committed schema parity test passed.
+- `pnpm smoke:pack` — passed in an external temporary project, including graph formats/queries,
+  SVG output, install, packaged template loading, and provider Skill byte equality.
+- Direct packed CLI review showed text, JSON, Mermaid, SVG, `show`, `owner`, and install output.
+
+Compatibility / migration: project/context fields are optional. Legacy configs do not gain new
+serialized fields. No remote access or automatic relation inference was added.
+
+Remaining work: none for 0.8. The separate unfinished 0.7 roadmap remains unimplemented and should
+be resolved before beginning 0.9.
+
+Next task: R090-01, after deciding how to reconcile the incomplete 0.7 roadmap with the 0.8 release.
+Release status: not published; Changeset prepares the minor release.

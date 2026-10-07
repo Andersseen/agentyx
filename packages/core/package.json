@@ -33,7 +33,8 @@
   "files": [
     "dist",
     "schema",
-    "skills"
+    "skills",
+    "templates"
   ],
   "engines": {
     "node": ">=22"

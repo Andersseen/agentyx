@@ -1,4 +1,4 @@
-import { builtInSkillRegistry } from "@agentyx/core";
+import { builtInSkillRegistry, loadAgentyxProject, type SkillRegistry } from "@agentyx/core";
 import { Command } from "commander";
 import { emit, toJson } from "../output.js";
 
@@ -10,6 +10,7 @@ export function runSkillListCommand(): string {
 export interface SkillShowCommandInput {
   readonly name: string;
   readonly json: boolean;
+  readonly skillRegistry?: SkillRegistry;
 }
 
 /**
@@ -18,7 +19,7 @@ export interface SkillShowCommandInput {
  * @throws {UnknownSkillError} when the skill is not registered.
  */
 export function runSkillShowCommand(input: SkillShowCommandInput): string {
-  const skill = builtInSkillRegistry.get(input.name);
+  const skill = (input.skillRegistry ?? builtInSkillRegistry).get(input.name);
 
   if (input.json) {
     return toJson(skill);
@@ -43,7 +44,12 @@ export function createSkillCommand(): Command {
     .argument("<name>", "skill identifier, for example angular-modern")
     .option("--json", "print machine-readable JSON only", false)
     .action(async (name: string, options: { json: boolean }) => {
-      await emit(() => runSkillShowCommand({ name, json: options.json }));
+      await emit(async () => {
+        const skillRegistry = builtInSkillRegistry.has(name)
+          ? builtInSkillRegistry
+          : (await loadAgentyxProject()).skillRegistry;
+        return runSkillShowCommand({ name, json: options.json, skillRegistry });
+      });
     });
 
   return skill;

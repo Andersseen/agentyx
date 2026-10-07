@@ -210,6 +210,33 @@ describe("agentyx install --skill/--mcp", () => {
 });
 
 describe("agentyx install", () => {
+  it("installs byte-identical canonical project context for Claude, Codex, and Kimi", async () => {
+    await writeConfig({
+      packs: [],
+      targets: ["claude", "codex", "kimi"],
+      project: { id: "web", name: "Web", owns: ["frontend"] },
+      relations: [
+        { id: "api", name: "API", type: "consumes", role: "backend-api", owns: ["backend-api"] },
+      ],
+    });
+    await runInstallCommand({ ...baseInput, cwd: projectDir });
+    const codex = await readFile(
+      join(projectDir, ".agents/skills/agentyx-project-context/SKILL.md"),
+      "utf8",
+    );
+    const claude = await readFile(
+      join(projectDir, ".claude/skills/agentyx-project-context/SKILL.md"),
+      "utf8",
+    );
+    const kimi = await readFile(
+      join(projectDir, ".agents/skills/agentyx-project-context/SKILL.md"),
+      "utf8",
+    );
+    expect(claude).toBe(codex);
+    expect(kimi).toBe(codex);
+    expect(codex).toContain('"backend-api"');
+  });
+
   it("installs and reports unchanged on a second run", async () => {
     await writeConfig({ packs: ["technical"], targets: ["codex"] });
 
@@ -339,6 +366,31 @@ describe("agentyx install ownership", () => {
 });
 
 describe("agentyx install --prune", () => {
+  it("updates, prunes, and protects the generated project context Skill", async () => {
+    await writeConfig({ targets: ["codex"], project: { id: "web", name: "Web" } });
+    await runInstallCommand({ ...baseInput, cwd: projectDir });
+    const skillPath = join(projectDir, ".agents/skills/agentyx-project-context/SKILL.md");
+    const first = await readFile(skillPath, "utf8");
+    await writeConfig({
+      targets: ["codex"],
+      project: { id: "web", name: "Web", owns: ["frontend"] },
+    });
+    const update = await runInstallCommand({ ...baseInput, cwd: projectDir });
+    expect(update).toContain("update    .agents/skills/agentyx-project-context/SKILL.md");
+    const updated = await readFile(skillPath, "utf8");
+    expect(updated).not.toBe(first);
+    await writeFile(skillPath, `${updated}\nlocal edit\n`);
+    await writeConfig({ targets: ["codex"] });
+    const prune = await runInstallCommand({
+      ...baseInput,
+      prune: true,
+      dryRun: true,
+      cwd: projectDir,
+    });
+    expect(prune).toContain("conflict");
+    expect(await readFile(skillPath, "utf8")).toContain("local edit");
+  });
+
   it("removes the skills a narrowed selection no longer resolves", async () => {
     await writeConfig({ packs: ["technical", "typescript"], targets: ["codex"] });
     await runInstallCommand({ ...baseInput, cwd: projectDir });

@@ -21,6 +21,7 @@ export interface ProjectPackageJsonDetection {
   readonly path: string;
   readonly name: string | undefined;
   readonly packageManager: string | undefined;
+  readonly scripts: Readonly<Record<string, string>>;
   readonly error: string | undefined;
 }
 
@@ -143,6 +144,7 @@ interface PackageJson {
   readonly name?: unknown;
   readonly packageManager?: unknown;
   readonly workspaces?: unknown;
+  readonly scripts?: unknown;
   readonly dependencies?: unknown;
   readonly devDependencies?: unknown;
   readonly peerDependencies?: unknown;
@@ -182,6 +184,7 @@ export async function collectProjectSignals(projectDir: string): Promise<Project
       path: packageJsonPath,
       name: getString(packageJson?.name),
       packageManager: getString(packageJson?.packageManager),
+      scripts: getStringRecord(packageJson?.scripts),
       error: packageJsonResult.error,
     },
     packageManager,
@@ -425,6 +428,15 @@ function parsePackageManagerName(value: string | undefined): PackageManagerName 
 
 function getString(value: unknown): string | undefined {
   return typeof value === "string" ? value : undefined;
+}
+
+function getStringRecord(value: unknown): Readonly<Record<string, string>> {
+  if (!isRecord(value)) return {};
+  return Object.fromEntries(
+    Object.entries(value).filter(
+      (entry): entry is [string, string] => typeof entry[1] === "string",
+    ),
+  );
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

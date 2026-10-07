@@ -24,6 +24,9 @@ describe("buildAgentyxConfigJsonSchema", () => {
       "skillDirectories",
       "localPacks",
       "trustedSources",
+      "project",
+      "relations",
+      "context",
     ]);
   });
 
