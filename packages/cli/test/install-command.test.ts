@@ -486,3 +486,26 @@ describe("shared .agents/skills directory", () => {
     );
   });
 });
+
+describe("agentyx install with the rust pack", () => {
+  const rustSkills = [
+    "rust-idiomatic-development",
+    "rust-filesystem-safety",
+    "rust-testing-portability",
+    "cargo-project-verification",
+  ];
+
+  it("writes byte-identical canonical Rust skills for Codex, Claude Code and Kimi Code", async () => {
+    await writeConfig({ packs: ["rust"], targets: ["codex", "claude", "kimi"] });
+
+    await runInstallCommand({ ...baseInput, cwd: projectDir });
+
+    for (const skill of rustSkills) {
+      const codex = await readFile(join(projectDir, ".agents/skills", skill, "SKILL.md"), "utf8");
+      const claude = await readFile(join(projectDir, ".claude/skills", skill, "SKILL.md"), "utf8");
+
+      expect(codex).toBe(claude);
+      expect(codex).toContain(`name: ${skill}`);
+    }
+  });
+});

@@ -184,4 +184,83 @@ describe("fixtures", () => {
       readFile(join(fixturesPath, "typescript-project", "package.json"), "utf8"),
     ).resolves.toContain('"typescript"');
   });
+
+  describe("rust detection", () => {
+    async function inRustProject(
+      files: Record<string, string>,
+      check: (signals: Awaited<ReturnType<typeof detectProject>>["signals"]) => void,
+    ): Promise<void> {
+      const projectDir = await mkdtemp(join(tmpdir(), "agentyx-detect-"));
+
+      try {
+        for (const [name, content] of Object.entries(files)) {
+          await writeFile(join(projectDir, name), content, "utf8");
+        }
+
+        check((await detectProject(projectDir)).signals);
+      } finally {
+        await rm(projectDir, { recursive: true, force: true });
+      }
+    }
+
+    const pkg = '[package]\nname = "demo"\nversion = "0.1.0"\n';
+
+    it("detects a crate from Cargo.toml alone", async () => {
+      await inRustProject({ "Cargo.toml": pkg }, (signals) => {
+        expect(signals.rust).toEqual({
+          detected: true,
+          workspace: false,
+          cargoLock: false,
+          toolchainFile: undefined,
+        });
+      });
+    });
+
+    it("records Cargo.lock and the toolchain file as supporting facts", async () => {
+      await inRustProject(
+        { "Cargo.toml": pkg, "Cargo.lock": "", "rust-toolchain.toml": "[toolchain]\n" },
+        (signals) => {
+          expect(signals.rust).toMatchObject({
+            detected: true,
+            cargoLock: true,
+            toolchainFile: "rust-toolchain.toml",
+          });
+        },
+      );
+      await inRustProject({ "Cargo.toml": pkg, "rust-toolchain": "stable\n" }, (signals) => {
+        expect(signals.rust.toolchainFile).toBe("rust-toolchain");
+      });
+    });
+
+    it("detects a workspace manifest", async () => {
+      await inRustProject({ "Cargo.toml": '[workspace]\nmembers = ["crates/*"]\n' }, (signals) => {
+        expect(signals.rust).toMatchObject({ detected: true, workspace: true });
+      });
+    });
+
+    it("does not detect Rust from stray .rs files or a non-manifest Cargo.toml", async () => {
+      await inRustProject({ "main.rs": "fn main() {}\n" }, (signals) => {
+        expect(signals.rust.detected).toBe(false);
+      });
+      await inRustProject({ "Cargo.toml": "# nothing here\n" }, (signals) => {
+        expect(signals.rust.detected).toBe(false);
+      });
+    });
+
+    it("does not detect Rust in an empty directory", async () => {
+      await inRustProject({}, (signals) => {
+        expect(signals.rust.detected).toBe(false);
+      });
+    });
+
+    it("detects Rust next to a package.json without disturbing TypeScript detection", async () => {
+      await inRustProject(
+        { "Cargo.toml": pkg, "package.json": "{}\n", "tsconfig.json": "{}\n" },
+        (signals) => {
+          expect(signals.rust.detected).toBe(true);
+          expect(signals.typescript.tsconfig).toBe(true);
+        },
+      );
+    });
+  });
 });

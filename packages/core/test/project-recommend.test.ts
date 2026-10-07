@@ -22,6 +22,7 @@ function baseSignals(overrides: Partial<ProjectSignals> = {}): ProjectSignals {
     packageManager: { name: undefined, source: undefined, lockfiles: [], ambiguous: false },
     typescript: { dependency: undefined, tsconfig: false },
     angular: undefined,
+    rust: { detected: false, workspace: false, cargoLock: false, toolchainFile: undefined },
     testFrameworks: [],
     browserTesting: [],
     observability: [],
@@ -60,6 +61,71 @@ describe("recommendCapabilities", () => {
 
     expect(result.packs).toEqual([]);
     expect(result.capabilities).toEqual([]);
+  });
+
+  describe("rust", () => {
+    const noPackageJson = { ...baseSignals().packageJson, present: false };
+    const cargo = {
+      detected: true,
+      workspace: false,
+      cargoLock: false,
+      toolchainFile: undefined,
+    };
+
+    it("recommends technical and rust for a Rust-only repository", () => {
+      const result = recommendCapabilities(
+        baseSignals({ packageJson: noPackageJson, rust: cargo }),
+      );
+
+      expect(packNames(result)).toEqual(["technical", "rust"]);
+      expect(result.packs[0]?.reasons[0]).toContain("Cargo.toml detected");
+      expect(result.packs[1]).toMatchObject({ kind: "pack", confidence: "high" });
+      expect(result.packs[1]?.reasons).toEqual(["Cargo.toml detected."]);
+    });
+
+    it("reports workspace, lockfile and toolchain facts as extra reasons", () => {
+      const result = recommendCapabilities(
+        baseSignals({
+          packageJson: noPackageJson,
+          rust: {
+            detected: true,
+            workspace: true,
+            cargoLock: true,
+            toolchainFile: "rust-toolchain.toml",
+          },
+        }),
+      );
+
+      expect(result.packs.find((pack) => pack.name === "rust")?.reasons).toEqual([
+        "Cargo.toml detected.",
+        "Cargo workspace (workspace Cargo.toml).",
+        "Cargo.lock detected.",
+        "rust-toolchain.toml detected.",
+      ]);
+    });
+
+    it("recommends both language packs for a mixed Rust and TypeScript repository", () => {
+      const result = recommendCapabilities(
+        baseSignals({
+          rust: cargo,
+          typescript: {
+            dependency: { dependency: "typescript", field: "devDependencies" },
+            tsconfig: true,
+          },
+        }),
+      );
+
+      expect(packNames(result)).toEqual(["technical", "typescript", "rust"]);
+      expect(result.packs[0]?.reasons[0]).toContain("package.json and Cargo.toml detected");
+    });
+
+    it("does not recommend rust for a TypeScript-only repository", () => {
+      const result = recommendCapabilities(
+        baseSignals({ typescript: { dependency: undefined, tsconfig: true } }),
+      );
+
+      expect(packNames(result)).toEqual(["technical", "typescript"]);
+    });
   });
 
   it("recommends typescript from a dependency and from tsconfig, deterministically", () => {

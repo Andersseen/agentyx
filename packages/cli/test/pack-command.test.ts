@@ -9,6 +9,7 @@ describe("agentyx pack list", () => {
       [
         "technical      engineering",
         "typescript     language",
+        "rust           language",
         "angular        framework",
         "efficiency     efficiency",
         "agentic        workflow",
@@ -28,6 +29,21 @@ describe("agentyx pack list", () => {
 });
 
 describe("agentyx pack show", () => {
+  it("shows the rust pack with its four skills and no MCP, tools or hooks", () => {
+    const output = runPackShowCommand({ name: "rust", json: false });
+
+    expect(output).toContain("category: language");
+    for (const skill of [
+      "rust-idiomatic-development",
+      "rust-filesystem-safety",
+      "rust-testing-portability",
+      "cargo-project-verification",
+    ]) {
+      expect(output).toContain(skill);
+    }
+    expect(output).not.toContain("optional");
+  });
+
   it("shows pack capabilities", () => {
     const output = runPackShowCommand({ name: "efficiency", json: false });
 

@@ -3,6 +3,17 @@ import { UnknownPackError } from "../src/pack/errors.js";
 import { builtInPackRegistry, createPackRegistry } from "../src/pack/registry.js";
 import { resolvePacks } from "../src/pack/resolver.js";
 
+describe("rust pack resolution", () => {
+  it("resolves rust without hidden inheritance", () => {
+    expect(resolvePacks(["rust"])).toEqual(["rust"]);
+    expect(resolvePacks(["technical", "rust", "typescript"])).toEqual([
+      "technical",
+      "rust",
+      "typescript",
+    ]);
+  });
+});
+
 describe("resolvePacks", () => {
   it("preserves configured order without hidden inheritance", () => {
     expect(resolvePacks(["technical", "typescript", "angular"])).toEqual([

@@ -25,6 +25,7 @@ Packs contribute provider-neutral capabilities:
 | --------------- | ----------- | -------------------------------------------------------------- |
 | `technical`     | engineering | General engineering quality, API design, code review           |
 | `typescript`    | language    | Strict, modeled, modern TypeScript                             |
+| `rust`          | language    | Idiomatic Rust, filesystem safety, portable tests, Cargo checks |
 | `angular`       | framework   | Modern Angular APIs, signals, architecture, testing            |
 | `efficiency`    | efficiency  | Context-efficient exploration, output, iteration, verification |
 | `agentic`       | workflow    | Brainstorming, planning, debugging, parallel and review flows  |
@@ -88,7 +89,7 @@ print the same distinction (`runtime: local` vs `runtime: may-download`) before 
 ## Discovery
 
 Agentyx ships more packs and capabilities than any project needs. `recommend` reads this project's
-`package.json` and a small set of known files — Dockerfile, CI workflow directory, workspace
+`package.json`, `Cargo.toml` and a small set of known files — Dockerfile, CI workflow directory, workspace
 markers — and suggests which built-in packs and optional capabilities fit, each with a reason:
 
 ```sh

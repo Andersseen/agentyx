@@ -46,6 +46,18 @@ export interface CiFileSignals {
   readonly githubActions: boolean;
 }
 
+/**
+ * Rust facts. `detected` requires a `Cargo.toml` that declares a `[package]` or `[workspace]`
+ * table; stray `.rs` files never count. The other fields are supporting context only.
+ */
+export interface RustSignal {
+  readonly detected: boolean;
+  readonly workspace: boolean;
+  readonly cargoLock: boolean;
+  /** `rust-toolchain.toml` or `rust-toolchain`, whichever is present. */
+  readonly toolchainFile: string | undefined;
+}
+
 export interface MonorepoSignal {
   readonly detected: boolean;
   readonly markers: readonly string[];
@@ -73,6 +85,7 @@ export interface ProjectSignals {
     readonly tsconfig: boolean;
   };
   readonly angular: TechnologyMatch | undefined;
+  readonly rust: RustSignal;
   readonly testFrameworks: readonly TechnologyMatch[];
   readonly browserTesting: readonly TechnologyMatch[];
   readonly observability: readonly TechnologyMatch[];
@@ -165,7 +178,7 @@ export async function collectProjectSignals(projectDir: string): Promise<Project
   const packageJsonResult = await readPackageJson(packageJsonPath);
   const packageJson = packageJsonResult.data;
 
-  const [packageManager, containers, ci, monorepo, repositorySize, tsconfig, rtkAvailable] =
+  const [packageManager, containers, ci, monorepo, repositorySize, tsconfig, rtkAvailable, rust] =
     await Promise.all([
       detectPackageManager(projectDir, packageJson),
       detectContainerFiles(projectDir),
@@ -174,6 +187,7 @@ export async function collectProjectSignals(projectDir: string): Promise<Project
       scanRepositorySize(projectDir),
       exists(join(projectDir, "tsconfig.json")),
       isExecutableOnPath(builtInToolRegistry.get("rtk").command),
+      detectRust(projectDir),
     ]);
 
   return {
@@ -193,6 +207,7 @@ export async function collectProjectSignals(projectDir: string): Promise<Project
       tsconfig,
     },
     angular: findDependency(packageJson, "@angular/core"),
+    rust,
     testFrameworks: findAnyDependency(packageJson, TEST_FRAMEWORK_PATTERNS),
     browserTesting: findAnyDependency(packageJson, BROWSER_TESTING_PATTERNS),
     observability: findAnyDependency(packageJson, OBSERVABILITY_PATTERNS),
@@ -306,6 +321,41 @@ function findAnyDependency(
   }
 
   return matches;
+}
+
+async function detectRust(projectDir: string): Promise<RustSignal> {
+  let manifest: string;
+
+  try {
+    manifest = await readFile(join(projectDir, "Cargo.toml"), "utf8");
+  } catch (cause) {
+    if (isNotFound(cause) || isNotReadableAsFile(cause)) {
+      return { detected: false, workspace: false, cargoLock: false, toolchainFile: undefined };
+    }
+
+    throw cause;
+  }
+
+  const workspace = /^\s*\[workspace\]/m.test(manifest);
+  const detected = workspace || /^\s*\[package\]/m.test(manifest);
+  const [cargoLock, toolchainToml, toolchain] = await Promise.all([
+    exists(join(projectDir, "Cargo.lock")),
+    exists(join(projectDir, "rust-toolchain.toml")),
+    exists(join(projectDir, "rust-toolchain")),
+  ]);
+
+  return {
+    detected,
+    workspace,
+    cargoLock,
+    toolchainFile: toolchainToml ? "rust-toolchain.toml" : toolchain ? "rust-toolchain" : undefined,
+  };
+}
+
+function isNotReadableAsFile(cause: unknown): boolean {
+  const code = cause instanceof Error ? (cause as NodeJS.ErrnoException).code : undefined;
+
+  return code === "EISDIR" || code === "ENOTDIR";
 }
 
 async function detectContainerFiles(projectDir: string): Promise<ContainerFileSignals> {
