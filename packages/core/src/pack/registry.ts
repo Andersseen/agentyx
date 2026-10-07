@@ -43,6 +43,18 @@ export const builtInPacks: readonly PackDefinitionInput[] = [
     skills: ["typescript-strict", "typescript-modeling", "typescript-modern"],
   },
   {
+    name: "rust",
+    category: "language",
+    description:
+      "Modern, idiomatic Rust development with safe ownership, Cargo verification, portability, and filesystem-aware engineering.",
+    skills: [
+      "rust-idiomatic-development",
+      "rust-filesystem-safety",
+      "rust-testing-portability",
+      "cargo-project-verification",
+    ],
+  },
+  {
     name: "angular",
     category: "framework",
     description: "Modern Angular development environment.",

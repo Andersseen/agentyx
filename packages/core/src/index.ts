@@ -181,6 +181,7 @@ export type {
   MonorepoSignal,
   ProjectSignals,
   RepositorySizeSignal,
+  RustSignal,
   TechnologyMatch,
 } from "./project/signals.js";
 export {

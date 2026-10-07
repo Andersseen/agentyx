@@ -12,6 +12,7 @@ describe("built-in pack registry", () => {
     expect([...builtInPackRegistry.keys()]).toEqual([
       "technical",
       "typescript",
+      "rust",
       "angular",
       "efficiency",
       "agentic",
@@ -104,6 +105,18 @@ describe("built-in pack registry", () => {
       "typescript-strict",
       "typescript-modeling",
       "typescript-modern",
+    ]);
+    expect(builtInPackRegistry.get("rust")).toMatchObject({
+      category: "language",
+      mcpServers: [],
+      tools: [],
+      hooks: [],
+    });
+    expect(builtInPackRegistry.get("rust")?.skills).toEqual([
+      "rust-idiomatic-development",
+      "rust-filesystem-safety",
+      "rust-testing-portability",
+      "cargo-project-verification",
     ]);
     expect(builtInPackRegistry.get("angular")?.skills).toEqual([
       "angular-modern",

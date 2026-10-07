@@ -17,7 +17,7 @@ import {
 
 builtInPacks.map((pack) => pack.name);
 // [
-//   "technical", "typescript", "angular", "efficiency", "agentic",
+//   "technical", "typescript", "rust", "angular", "efficiency", "agentic",
 //   "testing", "security", "performance", "accessibility", "refactoring",
 //   "documentation", "observability", "data", "git", "devops"
 // ]
@@ -27,6 +27,10 @@ resolvePacks(["technical", "typescript", "angular"]);
 
 resolvePackSkills(["typescript"]);
 // ["typescript-strict", "typescript-modeling", "typescript-modern"]
+
+resolvePackSkills(["rust"]);
+// ["rust-idiomatic-development", "rust-filesystem-safety",
+//  "rust-testing-portability", "cargo-project-verification"]
 
 resolveAgentyxConfig(await loadAgentyxConfig(process.cwd()));
 // { requestedPacks, resolvedPacks, skills, declaredMcpServers, mcpServers, declaredTools, tools, enabled, targets }

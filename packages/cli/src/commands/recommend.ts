@@ -148,6 +148,10 @@ export function detectedLabels(signals: ProjectSignals): readonly string[] {
     add("TypeScript");
   }
 
+  if (signals.rust.detected) {
+    add(signals.rust.workspace ? "Rust (Cargo workspace)" : "Rust");
+  }
+
   for (const match of [
     ...signals.testFrameworks,
     ...signals.browserTesting,

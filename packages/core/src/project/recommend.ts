@@ -61,10 +61,15 @@ export function recommendCapabilities(
 function recommendPacks(signals: ProjectSignals): readonly Recommendation[] {
   const packs: Recommendation[] = [];
 
-  if (signals.packageJson.present) {
+  const softwareReasons = [
+    ...(signals.packageJson.present ? ["package.json"] : []),
+    ...(signals.rust.detected ? ["Cargo.toml"] : []),
+  ];
+
+  if (softwareReasons.length > 0) {
     packs.push(
       packRecommendation("technical", "high", [
-        "package.json detected — baseline engineering practices apply to any software project.",
+        `${softwareReasons.join(" and ")} detected — baseline engineering practices apply to any software project.`,
       ]),
     );
   }
@@ -78,6 +83,10 @@ function recommendPacks(signals: ProjectSignals): readonly Recommendation[] {
 
   if (typescriptReasons.length > 0) {
     packs.push(packRecommendation("typescript", "high", typescriptReasons));
+  }
+
+  if (signals.rust.detected) {
+    packs.push(packRecommendation("rust", "high", rustReasons(signals)));
   }
 
   if (signals.angular !== undefined) {
@@ -139,6 +148,17 @@ function recommendPacks(signals: ProjectSignals): readonly Recommendation[] {
   }
 
   return packs;
+}
+
+function rustReasons(signals: ProjectSignals): readonly string[] {
+  const { workspace, cargoLock, toolchainFile } = signals.rust;
+
+  return [
+    "Cargo.toml detected.",
+    ...(workspace ? ["Cargo workspace (workspace Cargo.toml)."] : []),
+    ...(cargoLock ? ["Cargo.lock detected."] : []),
+    ...(toolchainFile !== undefined ? [`${toolchainFile} detected.`] : []),
+  ];
 }
 
 function recommendOptionalCapabilities(

@@ -46,6 +46,23 @@ describe("resolvePackSkills", () => {
     ]);
   });
 
+  it("resolves the rust pack to its four skills, composed with typescript", () => {
+    const rust = [
+      "rust-idiomatic-development",
+      "rust-filesystem-safety",
+      "rust-testing-portability",
+      "cargo-project-verification",
+    ];
+
+    expect(resolvePackSkills(["rust"])).toEqual(rust);
+    expect(resolvePackSkills(["typescript", "rust"])).toEqual([
+      "typescript-strict",
+      "typescript-modeling",
+      "typescript-modern",
+      ...rust,
+    ]);
+  });
+
   it("returns no skills when nothing is requested", () => {
     expect(resolvePackSkills([])).toEqual([]);
   });

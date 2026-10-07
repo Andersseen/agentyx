@@ -43,6 +43,33 @@ describe("agentyx recommend", () => {
     expect(output).not.toContain("angular");
   });
 
+  it("recommends technical and rust for a Cargo-only repository", async () => {
+    await writeFile(join(projectDir, "Cargo.toml"), '[package]\nname = "demo"\n', "utf8");
+    await writeFile(join(projectDir, "Cargo.lock"), "", "utf8");
+
+    const output = await runRecommendCommand({ json: false, cwd: projectDir });
+
+    expect(output).toContain("Detected\n  Rust");
+    expect(output).toContain("technical      high");
+    expect(output).toContain("rust           high");
+    expect(output).toContain("Cargo.toml detected.");
+    expect(output).toContain("Cargo.lock detected.");
+    expect(output).not.toContain("typescript");
+  });
+
+  it("recommends both language packs for a mixed Rust and TypeScript repository", async () => {
+    await writePackageJson({ devDependencies: { typescript: "^5.9.0" } });
+    await writeFile(join(projectDir, "Cargo.toml"), '[workspace]\nmembers = ["a"]\n', "utf8");
+
+    const document = JSON.parse(await runRecommendCommand({ json: true, cwd: projectDir }));
+
+    expect(document.packs.map((pack: { name: string }) => pack.name)).toEqual([
+      "technical",
+      "typescript",
+      "rust",
+    ]);
+  });
+
   it("recommends angular, testing, devops, observability and their capabilities together", async () => {
     await writePackageJson({
       dependencies: { "@angular/core": "^20.0.0", "@sentry/angular": "^8.0.0" },

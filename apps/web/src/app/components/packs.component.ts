@@ -73,6 +73,11 @@ interface Pack {
                       <lmn-cpu-chip class="h-5 w-5" aria-hidden="true" />
                     </span>
                   }
+                  @case ("rust") {
+                    <span class="icon-shell text-warning">
+                      <lmn-cpu-chip class="h-5 w-5" aria-hidden="true" />
+                    </span>
+                  }
                   @case ("angular") {
                     <span class="icon-shell text-danger">
                       <lmn-sparkles class="h-5 w-5" aria-hidden="true" />
@@ -121,6 +126,13 @@ export class PacksComponent {
       name: "typescript",
       category: "language",
       purpose: "Strict, modeled, modern TypeScript practices.",
+      icon: "cpu-chip",
+      span: "",
+    },
+    {
+      name: "rust",
+      category: "language",
+      purpose: "Idiomatic Rust, filesystem safety, portable tests, and Cargo verification.",
       icon: "cpu-chip",
       span: "",
     },

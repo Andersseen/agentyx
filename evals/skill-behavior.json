@@ -26,5 +26,51 @@
     "prompt": "Implement a search endpoint using a user-provided query.",
     "expectedSkills": ["secure-coding"],
     "expectedBehaviors": ["validates input", "uses parameterized queries"]
+  },
+  {
+    "id": "rust-clone-borrow",
+    "packs": ["rust"],
+    "prompt": "This Rust function fails the borrow checker; I added .clone() on the String argument and it compiles. Is that fine?",
+    "expectedSkills": ["rust-idiomatic-development"],
+    "expectedBehaviors": [
+      "treats the clone as a design smell",
+      "restructures the borrow or accepts &str instead of cloning",
+      "justifies any remaining clone"
+    ]
+  },
+  {
+    "id": "rust-path-traversal",
+    "packs": ["rust"],
+    "prompt": "Add a Rust CLI command that generates files into an output directory from paths listed in a user-supplied manifest.",
+    "expectedSkills": ["rust-filesystem-safety", "rust-idiomatic-development"],
+    "expectedBehaviors": [
+      "rejects parent, root and prefix components",
+      "checks containment with canonicalize and Path::starts_with",
+      "does not overwrite files it did not create",
+      "returns errors instead of panicking on bad paths"
+    ]
+  },
+  {
+    "id": "rust-portable-regression",
+    "packs": ["rust"],
+    "prompt": "A bug in route normalization breaks on Windows separators. Fix it.",
+    "expectedSkills": ["rust-testing-portability"],
+    "expectedBehaviors": [
+      "adds a regression test that fails without the fix",
+      "covers a Windows-separator case",
+      "uses tempfile and avoids sleeps for any filesystem fixtures"
+    ]
+  },
+  {
+    "id": "cargo-workspace-handoff",
+    "packs": ["agentic", "rust"],
+    "prompt": "I changed a public function and a feature flag in a Cargo workspace. Get it ready for a pull request.",
+    "expectedSkills": ["cargo-project-verification", "verification"],
+    "expectedBehaviors": [
+      "reads repository CI before choosing commands",
+      "runs fmt, clippy and tests with the repository's feature set",
+      "checks feature combinations after changing a feature",
+      "reports commands run and anything not run"
+    ]
   }
 ]

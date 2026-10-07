@@ -153,13 +153,13 @@ export async function runDoctorCommand(input: DoctorCommandInput): Promise<Docto
     });
   }
 
-  if (!project.packageJson.present) {
+  if (!project.packageJson.present && !project.signals.rust.detected) {
     diagnostics.push({
       level: "warning",
       code: "package_json_missing",
       message: "package.json was not found; project detection is limited.",
     });
-  } else if (!project.packageJson.valid) {
+  } else if (project.packageJson.present && !project.packageJson.valid) {
     diagnostics.push({
       level: "warning",
       code: "package_json_invalid",
