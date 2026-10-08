@@ -14,6 +14,13 @@ export {
   loadAgentyxConfig,
   parseAgentyxConfig,
 } from "./config/loader.js";
+export {
+  type AgentyxConfigMutationChanges,
+  AgentyxConfigMutationError,
+  type AgentyxConfigMutationResult,
+  type AgentyxConfigMutations,
+  mutateAgentyxConfig,
+} from "./config/mutate.js";
 export type { AgentyxProject } from "./config/project.js";
 export { loadAgentyxProject } from "./config/project.js";
 export type { ResolvedAgentyxConfig } from "./config/resolver.js";

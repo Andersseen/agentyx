@@ -128,7 +128,7 @@ Usage is **configuration-aware**:
   ignored (Doctor shows how many). A session with no recorded start, or an undetermined or
   conflicting baseline, is never negative evidence either.
 - While `.agentyx.json` is ahead of what is installed, Doctor pauses negative recommendations until
-  `agentyx install` makes them converge. A provider whose observer hooks are not installed (for
+  `agentyx sync` makes them converge. A provider whose observer hooks are not installed (for
   example Codex with inline `config.toml` hooks) contributes no negative evidence.
 - The store is ephemeral analytics, versioned independently of your configuration. It is now
   `usage-v2.jsonl`; an old `usage-v1.jsonl` is left untouched and ignored.
@@ -348,12 +348,23 @@ That record decides what Agentyx may touch:
   remove it.
 - Everything else is Agentyx's to replace, so reinstalling an up-to-date project writes nothing.
 
-Removing a pack from `.agentyx.json` does not by itself remove what it installed. Ask for it:
+`.agentyx.json` is the project's desired state. `.agentyx.lock.json` records the provider files and
+entries Agentyx owns. Use `configure` to edit desired state, `sync` to converge installed state, and
+`doctor` to inspect health, drift and harness evidence:
 
 ```sh
-pnpm dlx @agentyx/cli install --prune           # remove managed files nothing resolves any more
-pnpm dlx @agentyx/cli install --prune --dry-run # see what that would remove first
+pnpm dlx @agentyx/cli init
+pnpm dlx @agentyx/cli recommend
+pnpm dlx @agentyx/cli configure
+pnpm dlx @agentyx/cli sync --dry-run
+pnpm dlx @agentyx/cli sync
+pnpm dlx @agentyx/cli doctor
 ```
+
+`configure` changes only the requested config fields. `sync` applies and prunes Agentyx-owned
+provider state to match that config; it preserves unrelated provider settings and reports conflicts
+for unmanaged or drifted files. `install` remains available for lower-level manual installation.
+Doctor usage data is local evidence about installed harnesses, never desired state.
 
 `uninstall` removes everything the manifest records and leaves `.agentyx.json` alone, so the project
 can be reinstalled afterwards. `--target <id>` limits it to one provider; a file two providers share

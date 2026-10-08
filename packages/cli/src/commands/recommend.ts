@@ -42,6 +42,9 @@ export async function runRecommendCommand(input: RecommendCommandInput): Promise
     renderRecommendationBlock("Packs", result.packs, true),
     "",
     renderRecommendationBlock("Optional capabilities", result.capabilities, false),
+    ...(configuredPacks === undefined
+      ? []
+      : ["", "Review these suggestions with: agentyx configure"]),
   ].join("\n");
 }
 

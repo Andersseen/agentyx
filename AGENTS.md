@@ -6,17 +6,19 @@ configuration — Agentyx does not generate or read this file.
 ## What this project is
 
 Agentyx is a provider-agnostic CLI for defining reusable development environments for coding agents.
-The current scope is deliberately narrow: a configuration model (`.agentyx.json`), pack and Skill
-registries, provider-agnostic MCP definitions, pack/Skill/MCP resolution, optimization profiles,
-project detection, `init`, `doctor` (configuration health, harness footprint, observed activity and
-cleanup hints), provider-neutral lifecycle hooks (`SessionStart`, `SessionEnd`, `PostToolUse`), and
+The current scope is deliberately narrow: a desired configuration model (`.agentyx.json`), pack and
+Skill registries, provider-agnostic MCP definitions, pack/Skill/MCP resolution, project detection,
+`init`, `configure`, `sync`, and `doctor` (configuration health, installed-state drift, harness
+footprint, baseline-aware observations and conservative cleanup hints), provider-neutral lifecycle
+hooks (`SessionStart`, `SessionEnd`, `PostToolUse`), and
 provider adapters that install into Codex
 (`.agents/skills`), Claude Code (`.claude/skills`) and Kimi Code (`.agents/skills`). Installation is
 project-local, plan-first, and covers Skill files, project MCP configuration and project hooks
 (Claude `.claude/settings.json`, Codex `.codex/hooks.json`; Kimi Code supports hooks only in
 user-level config, so Agentyx installs none). It is also
-reversible: `.agentyx.lock.json` records what was written, which is what `install --prune` and
-`uninstall` act on.
+reversible: `.agentyx.lock.json` records Agentyx-owned installed state, which is what `sync`,
+`install --prune` and `uninstall` act on. `.agentyx.json` remains desired state; provider files never
+rewrite it. `configure` edits that desired state and `sync` converges installed state to it.
 
 ## Commands
 
@@ -30,6 +32,8 @@ pnpm format                   # biome check --write .
 pnpm build
 
 pnpm agentyx init --help
+pnpm agentyx configure --help
+pnpm agentyx sync --help
 pnpm agentyx doctor --help
 pnpm agentyx resolve angular            # run the built CLI (requires pnpm build first)
 pnpm --silent agentyx resolve --json    # --silent keeps pnpm's banner out of stdout

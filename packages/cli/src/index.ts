@@ -6,6 +6,7 @@ import { agentyxAdaptersName } from "@agentyx/adapters";
 import { agentyxCoreName } from "@agentyx/core";
 import { Command } from "commander";
 import { z } from "zod";
+import { createConfigureCommand } from "./commands/configure.js";
 import { createDoctorCommand } from "./commands/doctor.js";
 import { createGraphCommand } from "./commands/graph.js";
 import { createHookCommand } from "./commands/hook.js";
@@ -17,6 +18,7 @@ import { createRecommendCommand } from "./commands/recommend.js";
 import { createResolveCommand } from "./commands/resolve.js";
 import { createSkillCommand } from "./commands/skill.js";
 import { createSourceCommand } from "./commands/source.js";
+import { createSyncCommand } from "./commands/sync.js";
 import { createTargetCommand } from "./commands/target.js";
 import { createUninstallCommand } from "./commands/uninstall.js";
 
@@ -46,6 +48,8 @@ export function createAgentyxProgram(): Command {
     .addCommand(createInitCommand())
     .addCommand(createGraphCommand())
     .addCommand(createDoctorCommand())
+    .addCommand(createConfigureCommand())
+    .addCommand(createSyncCommand())
     .addCommand(createRecommendCommand())
     .addCommand(createResolveCommand())
     .addCommand(createSkillCommand())
