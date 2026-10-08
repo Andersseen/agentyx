@@ -30,9 +30,15 @@ import {
   type Recommendation,
   recommendCapabilities,
   resolveAgentyxConfig,
+  type UtilizationReport,
 } from "@agentyx/core";
 import { Command } from "commander";
 import { section, toJson } from "../output.js";
+import {
+  buildHarnessReports,
+  type HarnessSection,
+  type ObservationSection,
+} from "./doctor-harness.js";
 
 export type DoctorLevel = "info" | "warning" | "error";
 export type DoctorStatus = "healthy" | "warnings" | "errors";
@@ -127,6 +133,12 @@ export interface DoctorReport {
     readonly rtk: "available" | "not installed" | "not selected";
     readonly codebaseMemory: "enabled" | "disabled" | "not selected";
   };
+  /** Configured footprint and context surface, from configuration and registries alone. */
+  readonly harness: HarnessSection;
+  /** What local provider hooks have recorded; empty when nothing has been recorded yet. */
+  readonly observation: ObservationSection;
+  /** Observed-session rates per pack and capability, with their numerators and denominators. */
+  readonly utilization: UtilizationReport;
   readonly diagnostics: readonly DoctorDiagnostic[];
 }
 
@@ -221,7 +233,7 @@ export async function runDoctorCommand(input: DoctorCommandInput): Promise<Docto
     });
   }
 
-  if (resolved?.hooks.includes("session-doctor-bootstrap") === true) {
+  if (resolved !== undefined && resolved.hooks.length > 0) {
     const hookRuntimeAvailable = await projectLocalBinaryAvailable(input.cwd, "agentyx");
 
     if (!hookRuntimeAvailable) {
@@ -229,10 +241,10 @@ export async function runDoctorCommand(input: DoctorCommandInput): Promise<Docto
         level: "warning",
         code: "hook_runtime_unavailable",
         message:
-          "session-doctor-bootstrap runs `npx --no-install agentyx doctor --hook`, which needs " +
-          "@agentyx/cli installed as a project dependency (for example `pnpm add -D @agentyx/cli`) " +
-          "so npx can resolve node_modules/.bin/agentyx. Running Agentyx only through " +
-          "`pnpm dlx @agentyx/cli` does not install it, so the hook will not run at session start.",
+          "Agentyx hooks run `npx --no-install agentyx ...`, which needs @agentyx/cli installed as " +
+          "a project dependency (for example `pnpm add -D @agentyx/cli`) so npx can resolve " +
+          "node_modules/.bin/agentyx. Running Agentyx only through `pnpm dlx @agentyx/cli` does " +
+          "not install it, so the hooks will not run.",
       });
     }
   }
@@ -387,6 +399,16 @@ export async function runDoctorCommand(input: DoctorCommandInput): Promise<Docto
     });
   }
 
+  const harnessReports = await buildHarnessReports({
+    cwd: input.cwd,
+    resolved,
+    configuredPacks: configState.config?.packs ?? [],
+    recommendedPacks,
+    targets: configuredTargets,
+    packRegistry: configState.project?.packRegistry,
+    diagnostics,
+  });
+
   return {
     status: statusOf(diagnostics),
     project: {
@@ -442,6 +464,7 @@ export async function runDoctorCommand(input: DoctorCommandInput): Promise<Docto
             ? "disabled"
             : "not selected",
     },
+    ...harnessReports,
     diagnostics,
   };
 }
@@ -529,6 +552,7 @@ export function renderDoctorReport(report: DoctorReport, json: boolean): string 
       `RTK: ${report.efficiency.rtk}`,
       `Codebase Memory: ${report.efficiency.codebaseMemory}`,
     ]),
+    ...renderHarnessSections(report),
     section(
       "Diagnostics",
       report.diagnostics.map(
@@ -536,6 +560,92 @@ export function renderDoctorReport(report: DoctorReport, json: boolean): string 
       ),
     ),
   ].join("\n");
+}
+
+function renderHarnessSections(report: DoctorReport): string[] {
+  const { footprint } = report.harness;
+  const { sessions, providers } = report.observation;
+  const utilization = report.utilization;
+  const percent = (rate: number | null): string =>
+    rate === null ? "" : `${Math.round(rate * 100)}%`;
+  const cleanup = utilization.capabilities.filter(
+    (capability) => capability.kind === "mcp" && capability.state === "dormant-candidate",
+  );
+  const packLines = utilization.packs.map((pack) => {
+    if (pack.evidence === "unavailable") {
+      return `${pack.name}: usage unavailable — not reliably observable for the configured providers`;
+    }
+
+    if (sessions === 0) {
+      return `${pack.name}: no sessions recorded yet (${pack.evidence} visibility)`;
+    }
+
+    return pack.evidence === "strong"
+      ? `${pack.name}: observed in ${pack.observedSessions} / ${pack.eligibleSessions} observable sessions (${percent(pack.observedSessionRate)} observed session rate)`
+      : `${pack.name}: partial visibility — activity seen in ${pack.observedSessions} session(s)${
+          pack.observedCapabilities.length > 0 ? ` (${pack.observedCapabilities.join(", ")})` : ""
+        }; no rate`;
+  });
+
+  return [
+    section("Harness", [
+      `configured packs: ${footprint.packs.configured} (project recommends ${footprint.breadth.recommended})`,
+      `skills: ${footprint.skills}`,
+      `MCP servers: ${footprint.mcp.active} active / ${footprint.mcp.declared} declared`,
+      `local tools: ${footprint.tools.active} active / ${footprint.tools.declared} declared`,
+      `hooks: ${footprint.hooks.active} active / ${footprint.hooks.declared} declared`,
+    ]),
+    section("Context surface (qualitative, not token counts)", [
+      `low-cost MCP: ${footprint.contextSurface.low}`,
+      `medium-cost MCP: ${footprint.contextSurface.medium}`,
+      `high-cost MCP: ${footprint.contextSurface.high}`,
+      ...footprint.contextSurface.servers
+        .filter((server) => server.contextCost === "high" || server.contextCost === "medium")
+        .map((server) => {
+          const usage = utilization.capabilities.find(
+            (capability) => capability.kind === "mcp" && capability.name === server.name,
+          );
+
+          return `${server.name}: ${server.contextCost}${
+            usage !== undefined && usage.eligibleSessions > 0
+              ? ` — ${usage.observedSessions} / ${usage.eligibleSessions} observable sessions with calls`
+              : ""
+          }`;
+        }),
+    ]),
+    section("Observation (local only; metadata, never prompts, code or tool output)", [
+      `sessions recorded: ${sessions}`,
+      ...providers.map((provider) =>
+        provider.runtimeObservation === "unavailable"
+          ? `${provider.name}: static only — runtime usage observation unavailable (${provider.reason ?? "no project-local hooks"})`
+          : `${provider.name}: ${provider.sessions} session(s), capability visibility ${provider.visibility}; hooks ${
+              provider.hooks?.configured === true ? "configured" : "not configured"
+            }${provider.hooks?.trust === "review-may-be-required" ? ", user review may be required" : ""}${
+              provider.lastReportedContextTokens === undefined
+                ? ""
+                : `; last provider-reported context: ${Math.round(provider.lastReportedContextTokens / 1000)}k tokens`
+            }${provider.reason === undefined ? "" : `; ${provider.reason}`}`,
+      ),
+      report.observation.store.location === "unavailable"
+        ? "no Git checkout: nothing is recorded (Agentyx never writes to $HOME)"
+        : "state: Git-local, never committed",
+    ]),
+    section(`Pack activity — observed session rate, last ${sessions} session(s)`, [
+      ...(sessions > 0
+        ? [
+            "rate = sessions with observed activity / sessions that could show it; not token or cost share",
+          ]
+        : []),
+      ...packLines,
+    ]),
+    section(
+      "Potential cleanup",
+      cleanup.map(
+        (capability) =>
+          `${capability.name}: ${capability.contextCost ?? "unclassified"} context cost, ${capability.observedCalls} observed calls / ${capability.eligibleSessions} observable sessions`,
+      ),
+    ),
+  ];
 }
 
 /**

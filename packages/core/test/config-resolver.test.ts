@@ -56,10 +56,12 @@ describe("resolveAgentyxConfig", () => {
     expect(disabled.mcpServers).toEqual([]);
     expect(disabled.declaredTools).toEqual([{ name: "rtk", activation: "optional" }]);
     expect(disabled.tools).toEqual([]);
-    expect(disabled.declaredHooks).toEqual([
-      { name: "session-doctor-bootstrap", activation: "default" },
+    expect(disabled.hooks).toEqual([
+      "session-doctor-bootstrap",
+      "observe-session-start",
+      "observe-session-end",
+      "observe-tool-use",
     ]);
-    expect(disabled.hooks).toEqual(["session-doctor-bootstrap"]);
     expect(enabled.mcpServers).toEqual(["codebase-memory"]);
     expect(enabled.tools).toEqual(["rtk"]);
   });

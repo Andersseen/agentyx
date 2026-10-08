@@ -4,9 +4,13 @@ export type {
   AdapterCapabilities,
   AdapterContext,
   AdapterDetection,
+  AdapterObservability,
   AgentAdapter,
+  ExistingHookConfig,
   ExistingMcpConfig,
+  HookInstallStatus,
   PlannedFile,
+  PlannedHookConfig,
   PlannedMcpConfig,
 } from "./adapter.js";
 export {
@@ -26,6 +30,16 @@ export {
 } from "./errors.js";
 export type { ApplyInstallOptions, InstallResult } from "./executor.js";
 export { applyInstallPlan, applyInstallPlans } from "./executor.js";
+export type {
+  HookPayloadNormalizer,
+  KnownCapabilities,
+  NormalizedHookEvent,
+} from "./hook-observer.js";
+export {
+  mcpServerFromToolName,
+  normalizeClaudeHook,
+  normalizeCodexHook,
+} from "./hook-observer.js";
 export type {
   DeleteOperation,
   DeleteOperationStatus,

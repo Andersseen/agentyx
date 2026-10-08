@@ -28,16 +28,21 @@ import {
  *   and user MCP scopes live in `~/.claude.json`, which Agentyx deliberately does not mutate.
  * - **Kimi Code MCP** supports project scope in `.kimi-code/mcp.json` with an `mcpServers` object.
  *   Kimi also supports SSE, but Agentyx's provider-neutral MCP model currently covers stdio and HTTP.
- * - **Claude Code hooks** support a `SessionStart` event in project-local `.claude/settings.json`
- *   under `hooks.SessionStart`, so Agentyx can install a hook the same way it installs a Skill:
- *   inside the project, tracked by the manifest, removable by `uninstall`.
- * - **Codex** has no documented hook mechanism at all, so nothing is invented for it.
- * - **Kimi Code does document lifecycle hooks**, but its hook configuration is user-level
- *   (`~/.kimi-code/config.toml`), not project-local. "Kimi Code supports hooks" and "Agentyx has a
- *   safe project-local hook installation strategy for Kimi Code" are different claims: only the
- *   first is true today. Agentyx never writes under `$HOME` (rule 8), so it does not declare
- *   `hooks` for Kimi Code until a project-local mechanism exists to install them into — this is a
- *   gap in Agentyx's installer, not a gap in what Kimi Code itself supports.
+ * - **Claude Code hooks** live in project-local `.claude/settings.json` under `hooks.<Event>`, so
+ *   Agentyx can install a hook the same way it installs a Skill: inside the project, tracked by the
+ *   manifest, removable by `uninstall`.
+ * - **Codex hooks** are documented too: project-local `<repo>/.codex/hooks.json`, or inline
+ *   `[hooks]` in `<repo>/.codex/config.toml`, loaded only for a trusted project layer. Non-managed
+ *   hooks must also be reviewed and trusted by the user (`/hooks`) before they run; Agentyx never
+ *   bypasses that, so a configured Codex hook is "configured", not "known to be active". Codex warns
+ *   when one layer uses both representations, so Agentyx writes `hooks.json` only when the project
+ *   has no inline `[hooks]`. Codex documents no Skill usage signal, so Skill use is unobservable.
+ * - **Kimi Code supports lifecycle hooks**, but they are configured only in the user-level
+ *   `~/.kimi-code/config.toml` `[[hooks]]` array, and plugin installation is per-user. "Kimi Code
+ *   supports hooks" and "Agentyx has a safe project-local hook installation scope for Kimi Code" are
+ *   different claims: only the first is true. Agentyx never writes under `$HOME` (rule 8), so it
+ *   declares no `hooks` for Kimi Code and reports its runtime usage as unobservable. This is a limit
+ *   of Agentyx's project-local safety policy, not of Kimi Code.
  *
  * Each definition also names the project-local paths that only that provider
  * creates. `.agents/skills` is shared by Codex and Kimi Code, so it cannot say
@@ -61,6 +66,18 @@ export const builtInAdapterDefinitions: readonly SkillDirectoryAdapterDefinition
       transports: ["stdio", "http"],
       reference: "https://developers.openai.com/codex/mcp",
     },
+    hooks: {
+      config: "codex-hooks-json",
+      reference: "https://developers.openai.com/codex/hooks",
+    },
+    observability: {
+      sessionLifecycle: true,
+      toolUse: true,
+      skillUse: false,
+      mcpUse: true,
+      contextTokens: false,
+      reason: "Codex documents no Skill usage signal, so Skill activity cannot be observed.",
+    },
   },
   {
     id: "claude",
@@ -76,7 +93,14 @@ export const builtInAdapterDefinitions: readonly SkillDirectoryAdapterDefinition
     },
     hooks: {
       config: "claude-settings-json",
-      reference: "https://code.claude.com/docs/en/hooks.md",
+      reference: "https://code.claude.com/docs/en/hooks",
+    },
+    observability: {
+      sessionLifecycle: true,
+      toolUse: true,
+      skillUse: true,
+      mcpUse: true,
+      contextTokens: true,
     },
   },
   {
@@ -90,6 +114,16 @@ export const builtInAdapterDefinitions: readonly SkillDirectoryAdapterDefinition
       config: "kimi-json",
       transports: ["stdio", "http"],
       reference: "https://www.kimi.com/code/docs/en/kimi-code-cli/customization/mcp.html",
+    },
+    observability: {
+      sessionLifecycle: false,
+      toolUse: false,
+      skillUse: false,
+      mcpUse: false,
+      contextTokens: false,
+      reason:
+        "Kimi Code supports hooks, but only in user-level config; Agentyx has no safe " +
+        "project-local installation for them and does not write under $HOME.",
     },
   },
 ];

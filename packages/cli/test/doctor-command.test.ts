@@ -256,8 +256,11 @@ describe("agentyx doctor", () => {
       activation: "optional",
       active: false,
     });
-    expect(report.resolution.hooks).toEqual([
-      { name: "session-doctor-bootstrap", activation: "default", active: true },
+    expect(report.resolution.hooks.map((hook) => hook.name)).toEqual([
+      "session-doctor-bootstrap",
+      "observe-session-start",
+      "observe-session-end",
+      "observe-tool-use",
     ]);
     expect(report.efficiency.codebaseMemory).toBe("enabled");
   });

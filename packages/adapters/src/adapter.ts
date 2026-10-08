@@ -1,4 +1,5 @@
 import type { HookDefinition, McpServerDefinition, SkillDefinition } from "@agentyx/core";
+import type { HookPayloadNormalizer } from "./hook-observer.js";
 
 export interface AdapterCapabilities {
   readonly skills: boolean;
@@ -8,6 +9,26 @@ export interface AdapterCapabilities {
     readonly transports?: readonly string[];
   };
   readonly hooks: boolean;
+  /** Absent means the adapter declares nothing observable. */
+  readonly observability?: AdapterObservability;
+}
+
+/**
+ * What a provider can reliably show Agentyx about a session, as documented by the provider.
+ *
+ * Core aggregation consumes these flags; it never branches on a provider id. `reason` explains an
+ * absence in one sentence for Doctor.
+ */
+export interface AdapterObservability {
+  /** Agentyx can install project-local hooks for this provider. */
+  readonly projectHooks: boolean;
+  readonly sessionLifecycle: boolean;
+  readonly toolUse: boolean;
+  readonly skillUse: boolean;
+  readonly mcpUse: boolean;
+  /** The provider reports a context size in some lifecycle payload. */
+  readonly contextTokens: boolean;
+  readonly reason?: string;
 }
 
 /**
@@ -72,6 +93,8 @@ export interface PlannedHookConfig {
   readonly segments: readonly string[];
   readonly content: string;
   readonly hooks: readonly string[];
+  /** Set when Agentyx deliberately plans nothing; the reason. The planner emits no operation. */
+  readonly skipped?: string;
   /**
    * Whether the rendered document has nothing left in it.
    *
@@ -93,6 +116,23 @@ export interface PlannedHookConfig {
 export interface ExistingHookConfig {
   readonly content: string | undefined;
   readonly remove: readonly string[];
+  /** Content of {@link AgentAdapter.hooksSiblingConfigPath}, when the adapter names one. */
+  readonly sibling?: string | undefined;
+}
+
+/** How far Agentyx can vouch for a provider's hook installation, without changing anything. */
+export interface HookInstallStatus {
+  /** Project-relative path of the hook configuration. */
+  readonly path: string;
+  /** Agentyx-owned entries are present in it. */
+  readonly configured: boolean;
+  /**
+   * `review-may-be-required`: the provider asks the user to review and trust project hooks, and
+   * Agentyx cannot verify that it happened. `unknown`: nothing is known either way.
+   */
+  readonly trust: "review-may-be-required" | "unknown";
+  /** Why the hooks are not configured, when Agentyx deliberately left them out. */
+  readonly note?: string;
 }
 
 /** What Agentyx can say about a provider in a project without changing anything. */
@@ -150,6 +190,15 @@ export interface AgentAdapter {
   planMcpConfig?(context: AdapterContext, existing: ExistingMcpConfig): PlannedMcpConfig;
   /** Path to the project-local hook config, when supported. */
   hooksConfigPath?(projectDir: string): string;
+  /**
+   * A second file the provider also reads hooks from, passed to `planHookConfig` as `sibling`. Lets
+   * an adapter avoid defining the same hooks in two places.
+   */
+  hooksSiblingConfigPath?(projectDir: string): string;
+  /** Reports hook installation state and trust. Reads only; never writes. */
+  inspectHooks?(projectDir: string): Promise<HookInstallStatus>;
+  /** Reduces one provider hook payload to metadata Agentyx may keep, or nothing. */
+  observeHook?: HookPayloadNormalizer;
   /** Merges resolved hooks into existing provider config content, minus any removals. */
   planHookConfig?(context: AdapterContext, existing: ExistingHookConfig): PlannedHookConfig;
 }

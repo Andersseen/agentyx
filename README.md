@@ -86,6 +86,69 @@ That is a property of the command itself, not of Agentyx, and every server that 
 "may fetch a package on first launch" above; `agentyx mcp show <name>` and `agentyx pack show <pack>`
 print the same distinction (`runtime: local` vs `runtime: may-download`) before you enable anything.
 
+## Harness observability
+
+`agentyx doctor` answers a practical question: is the harness you configured actually useful, or have
+you piled up capabilities you rarely use?
+
+- **Footprint, always.** From configuration alone, Doctor reports how many packs, Skills, MCP
+  servers, local tools and hooks are active, and how many active MCP servers are low, medium or
+  high *context cost*. Those are the qualitative `contextCost` labels each MCP server declares —
+  they are never added up into a token figure. A capability two packs both contribute counts once.
+- **Pack breadth.** Configured packs are compared with what project detection recommends. This is
+  informational: packs such as `security`, `documentation` or `efficiency` are often deliberate
+  workflow choices that `package.json` cannot reveal.
+- **Observed activity, when a provider can show it.** With the `efficiency` pack, Agentyx installs
+  three small project-local hooks (`observe-session-start`, `observe-session-end`,
+  `observe-tool-use`) for Claude Code (`.claude/settings.json`) and Codex (`.codex/hooks.json`). Each
+  runs `agentyx hook observe`, which records *that* a session started or ended and *which* Agentyx
+  Skill or MCP server was used. Repeated hooks are silent and fail open.
+
+What the numbers mean:
+
+- `observed in 9 / 12 observable sessions (75%)` is an **observed session rate**: sessions where
+  Agentyx saw activity for a pack or capability, divided by sessions that gave it enough telemetry to
+  see it. It is **not** a token, cost or context-window share, and not a measure of usefulness. Every
+  JSON percentage carries its numerator and denominator.
+- *No observed evidence* is not *known unused*. Codex documents no Skill usage signal, so Skills there
+  are *unobservable*, and a pack made of Skills reports "usage unavailable" rather than zero. Pack
+  evidence is `strong`, `partial` or `unavailable`; only strong evidence gets a percentage.
+- A **dormant candidate** is an active MCP server that a provider can reliably show, with at least 10
+  observable sessions (`DORMANCY_MIN_SESSIONS` in `@agentyx/core`; a heuristic, not a scientific
+  constant) and no observed use. For a high-context server, Doctor adds an informational note
+  suggesting you consider disabling it. Doctor never changes `.agentyx.json`.
+
+Privacy, in full:
+
+- Local only. No network requests, no telemetry, no accounts, no cloud storage.
+- Metadata only. A record holds a timestamp, the provider id, an opaque hash of the session id, an
+  event, an Agentyx Skill/MCP id and — when Claude Code reports it — a context size. It never holds
+  prompts, responses, source code, file names, tool arguments or output, shell commands, secrets or
+  environment variables; the schema has nowhere to put them.
+- Never in your commits. State lives at `<git dir>/agentyx/usage-v1.jsonl` (the real git directory
+  is resolved for worktrees and submodules). Git ignores it, so `git status` stays clean and
+  `.gitignore` is untouched. Outside a Git checkout nothing is recorded; Agentyx never writes to
+  `$HOME`. It keeps the 50 most recent sessions and at most 256 KiB.
+
+Provider support:
+
+| Provider | Project hooks | Session lifecycle | MCP use | Skill use | Context size |
+| --- | --- | --- | --- | --- | --- |
+| Claude Code | yes | yes | yes | yes | provider-reported, when sent |
+| Codex | yes (`.codex/hooks.json`) | yes | yes | not documented | no |
+| Kimi Code | no | no | no | no | no |
+
+Codex requires you to review and trust project hooks (`/hooks`); Agentyx never bypasses that, so Doctor
+reports Codex hooks as *configured, user review may be required* rather than active. If
+`.codex/config.toml` already defines inline `[hooks]`, Agentyx adds no second `hooks.json` (Codex
+warns about two sources in one layer) and says so. Kimi Code supports hooks, but only in user-level
+`~/.kimi-code/config.toml`; Agentyx refuses to mutate `$HOME`, so Kimi gets the full static analysis
+and runtime observation is reported as unavailable.
+
+The observer hooks run `npx --no-install agentyx ...`, so `@agentyx/cli` must be a project dependency.
+Skill use is recorded for Agentyx's built-in Skills only. RTK runs through shell commands, which
+Agentyx will not store or guess at, so RTK use is not observed.
+
 ## Discovery
 
 Agentyx ships more packs and capabilities than any project needs. `recommend` reads this project's

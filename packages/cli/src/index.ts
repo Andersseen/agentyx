@@ -8,6 +8,7 @@ import { Command } from "commander";
 import { z } from "zod";
 import { createDoctorCommand } from "./commands/doctor.js";
 import { createGraphCommand } from "./commands/graph.js";
+import { createHookCommand } from "./commands/hook.js";
 import { createInitCommand } from "./commands/init.js";
 import { createInstallCommand } from "./commands/install.js";
 import { createMcpCommand } from "./commands/mcp.js";
@@ -53,7 +54,8 @@ export function createAgentyxProgram(): Command {
     .addCommand(createPackCommand())
     .addCommand(createTargetCommand())
     .addCommand(createInstallCommand())
-    .addCommand(createUninstallCommand());
+    .addCommand(createUninstallCommand())
+    .addCommand(createHookCommand(), { hidden: true });
 }
 
 function isMainModule(): boolean {

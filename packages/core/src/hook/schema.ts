@@ -4,7 +4,14 @@ export const HOOK_ACTIVATION_LEVELS = ["default", "optional"] as const;
 
 export const hookActivationLevelSchema = z.enum(HOOK_ACTIVATION_LEVELS);
 
-export const HOOK_EVENTS = ["SessionStart"] as const;
+/**
+ * The provider-neutral lifecycle events a hook can run on.
+ *
+ * Deliberately small: only events Agentyx has a use for and that more than one provider documents.
+ * Provider-only events (for example Claude Code's `UserPromptExpansion`) stay inside that
+ * provider's adapter.
+ */
+export const HOOK_EVENTS = ["SessionStart", "SessionEnd", "PostToolUse"] as const;
 
 export const hookEventSchema = z.enum(HOOK_EVENTS);
 
@@ -21,7 +28,22 @@ export const hookDefinitionSchema = z.strictObject({
   description: z.string().trim().min(1, "Hook descriptions must be non-empty strings."),
   event: hookEventSchema.describe("The provider lifecycle event this hook runs on."),
   command: z.string().trim().min(1, "Hook command must be a non-empty string."),
-  args: z.array(z.string()).default([]),
+  args: z
+    .array(z.string())
+    .describe('Command arguments. The literal "{provider}" is replaced with the target id.')
+    .default([]),
+  matcher: z
+    .string()
+    .min(1, "Hook matchers must be non-empty strings.")
+    .describe("Provider matcher for the event, for example a tool-name pattern.")
+    .optional(),
+  async: z.boolean().describe("Run in the background where the provider supports it.").optional(),
+  timeout: z
+    .number()
+    .int()
+    .positive()
+    .describe("Timeout in seconds, where the provider supports one.")
+    .optional(),
 });
 
 export const hookReferenceSchema = z

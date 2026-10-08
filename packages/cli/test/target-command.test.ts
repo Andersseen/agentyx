@@ -35,9 +35,10 @@ describe("agentyx target show", () => {
         "Skills: .agents/skills (not present)",
         "MCP: .codex/config.toml",
         "MCP transports: stdio, http",
-        "Hooks: not supported (not supported)",
+        "Hooks: .codex/hooks.json",
         "Reference: https://developers.openai.com/codex/skills",
         "Reference: https://developers.openai.com/codex/mcp",
+        "Reference: https://developers.openai.com/codex/hooks",
       ].join("\n"),
     );
     expect(await runTargetShowCommand({ target: "claude", json: false, cwd: projectDir })).toBe(
@@ -50,7 +51,7 @@ describe("agentyx target show", () => {
         "Hooks: .claude/settings.json",
         "Reference: https://code.claude.com/docs/en/skills",
         "Reference: https://docs.anthropic.com/en/docs/claude-code/mcp",
-        "Reference: https://code.claude.com/docs/en/hooks.md",
+        "Reference: https://code.claude.com/docs/en/hooks",
       ].join("\n"),
     );
     expect(await runTargetShowCommand({ target: "kimi", json: false, cwd: projectDir })).toBe(
@@ -77,9 +78,10 @@ describe("agentyx target show", () => {
         "Skills: .agents/skills",
         "MCP: .codex/config.toml",
         "MCP transports: stdio, http",
-        "Hooks: not supported (not supported)",
+        "Hooks: .codex/hooks.json",
         "Reference: https://developers.openai.com/codex/skills",
         "Reference: https://developers.openai.com/codex/mcp",
+        "Reference: https://developers.openai.com/codex/hooks",
       ].join("\n"),
     );
   });
@@ -104,7 +106,7 @@ describe("agentyx target show", () => {
       references: [
         "https://code.claude.com/docs/en/skills",
         "https://docs.anthropic.com/en/docs/claude-code/mcp",
-        "https://code.claude.com/docs/en/hooks.md",
+        "https://code.claude.com/docs/en/hooks",
       ],
     });
   });

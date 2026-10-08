@@ -1,17 +1,25 @@
-import { stat } from "node:fs/promises";
+import { readFile, stat } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { formatSkillMarkdown } from "@agentyx/core";
 import type {
   AdapterContext,
+  AdapterObservability,
   AgentAdapter,
   ExistingHookConfig,
   ExistingMcpConfig,
+  HookInstallStatus,
   PlannedFile,
 } from "./adapter.js";
+import { normalizeClaudeHook, normalizeCodexHook } from "./hook-observer.js";
 import {
   CLAUDE_HOOKS_CONFIG_SEGMENTS,
+  CODEX_HOOKS_CONFIG_SEGMENTS,
   claudeHooksConfigPath,
-  renderClaudeHooksConfig,
+  codexHooksConfigPath,
+  codexInlineHooksConfigPath,
+  containsAgentyxHooks,
+  hasInlineCodexHooks,
+  renderJsonHooksConfig,
 } from "./hook-rendering.js";
 import {
   CLAUDE_MCP_CONFIG_SEGMENTS,
@@ -58,11 +66,13 @@ export interface SkillDirectoryAdapterDefinition {
     | {
         readonly project: false;
       };
-  /** Present only for providers with a documented hook mechanism Agentyx can target. */
+  /** Present only for providers with a documented project-local hook mechanism Agentyx can target. */
   readonly hooks?: {
-    readonly config: "claude-settings-json";
+    readonly config: "claude-settings-json" | "codex-hooks-json";
     readonly reference: string;
   };
+  /** What the provider documents as observable through its hooks. */
+  readonly observability?: Omit<AdapterObservability, "projectHooks">;
 }
 
 /**
@@ -109,6 +119,15 @@ export function createSkillDirectoryAdapter(
         transports: definition.mcp?.project === true ? definition.mcp.transports : [],
       },
       hooks: definition.hooks !== undefined,
+      observability: {
+        sessionLifecycle: false,
+        toolUse: false,
+        skillUse: false,
+        mcpUse: false,
+        contextTokens: false,
+        ...definition.observability,
+        projectHooks: definition.hooks !== undefined,
+      },
     },
     references,
     skillsPath,
@@ -168,23 +187,77 @@ export function createSkillDirectoryAdapter(
   }
 
   if (definition.hooks !== undefined) {
+    const flavor = definition.hooks.config === "claude-settings-json" ? "claude" : "codex";
+    const segments =
+      flavor === "claude" ? CLAUDE_HOOKS_CONFIG_SEGMENTS : CODEX_HOOKS_CONFIG_SEGMENTS;
+    const hooksPath = flavor === "claude" ? claudeHooksConfigPath : codexHooksConfigPath;
+
     adapter = {
       ...adapter,
-      hooksConfigPath: claudeHooksConfigPath,
+      hooksConfigPath: hooksPath,
+      observeHook: flavor === "claude" ? normalizeClaudeHook : normalizeCodexHook,
+      ...(flavor === "codex" ? { hooksSiblingConfigPath: codexInlineHooksConfigPath } : {}),
       planHookConfig: (context: AdapterContext, existing: ExistingHookConfig) => {
-        const rendered = renderClaudeHooksConfig(context.hooks ?? [], existing);
+        const hooks = context.hooks ?? [];
+        // Codex warns when one layer defines hooks both in hooks.json and inline. If the project
+        // already uses inline hooks and has no hooks.json, do not create a second source.
+        const inline =
+          flavor === "codex" &&
+          existing.content === undefined &&
+          hasInlineCodexHooks(existing.sibling);
+        const rendered = renderJsonHooksConfig(
+          flavor,
+          definition.id,
+          inline ? [] : hooks,
+          existing,
+        );
 
         return {
-          segments: CLAUDE_HOOKS_CONFIG_SEGMENTS,
+          segments,
           content: rendered.content,
           empty: rendered.empty,
-          hooks: (context.hooks ?? []).map((hook) => hook.name),
+          hooks: inline ? [] : hooks.map((hook) => hook.name),
+          ...(inline && hooks.length > 0
+            ? {
+                skipped:
+                  ".codex/config.toml already defines inline [hooks]; Agentyx does not add a " +
+                  "second .codex/hooks.json (Codex warns about two sources in one layer).",
+              }
+            : {}),
+        };
+      },
+      inspectHooks: async (projectDir): Promise<HookInstallStatus> => {
+        const path = hooksPath(projectDir);
+        const [content, sibling] = await Promise.all([
+          readOptional(path),
+          flavor === "codex" ? readOptional(codexInlineHooksConfigPath(projectDir)) : undefined,
+        ]);
+        const configured = containsAgentyxHooks(content);
+        const inline = flavor === "codex" && content === undefined && hasInlineCodexHooks(sibling);
+
+        return {
+          path: segments.join("/"),
+          configured,
+          trust: flavor === "codex" ? "review-may-be-required" : "unknown",
+          ...(inline
+            ? {
+                note: ".codex/config.toml defines inline hooks, so Agentyx did not add .codex/hooks.json.",
+              }
+            : {}),
         };
       },
     };
   }
 
   return adapter;
+}
+
+async function readOptional(path: string): Promise<string | undefined> {
+  try {
+    return await readFile(path, "utf8");
+  } catch {
+    return undefined;
+  }
 }
 
 /** True as soon as one marker exists, whether it is a file or a directory. */
