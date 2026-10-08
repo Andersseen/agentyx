@@ -58,7 +58,7 @@ describe("agentyx doctor", () => {
       level: "warning",
       code: "installation_pending",
       message:
-        "7 file(s) to create and 0 to update are not yet installed. Run agentyx install to apply them.",
+        "7 file(s) to create, 0 to update and 0 to remove are not yet installed. Run agentyx sync to apply them.",
     });
     expect(report.project).toMatchObject({
       packageManager: "pnpm",

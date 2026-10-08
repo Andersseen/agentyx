@@ -1,11 +1,13 @@
 import {
   applyInstallPlans,
+  builtInAdapterRegistry,
   collectInstallConflicts,
   detectConfiguredTargets,
   InstallConflictError,
   type InstallPlan,
   type InstallPlanSummary,
   planInstall,
+  planTargetInstall,
   summarizeInstallPlans,
 } from "@agentyx/adapters";
 import {
@@ -48,6 +50,8 @@ export interface InstallCommandInput {
   readonly mcpOnly?: boolean;
   /** Remove managed files and MCP entries the current selection no longer resolves. */
   readonly prune?: boolean;
+  /** Also prune provider targets recorded in the manifest but removed from desired config. */
+  readonly pruneRemovedTargets?: boolean;
   /** Overwrite files Agentyx does not manage instead of refusing to touch them. */
   readonly force?: boolean;
   readonly cwd: string;
@@ -118,16 +122,40 @@ export async function executeInstall(input: InstallCommandInput): Promise<Instal
     ? []
     : environment.hooks.map((name) => builtInHookRegistry.get(name));
   const manifest = await loadInstallManifest(input.cwd);
-  const plans = await planInstall({
-    targets: environment.targets,
-    projectDir: input.cwd,
-    skills,
-    mcpServers,
-    hooks,
-    manifest,
-    prune: input.prune === true,
-    force: input.force === true,
-  });
+  const activePlans =
+    environment.targets.length === 0 && input.pruneRemovedTargets === true
+      ? []
+      : await planInstall({
+          targets: environment.targets,
+          projectDir: input.cwd,
+          skills,
+          mcpServers,
+          hooks,
+          manifest,
+          prune: input.prune === true,
+          force: input.force === true,
+        });
+  const staleTargets = input.pruneRemovedTargets
+    ? unique(manifest.entries.flatMap((entry) => entry.targets)).filter(
+        (target) => !environment.targets.includes(target) && builtInAdapterRegistry.has(target),
+      )
+    : [];
+  const retiredPlans = await Promise.all(
+    staleTargets.map((target) =>
+      planTargetInstall({
+        target,
+        projectDir: input.cwd,
+        skills: [],
+        mcpServers: [],
+        hooks: [],
+        manifest,
+        prune: true,
+        force: input.force === true,
+        plannedTargets: [target],
+      }),
+    ),
+  );
+  const plans = [...activePlans, ...retiredPlans];
   const conflicts = collectInstallConflicts(plans);
 
   if (conflicts.length > 0 && !input.dryRun) {

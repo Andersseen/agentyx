@@ -372,11 +372,11 @@ export async function runDoctorCommand(input: DoctorCommandInput): Promise<Docto
     });
   }
 
-  if (summary !== undefined && summary.create + summary.update > 0) {
+  if (summary !== undefined && summary.create + summary.update + summary.delete > 0) {
     diagnostics.push({
       level: "warning",
       code: "installation_pending",
-      message: `${summary.create} file(s) to create and ${summary.update} to update are not yet installed. Run agentyx install to apply them.`,
+      message: `${summary.create} file(s) to create, ${summary.update} to update and ${summary.delete} to remove are not yet installed. Run agentyx sync to apply them.`,
     });
   }
 
