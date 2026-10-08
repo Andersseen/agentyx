@@ -7,7 +7,13 @@ import {
 } from "./observation.js";
 
 /** File name inside the Agentyx-owned directory; the suffix is the observation version. */
-export const USAGE_FILE_NAME = "usage-v1.jsonl";
+export const USAGE_FILE_NAME = "usage-v2.jsonl";
+
+/**
+ * Earlier observation files. They are never read, migrated or deleted: v1 sessions were not tied to
+ * a harness baseline, so they cannot be told apart from sessions of a different configuration.
+ */
+export const LEGACY_USAGE_FILE_NAMES = ["usage-v1.jsonl"] as const;
 
 /**
  * Retention heuristics. They are product choices, not scientific constants: enough recent sessions
@@ -19,7 +25,7 @@ export const MAX_USAGE_FILE_BYTES = 256 * 1024;
 export const COMPACTION_THRESHOLD_BYTES = 128 * 1024;
 
 /**
- * Where runtime observations live: `<git dir>/agentyx/usage-v1.jsonl`.
+ * Where runtime observations live: `<git dir>/agentyx/usage-v2.jsonl`.
  *
  * Git ignores unknown directories inside its own metadata directory, so the state never shows up in
  * `git status`, is never committed, needs no `.gitignore` entry and disappears with the checkout. The
@@ -75,26 +81,43 @@ async function gitDirOf(dir: string): Promise<string | undefined> {
 /** Reads every valid observation; malformed lines are skipped, a missing file is empty. */
 export async function readObservations(projectDir: string): Promise<{
   readonly available: boolean;
+  /** The store file exists, even if none of its lines are valid. */
+  readonly present: boolean;
+  /** An ignored earlier-format file sits next to the store. */
+  readonly legacyData: boolean;
   readonly observations: readonly HarnessObservation[];
 }> {
   const file = await resolveUsageFile(projectDir);
 
   if (file === undefined) {
-    return { available: false, observations: [] };
+    return { available: false, present: false, legacyData: false, observations: [] };
   }
+
+  const legacyData = (
+    await Promise.all(
+      LEGACY_USAGE_FILE_NAMES.map((name) =>
+        stat(join(dirname(file), name)).then(
+          (info) => info.isFile(),
+          () => false,
+        ),
+      ),
+    )
+  ).some(Boolean);
 
   try {
     const text = await readFile(file, "utf8");
 
     return {
       available: true,
+      present: true,
+      legacyData,
       observations: text
         .split("\n")
         .map(parseObservationLine)
         .filter((observation) => observation !== undefined),
     };
   } catch {
-    return { available: true, observations: [] };
+    return { available: true, present: false, legacyData, observations: [] };
   }
 }
 
@@ -172,6 +195,7 @@ export function compactObservations(
       observation.capabilityKind ?? "",
       observation.capability ?? "",
       observation.contextTokens ?? "",
+      observation.baseline ?? "",
     ].join("\0");
     const existing = merged.get(key);
 

@@ -1,5 +1,6 @@
 import type { HarnessObservation } from "./observation.js";
 import type { CapabilityKind, CapabilityProvenance } from "./provenance.js";
+import { type SessionSummary, summarizeSessions } from "./sessions.js";
 
 /**
  * Minimum observable sessions before a capability can be called a dormant candidate.
@@ -14,6 +15,11 @@ export interface ProviderVisibility {
   readonly id: string;
   readonly skills: boolean;
   readonly mcp: boolean;
+  /**
+   * Agentyx's observer hooks are currently installed for this provider. A provider that supports
+   * observation but is not being observed cannot show that anything went unused.
+   */
+  readonly observing: boolean;
 }
 
 export type Evidence = "strong" | "partial" | "unavailable";
@@ -23,7 +29,12 @@ export type CapabilityState =
   | "observed"
   /** Activity of this kind cannot be seen by any configured provider. Says nothing about use. */
   | "unobservable"
-  /** Observable, but no recorded session yet. */
+  /**
+   * Observable, never seen, but the installed harness is behind `.agentyx.json`: negative evidence
+   * is withheld until `agentyx install` makes them converge.
+   */
+  | "paused-pending-install"
+  /** Observable, but no session in the current baseline yet. */
   | "no-data"
   /** Observable, never seen, but fewer sessions than {@link DORMANCY_MIN_SESSIONS}. */
   | "insufficient-sample"
@@ -54,8 +65,21 @@ export interface UtilizationPack {
   readonly observedSessionRate: number | null;
 }
 
+export interface UtilizationObservationCounts {
+  readonly totalSessions: number;
+  readonly currentBaselineSessions: number;
+  /** Sessions recorded under a different harness; ignored for every current-harness conclusion. */
+  readonly ignoredHistoricalSessions: number;
+  /** Sessions with no usable baseline (no session-start, undetermined or conflicting harness). */
+  readonly unbaselinedSessions: number;
+}
+
 export interface UtilizationReport {
+  /** All recorded sessions, whatever their baseline. */
   readonly sessions: number;
+  readonly observation: UtilizationObservationCounts;
+  /** Negative evidence is `paused-pending-install` while installed state trails configuration. */
+  readonly negativeEvidence: "enabled" | "paused-pending-install";
   readonly minSessionsForDormancy: number;
   readonly packs: readonly UtilizationPack[];
   readonly capabilities: readonly UtilizationCapability[];
@@ -73,6 +97,13 @@ export interface UtilizationInput {
   })[];
   readonly resolvedPacks: readonly string[];
   readonly minSessions?: number;
+  /**
+   * The fingerprint of the harness the provider is running now. `undefined` when it cannot be
+   * determined: then no session is current and nothing can be negative evidence.
+   */
+  readonly currentBaseline?: string | undefined;
+  /** `.agentyx.json` asks for a harness that `agentyx install` has not installed yet. */
+  readonly installationPending?: boolean;
 }
 
 /**
@@ -82,30 +113,34 @@ export interface UtilizationInput {
  * Agentyx refuses to store and will not guess at, so a tool can be seen but never ruled out.
  */
 function sees(provider: ProviderVisibility | undefined, kind: CapabilityKind): boolean {
-  if (provider === undefined) {
+  if (provider === undefined || !provider.observing) {
     return false;
   }
 
   return kind === "skill" ? provider.skills : kind === "mcp" ? provider.mcp : false;
 }
 
+/**
+ * Observed-session rates for the CURRENT harness only.
+ *
+ * Invariant: a session counts toward a capability's `eligibleSessions` only if (1) it was stamped
+ * with the current baseline by a valid `session-start`, (2) the capability is part of that harness,
+ * (3) the session's provider reliably observes that kind and its observer hooks are installed, and
+ * (4) installation is not pending. Only then does absence mean "Agentyx could see it and it did not
+ * happen". Historical and unbaselined sessions never reach a denominator.
+ */
 export function computeUtilization(input: UtilizationInput): UtilizationReport {
   const min = input.minSessions ?? DORMANCY_MIN_SESSIONS;
   const providers = new Map(input.providers.map((provider) => [provider.id, provider]));
-  const sessions = new Map<string, { provider: string; hits: Map<string, number> }>();
-
-  for (const observation of input.observations) {
-    const key = `${observation.provider}:${observation.session}`;
-    const session = sessions.get(key) ?? { provider: observation.provider, hits: new Map() };
-
-    sessions.set(key, session);
-
-    if (observation.capabilityKind !== undefined && observation.capability !== undefined) {
-      const hit = `${observation.capabilityKind}:${observation.capability}`;
-
-      session.hits.set(hit, (session.hits.get(hit) ?? 0) + (observation.count ?? 1));
-    }
-  }
+  const all = summarizeSessions(input.observations, input.currentBaseline);
+  const sessions: SessionSummary[] = all.filter((session) => session.standing === "current");
+  const paused = input.installationPending === true;
+  const observation: UtilizationObservationCounts = {
+    totalSessions: all.length,
+    currentBaselineSessions: sessions.length,
+    ignoredHistoricalSessions: all.filter((session) => session.standing === "historical").length,
+    unbaselinedSessions: all.filter((session) => session.standing === "unbaselined").length,
+  };
 
   const configured = input.targets
     .map((target) => providers.get(target))
@@ -121,7 +156,7 @@ export function computeUtilization(input: UtilizationInput): UtilizationReport {
       let observed = 0;
       let calls = 0;
 
-      for (const session of sessions.values()) {
+      for (const session of sessions) {
         const count = session.hits.get(hit) ?? 0;
 
         calls += count;
@@ -129,6 +164,11 @@ export function computeUtilization(input: UtilizationInput): UtilizationReport {
         if (!sees(providers.get(session.provider), capability.kind)) {
           // Positive evidence still counts for kinds that cannot be ruled out (tools).
           observed += capability.kind === "tool" && count > 0 ? 1 : 0;
+          continue;
+        }
+
+        if (paused) {
+          observed += count > 0 ? 1 : 0;
           continue;
         }
 
@@ -141,11 +181,13 @@ export function computeUtilization(input: UtilizationInput): UtilizationReport {
           ? "observed"
           : !observable(capability.kind)
             ? "unobservable"
-            : eligible === 0
-              ? "no-data"
-              : eligible < min
-                ? "insufficient-sample"
-                : "dormant-candidate";
+            : paused
+              ? "paused-pending-install"
+              : eligible === 0
+                ? "no-data"
+                : eligible < min
+                  ? "insufficient-sample"
+                  : "dormant-candidate";
 
       return {
         kind: capability.kind,
@@ -174,12 +216,13 @@ export function computeUtilization(input: UtilizationInput): UtilizationReport {
     let eligible = 0;
     let observed = 0;
 
-    for (const session of sessions.values()) {
+    for (const session of sessions) {
       const provider = providers.get(session.provider);
       const visible =
-        evidence === "strong"
+        !paused &&
+        (evidence === "strong"
           ? needed.every((kind) => sees(provider, kind))
-          : needed.some((kind) => sees(provider, kind));
+          : needed.some((kind) => sees(provider, kind)));
       const used = members.some((member) => session.hits.has(`${member.kind}:${member.name}`));
 
       if (visible) {
@@ -203,7 +246,14 @@ export function computeUtilization(input: UtilizationInput): UtilizationReport {
     };
   });
 
-  return { sessions: sessions.size, minSessionsForDormancy: min, packs, capabilities };
+  return {
+    sessions: all.length,
+    observation,
+    negativeEvidence: paused ? "paused-pending-install" : "enabled",
+    minSessionsForDormancy: min,
+    packs,
+    capabilities,
+  };
 }
 
 function rate(numerator: number, denominator: number): number {

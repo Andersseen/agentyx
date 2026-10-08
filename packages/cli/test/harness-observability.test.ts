@@ -22,6 +22,23 @@ async function writeConfig(config: Record<string, unknown>): Promise<void> {
   await writeFile(join(dir, ".agentyx.json"), JSON.stringify(config), "utf8");
 }
 
+const installInput = {
+  packs: [],
+  enable: [],
+  targets: [],
+  skills: [],
+  mcpServers: [],
+  select: false,
+  dryRun: false,
+  json: false,
+};
+
+/** Writes the config and installs it, so hooks exist and sessions get a baseline. */
+async function setup(config: Record<string, unknown>): Promise<void> {
+  await writeConfig(config);
+  await runInstallCommand({ ...installInput, cwd: dir });
+}
+
 async function observe(provider: string, payload: unknown): Promise<boolean> {
   return runHookObserveCommand({ provider, payload: JSON.stringify(payload), cwd: dir });
 }
@@ -46,7 +63,7 @@ async function sessions(provider: string, count: number, usePlaywright: number):
   }
 }
 
-const usageFile = () => join(dir, ".git", "agentyx", "usage-v1.jsonl");
+const usageFile = () => join(dir, ".git", "agentyx", "usage-v2.jsonl");
 
 describe("agentyx hook observe", () => {
   it("is hidden from the primary help", () => {
@@ -135,20 +152,20 @@ describe("agentyx hook observe", () => {
 
 describe("doctor harness observability", () => {
   it("A: shows a static footprint with no observations and no cleanup advice", async () => {
-    await writeConfig({ packs: ["technical", "typescript"], targets: ["claude"] });
+    await setup({ packs: ["typescript", "efficiency"], targets: ["claude"] });
 
     const report = await runDoctorCommand({ json: false, cwd: dir });
 
     expect(report.harness.footprint.packs.configured).toBe(2);
-    expect(report.harness.footprint.mcp).toEqual({ active: 0, declared: 0 });
+    expect(report.harness.footprint.mcp).toEqual({ active: 0, declared: 1 });
     expect(report.observation.sessions).toBe(0);
     expect(report.utilization.packs.every((pack) => pack.observedSessionRate === null)).toBe(true);
     expect(report.diagnostics.some((d) => d.code === "dormant_mcp_candidate")).toBe(false);
-    expect(renderDoctorReport(report, false)).toContain("no sessions recorded yet");
+    expect(renderDoctorReport(report, false)).toContain("no sessions in the current harness yet");
   });
 
   it("B: suggests cleanup for a high-context MCP never used over 10 sessions", async () => {
-    await writeConfig({ packs: ["testing"], enable: ["playwright"], targets: ["claude"] });
+    await setup({ packs: ["testing", "efficiency"], enable: ["playwright"], targets: ["claude"] });
     await sessions("claude", 10, 0);
 
     const report = await runDoctorCommand({ json: false, cwd: dir });
@@ -163,12 +180,12 @@ describe("doctor harness observability", () => {
     expect(report.status).not.toBe("errors");
     expect(text).toContain("Potential cleanup");
     expect(text).toContain(
-      "playwright: high context cost, 0 observed calls / 10 observable sessions",
+      "playwright: high context cost, 0 observed calls / 10 current-harness observable sessions",
     );
   });
 
   it("does not suggest cleanup after only a few sessions", async () => {
-    await writeConfig({ packs: ["testing"], enable: ["playwright"], targets: ["claude"] });
+    await setup({ packs: ["testing", "efficiency"], enable: ["playwright"], targets: ["claude"] });
     await sessions("claude", 3, 0);
 
     const report = await runDoctorCommand({ json: false, cwd: dir });
@@ -180,7 +197,7 @@ describe("doctor harness observability", () => {
   });
 
   it("C: shows the observed session rate with numerator/denominator and no cleanup", async () => {
-    await writeConfig({ packs: ["testing"], enable: ["playwright"], targets: ["claude"] });
+    await setup({ packs: ["testing", "efficiency"], enable: ["playwright"], targets: ["claude"] });
     await sessions("claude", 10, 6);
 
     const report = await runDoctorCommand({ json: false, cwd: dir });
@@ -223,6 +240,8 @@ describe("doctor harness observability", () => {
     expect(byId.claude).toMatchObject({
       visibility: "strong",
       sessions: 2,
+      currentBaselineSessions: 0, // nothing installed, so no session has a baseline
+      coverage: "unavailable",
       runtimeObservation: "available",
     });
     expect(byId.codex).toMatchObject({ visibility: "partial", sessions: 1 });
@@ -242,7 +261,7 @@ describe("doctor harness observability", () => {
   });
 
   it("reports provider-reported context tokens without inventing a percentage", async () => {
-    await writeConfig({ packs: ["efficiency"], targets: ["claude"] });
+    await setup({ packs: ["efficiency"], targets: ["claude"] });
     await observe("claude", {
       session_id: "c",
       hook_event_name: "SessionStart",
@@ -259,7 +278,7 @@ describe("doctor harness observability", () => {
   });
 
   it("I: marks pack evidence strong, partial and unavailable", async () => {
-    await writeConfig({
+    await setup({
       packs: ["testing", "efficiency", "security"],
       enable: ["playwright"],
       targets: ["codex"],
@@ -367,5 +386,258 @@ describe("install with the efficiency pack", () => {
       cwd: dir,
     } as never);
     await expect(readFile(join(dir, ".codex", "hooks.json"), "utf8")).rejects.toThrow();
+  });
+});
+
+const SESSION_START = "SessionStart";
+
+async function observeSessions(
+  provider: string,
+  count: number,
+  usePlaywright: number,
+  prefix = "x",
+): Promise<void> {
+  for (let n = 0; n < count; n += 1) {
+    const session_id = `${prefix}-${provider}-${n}`;
+
+    await observe(provider, { session_id, hook_event_name: SESSION_START });
+
+    if (n < usePlaywright) {
+      await observe(provider, {
+        session_id,
+        hook_event_name: "PostToolUse",
+        tool_name: "mcp__playwright__browser_click",
+      });
+    }
+  }
+}
+
+const playwrightOf = (report: Awaited<ReturnType<typeof runDoctorCommand>>) =>
+  report.utilization.capabilities.find((c) => c.name === "playwright");
+const harness = { packs: ["testing", "efficiency"], enable: ["playwright"], targets: ["claude"] };
+
+describe("configuration-aware baselines", () => {
+  it("stamps a session start with the installed baseline and nothing else new", async () => {
+    await setup(harness);
+    await observe("claude", { session_id: "s", hook_event_name: SESSION_START });
+    await observe("claude", {
+      session_id: "s",
+      hook_event_name: "PostToolUse",
+      tool_name: "mcp__playwright__x",
+    });
+
+    const [start, tool] = (await readFile(usageFile(), "utf8"))
+      .trim()
+      .split("\n")
+      .map((line) => JSON.parse(line));
+    const report = await runDoctorCommand({ json: false, cwd: dir });
+
+    expect(start.baseline).toBe(report.observation.currentBaseline.fingerprint);
+    expect(start.baseline).toMatch(/^[0-9a-f]{16}$/);
+    expect(tool.baseline).toBeUndefined();
+    // Baseline data is an opaque id: no path, no project name, no capability text.
+    expect(JSON.stringify(start)).not.toContain(dir);
+    expect(JSON.stringify(start)).not.toMatch(/playwright|claude\/|\.json/);
+  });
+
+  it("records no baseline when nothing is installed, and never counts that session", async () => {
+    await writeConfig(harness);
+    await observeSessions("claude", 12, 0);
+
+    const report = await runDoctorCommand({ json: false, cwd: dir });
+
+    expect(report.observation.currentBaseline.fingerprint).toBeNull();
+    expect(report.observation.unbaselinedSessions).toBe(12);
+    expect(playwrightOf(report)?.state).not.toBe("dormant-candidate");
+  });
+
+  it("smoke: pending install, harness change and reinstall each start from the right sample", async () => {
+    await setup(harness);
+    await observeSessions("claude", 12, 0, "one");
+
+    let report = await runDoctorCommand({ json: false, cwd: dir });
+    const first = report.observation.currentBaseline.fingerprint;
+
+    expect(playwrightOf(report)).toMatchObject({
+      state: "dormant-candidate",
+      eligibleSessions: 12,
+    });
+    expect(report.observation).toMatchObject({ sessions: 12, historicalSessions: 0 });
+
+    // The config changes but nothing is reinstalled: old sessions say nothing about it.
+    await writeConfig({ ...harness, packs: ["testing", "efficiency", "security"] });
+    report = await runDoctorCommand({ json: false, cwd: dir });
+
+    expect(report.observation.negativeEvidence).toBe("paused-pending-install");
+    expect(report.observation.currentBaseline.fingerprint).toBe(first);
+    expect(playwrightOf(report)).toMatchObject({
+      state: "paused-pending-install",
+      eligibleSessions: 0,
+    });
+    expect(report.diagnostics.some((d) => d.code === "dormant_mcp_candidate")).toBe(false);
+    expect(renderDoctorReport(report, false)).toContain("utilization paused");
+
+    // A session starting now still belongs to the installed baseline, not the desired one.
+    await observeSessions("claude", 1, 0, "pending");
+    expect(
+      (await runDoctorCommand({ json: false, cwd: dir })).observation.currentBaseline.sessions,
+    ).toBe(13);
+
+    // Reinstall: a new baseline begins and the old sessions are history.
+    await runInstallCommand({ ...installInput, cwd: dir });
+    report = await runDoctorCommand({ json: false, cwd: dir });
+
+    expect(report.observation.currentBaseline.fingerprint).not.toBe(first);
+    expect(report.observation).toMatchObject({
+      sessions: 13,
+      historicalSessions: 13,
+      negativeEvidence: "enabled",
+    });
+    expect(report.observation.currentBaseline.sessions).toBe(0);
+    expect(playwrightOf(report)).toMatchObject({ state: "no-data", eligibleSessions: 0 });
+    expect(report.diagnostics).toContainEqual(
+      expect.objectContaining({ level: "info", code: "observation_baseline_reset" }),
+    );
+    expect(renderDoctorReport(report, false)).toContain("historical sessions ignored: 13");
+
+    // Enough new sessions: a valid, current-only result.
+    await observeSessions("claude", 10, 4, "two");
+    report = await runDoctorCommand({ json: false, cwd: dir });
+
+    expect(playwrightOf(report)).toMatchObject({
+      state: "observed",
+      observedSessions: 4,
+      eligibleSessions: 10,
+      observedSessionRate: 0.4,
+    });
+    expect(report.observation.historicalSessions).toBe(13);
+    expect(report.diagnostics.some((d) => d.code === "observation_baseline_reset")).toBe(false);
+  });
+
+  it("keeps old sessions of a newly enabled capability out of its denominator", async () => {
+    await setup({ packs: ["efficiency"], targets: ["claude"] });
+    await observeSessions("claude", 20, 0, "old");
+    await writeConfig(harness);
+    await runInstallCommand({ ...installInput, cwd: dir });
+    await observeSessions("claude", 1, 0, "new");
+
+    const report = await runDoctorCommand({ json: false, cwd: dir });
+
+    expect(playwrightOf(report)).toMatchObject({
+      state: "insufficient-sample",
+      eligibleSessions: 1,
+    });
+  });
+
+  it("ignores a legacy usage-v1.jsonl without touching it", async () => {
+    await setup(harness);
+    await mkdir(join(dir, ".git", "agentyx"), { recursive: true });
+    await writeFile(join(dir, ".git", "agentyx", "usage-v1.jsonl"), "legacy\n", "utf8");
+
+    const report = await runDoctorCommand({ json: false, cwd: dir });
+
+    expect(report.observation.store).toMatchObject({ file: "usage-v2.jsonl", legacyData: true });
+    expect(report.observation.sessions).toBe(0);
+    expect(renderDoctorReport(report, false)).toContain("legacy usage-v1.jsonl");
+    expect(await readFile(join(dir, ".git", "agentyx", "usage-v1.jsonl"), "utf8")).toBe("legacy\n");
+  });
+
+  it("hides context sizes from a previous harness", async () => {
+    await setup({ packs: ["efficiency"], targets: ["claude"] });
+    await observe("claude", {
+      session_id: "a",
+      hook_event_name: SESSION_START,
+      context_tokens: 90000,
+    });
+    await writeConfig({
+      packs: ["efficiency", "testing"],
+      enable: ["playwright"],
+      targets: ["claude"],
+    });
+    await runInstallCommand({ ...installInput, cwd: dir });
+
+    const report = await runDoctorCommand({ json: false, cwd: dir });
+
+    expect(report.observation.providers[0]?.lastReportedContextTokens).toBeUndefined();
+    expect(renderDoctorReport(report, false)).not.toContain("last provider-reported context");
+  });
+});
+
+describe("provider coverage and baselines", () => {
+  it("Codex: partial until a hook has run, then its current sessions count", async () => {
+    await setup({ packs: ["efficiency", "testing"], enable: ["playwright"], targets: ["codex"] });
+
+    let report = await runDoctorCommand({ json: false, cwd: dir });
+
+    expect(report.observation.providers[0]).toMatchObject({
+      coverage: "partial",
+      hooks: { configured: true, trust: "review-may-be-required" },
+      currentBaselineSessions: 0,
+    });
+
+    await observeSessions("codex", 10, 0);
+    report = await runDoctorCommand({ json: false, cwd: dir });
+
+    expect(report.observation.providers[0]).toMatchObject({
+      coverage: "active",
+      visibility: "partial",
+      sessions: 10,
+      currentBaselineSessions: 10,
+    });
+    expect(playwrightOf(report)).toMatchObject({
+      state: "dormant-candidate",
+      eligibleSessions: 10,
+    });
+  });
+
+  it("Codex with inline hooks: the observer is skipped, so old sessions are no negative evidence", async () => {
+    await mkdir(join(dir, ".codex"));
+    await writeFile(
+      join(dir, ".codex", "config.toml"),
+      '[[hooks.Stop]]\n\n[[hooks.Stop.hooks]]\ntype = "command"\ncommand = "ding"\n',
+    );
+    await setup({ packs: ["efficiency", "testing"], enable: ["playwright"], targets: ["codex"] });
+    await observeSessions("codex", 15, 0);
+
+    const report = await runDoctorCommand({ json: false, cwd: dir });
+
+    expect(report.observation.providers[0]).toMatchObject({ coverage: "unavailable" });
+    expect(playwrightOf(report)?.state).toBe("unobservable");
+    expect(report.diagnostics.some((d) => d.code === "dormant_mcp_candidate")).toBe(false);
+  });
+
+  it("Claude with its hooks removed: earlier sessions stop being negative evidence", async () => {
+    await setup(harness);
+    await observeSessions("claude", 12, 0);
+    await rm(join(dir, ".claude", "settings.json"));
+
+    const report = await runDoctorCommand({ json: false, cwd: dir });
+
+    expect(report.observation.providers[0]?.coverage).toBe("unavailable");
+    expect(report.diagnostics.some((d) => d.code === "dormant_mcp_candidate")).toBe(false);
+  });
+
+  it("Claude + Codex + Kimi: per-provider current counts; Kimi never adds runtime evidence", async () => {
+    await setup({
+      packs: ["efficiency", "testing"],
+      enable: ["playwright"],
+      targets: ["claude", "codex", "kimi"],
+    });
+    await observeSessions("claude", 6, 0);
+    await observeSessions("codex", 4, 0);
+    await observeSessions("kimi", 5, 0); // Kimi has no observer; the payloads are rejected
+
+    const report = await runDoctorCommand({ json: true, cwd: dir });
+    const byId = Object.fromEntries(report.observation.providers.map((p) => [p.id, p]));
+
+    expect(byId.claude).toMatchObject({ coverage: "active", currentBaselineSessions: 6 });
+    expect(byId.codex).toMatchObject({ currentBaselineSessions: 4 });
+    expect(byId.kimi).toMatchObject({
+      coverage: "unavailable",
+      runtimeObservation: "unavailable",
+      sessions: 0,
+    });
+    expect(report.observation.currentBaseline.sessions).toBe(10);
+    expect(playwrightOf(report)?.eligibleSessions).toBe(10);
   });
 });

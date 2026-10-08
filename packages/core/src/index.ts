@@ -36,6 +36,17 @@ export {
   skillDirectorySchema,
 } from "./config/schema.js";
 export { AgentyxError } from "./errors.js";
+export type {
+  BaselineCapability,
+  BaselineProvider,
+  HarnessBaseline,
+  HarnessBaselineInput,
+} from "./harness/baseline.js";
+export {
+  computeHarnessObservationBaseline,
+  HARNESS_OBSERVATION_CONTRACT_VERSION,
+  installedCapabilities,
+} from "./harness/baseline.js";
 export type { ContextSurfaceEntry, FootprintInput, HarnessFootprint } from "./harness/footprint.js";
 export { computeHarnessFootprint } from "./harness/footprint.js";
 export type {
@@ -53,9 +64,12 @@ export {
 } from "./harness/observation.js";
 export type { CapabilityKind, CapabilityProvenance } from "./harness/provenance.js";
 export { deriveCapabilityProvenance } from "./harness/provenance.js";
+export type { SessionStanding, SessionSummary } from "./harness/sessions.js";
+export { summarizeSessions } from "./harness/sessions.js";
 export {
   COMPACTION_THRESHOLD_BYTES,
   compactObservations,
+  LEGACY_USAGE_FILE_NAMES,
   MAX_RETAINED_SESSIONS,
   MAX_USAGE_FILE_BYTES,
   readObservations,
@@ -69,6 +83,7 @@ export type {
   ProviderVisibility,
   UtilizationCapability,
   UtilizationInput,
+  UtilizationObservationCounts,
   UtilizationPack,
   UtilizationReport,
 } from "./harness/utilization.js";
