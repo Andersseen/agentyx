@@ -1,8 +1,13 @@
 import { createHash } from "node:crypto";
 import { z } from "zod";
 
-/** Version of the observation record; bumping it starts a new state file. */
-export const OBSERVATION_VERSION = 1;
+/**
+ * Version of the observation record; bumping it starts a new state file.
+ *
+ * v2 ties sessions to the harness baseline that produced them (`baseline` on `session-start`).
+ * v1 records are never reinterpreted: `usage-v1.jsonl` is left untouched and ignored.
+ */
+export const OBSERVATION_VERSION = 2;
 
 /** Normalized, provider-neutral events. Deliberately small. */
 export const OBSERVATION_EVENTS = [
@@ -26,7 +31,7 @@ export type ObservationCapabilityKind = (typeof OBSERVATION_CAPABILITY_KINDS)[nu
  * a command, so none can be stored: the schema is strict and a record carrying anything else is
  * rejected as a whole.
  */
-export const harnessObservationSchema = z.strictObject({
+const observationShape = z.strictObject({
   version: z.literal(OBSERVATION_VERSION),
   timestamp: z.string().datetime(),
   provider: z.string().min(1).max(64),
@@ -39,7 +44,20 @@ export const harnessObservationSchema = z.strictObject({
   contextTokens: z.number().int().nonnegative().max(1_000_000_000).optional(),
   /** Collapsed repeats of an otherwise identical record; absent means 1. */
   count: z.number().int().positive().optional(),
+  /**
+   * The harness baseline the session started under (see `computeHarnessObservationBaseline`). Only
+   * a `session-start` carries it; it is absent when the installed harness could not be determined.
+   */
+  baseline: z
+    .string()
+    .regex(/^[0-9a-f]{16}$/)
+    .optional(),
 });
+
+export const harnessObservationSchema = observationShape.refine(
+  (observation) => observation.baseline === undefined || observation.event === "session-start",
+  { message: "Only a session-start observation can carry a baseline.", path: ["baseline"] },
+);
 
 export type HarnessObservation = z.infer<typeof harnessObservationSchema>;
 

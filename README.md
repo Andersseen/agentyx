@@ -118,14 +118,29 @@ What the numbers mean:
   constant) and no observed use. For a high-context server, Doctor adds an informational note
   suggesting you consider disabling it. Doctor never changes `.agentyx.json`.
 
+Usage is **configuration-aware**:
+
+- Each session records a harness baseline at its start: an opaque fingerprint of what is *installed*
+  (from `.agentyx.lock.json`: Skills, MCP servers and hooks per target, plus the providers'
+  observability contract). Changing the installed harness starts a fresh baseline.
+- Only current-baseline sessions count toward rates, dormant candidates and context sizes. Enabling
+  Playwright after 20 sessions does not make it look dormant: those sessions are historical and
+  ignored (Doctor shows how many). A session with no recorded start, or an undetermined or
+  conflicting baseline, is never negative evidence either.
+- While `.agentyx.json` is ahead of what is installed, Doctor pauses negative recommendations until
+  `agentyx install` makes them converge. A provider whose observer hooks are not installed (for
+  example Codex with inline `config.toml` hooks) contributes no negative evidence.
+- The store is ephemeral analytics, versioned independently of your configuration. It is now
+  `usage-v2.jsonl`; an old `usage-v1.jsonl` is left untouched and ignored.
+
 Privacy, in full:
 
 - Local only. No network requests, no telemetry, no accounts, no cloud storage.
 - Metadata only. A record holds a timestamp, the provider id, an opaque hash of the session id, an
-  event, an Agentyx Skill/MCP id and — when Claude Code reports it — a context size. It never holds
+  event, an Agentyx Skill/MCP id, a session-start baseline fingerprint and — when Claude Code reports it — a context size. It never holds
   prompts, responses, source code, file names, tool arguments or output, shell commands, secrets or
   environment variables; the schema has nowhere to put them.
-- Never in your commits. State lives at `<git dir>/agentyx/usage-v1.jsonl` (the real git directory
+- Never in your commits. State lives at `<git dir>/agentyx/usage-v2.jsonl` (the real git directory
   is resolved for worktrees and submodules). Git ignores it, so `git status` stays clean and
   `.gitignore` is untouched. Outside a Git checkout nothing is recorded; Agentyx never writes to
   `$HOME`. It keeps the 50 most recent sessions and at most 256 KiB.

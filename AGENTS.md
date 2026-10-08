@@ -111,7 +111,7 @@ Dependencies point one way: `cli → core`, `adapters → core`. Core depends on
    `applyInstallPlans` write. Agentyx writes UTF-8 files inside the directory or project config file a
    target owns, plus `.agentyx.lock.json` at the project root, and nothing else — no shell commands,
    no network and no `$HOME`. The one runtime exception is the hook observer
-   (`agentyx hook observe`), which appends metadata to `<git dir>/agentyx/usage-v1.jsonl`; it never
+   (`agentyx hook observe`), which appends metadata to `<git dir>/agentyx/usage-v2.jsonl`; it never
    stores prompts, tool arguments or output, commands, file names or secrets, fails open, prints
    nothing, and records nothing outside a Git checkout.
 9. **Agentyx only touches what it recorded.** `.agentyx.lock.json` names every managed path and hashes
@@ -124,7 +124,9 @@ Dependencies point one way: `cli → core`, `adapters → core`. Core depends on
    directory as built-in ones.
 10. **Observation is honest.** "No observed use" is not "unused": a capability a provider cannot reliably
     show is *unobservable*, never dormant. Provider observability lives in each adapter's
-    `capabilities.observability`; core aggregation never branches on a provider id. Percentages are
+    `capabilities.observability`; core aggregation never branches on a provider id. Doctor recommendations must never combine
+    sessions from incompatible harness baselines: only sessions stamped with the current *installed*
+    baseline (`computeHarnessObservationBaseline`) reach a denominator. Percentages are
     observed session rates (always with numerator and denominator), never token or cost shares.
 11. **Do not implement the future roadmap.** OpenCode, Cursor, global installs, token budgets, remote
     registries, plugins, npm registry integration and an update system are all out of scope until

@@ -1,13 +1,18 @@
+import { stat } from "node:fs/promises";
+import { dirname, join, resolve } from "node:path";
 import { builtInAdapterRegistry } from "@agentyx/adapters";
 import {
+  AGENTYX_MANIFEST_FILENAME,
   builtInMcpServerNames,
   builtInSkillNames,
   type HarnessObservation,
   hashSessionKey,
+  loadInstallManifest,
   OBSERVATION_VERSION,
   recordObservation,
 } from "@agentyx/core";
 import { Command } from "commander";
+import { installedHarnessBaseline } from "./harness-baseline.js";
 
 /** Provider hook payloads are small; anything larger is not a payload this command wants. */
 const MAX_PAYLOAD_BYTES = 256 * 1024;
@@ -58,11 +63,42 @@ export async function runHookObserveCommand(input: HookObserveInput): Promise<bo
       ...(normalized.contextTokens === undefined
         ? {}
         : { contextTokens: normalized.contextTokens }),
+      // Only a session start pays for reading the manifest; every other event stays a bare append.
+      ...(normalized.event === "session-start" ? await baselineField(input.cwd) : {}),
     };
 
     return await recordObservation(input.cwd, observation);
   } catch {
     return false;
+  }
+}
+
+/**
+ * The baseline of the harness that is INSTALLED, which is what the running provider's hooks belong
+ * to — not `.agentyx.json`, which may be ahead of it. Anything uncertain (no manifest, a damaged
+ * one, no installed capability) yields no baseline, and a session without one is never negative
+ * evidence. Reads one small file; scans nothing.
+ */
+async function baselineField(cwd: string): Promise<{ baseline?: string }> {
+  try {
+    for (let dir = resolve(cwd); ; dir = dirname(dir)) {
+      const found = await stat(join(dir, AGENTYX_MANIFEST_FILENAME)).then(
+        (info) => info.isFile(),
+        () => false,
+      );
+
+      if (found) {
+        const baseline = installedHarnessBaseline(await loadInstallManifest(dir));
+
+        return baseline === undefined ? {} : { baseline: baseline.fingerprint };
+      }
+
+      if (dirname(dir) === dir) {
+        return {};
+      }
+    }
+  } catch {
+    return {};
   }
 }
 

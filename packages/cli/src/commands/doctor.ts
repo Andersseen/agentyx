@@ -407,6 +407,10 @@ export async function runDoctorCommand(input: DoctorCommandInput): Promise<Docto
     targets: configuredTargets,
     packRegistry: configState.project?.packRegistry,
     diagnostics,
+    manifest,
+    // Installed state trails configuration: negative usage evidence would describe the wrong harness.
+    installationPending:
+      summary !== undefined && summary.create + summary.update + summary.delete > 0,
   });
 
   return {
@@ -564,7 +568,8 @@ export function renderDoctorReport(report: DoctorReport, json: boolean): string 
 
 function renderHarnessSections(report: DoctorReport): string[] {
   const { footprint } = report.harness;
-  const { sessions, providers } = report.observation;
+  const { providers } = report.observation;
+  const sessions = report.observation.currentBaseline.sessions;
   const utilization = report.utilization;
   const percent = (rate: number | null): string =>
     rate === null ? "" : `${Math.round(rate * 100)}%`;
@@ -576,8 +581,12 @@ function renderHarnessSections(report: DoctorReport): string[] {
       return `${pack.name}: usage unavailable — not reliably observable for the configured providers`;
     }
 
+    if (utilization.negativeEvidence === "paused-pending-install" && pack.eligibleSessions === 0) {
+      return `${pack.name}: usage paused — installation is pending, so old sessions describe a different harness`;
+    }
+
     if (sessions === 0) {
-      return `${pack.name}: no sessions recorded yet (${pack.evidence} visibility)`;
+      return `${pack.name}: no sessions in the current harness yet (${pack.evidence} visibility)`;
     }
 
     return pack.evidence === "strong"
@@ -614,11 +623,27 @@ function renderHarnessSections(report: DoctorReport): string[] {
         }),
     ]),
     section("Observation (local only; metadata, never prompts, code or tool output)", [
-      `sessions recorded: ${sessions}`,
+      `current baseline: ${report.observation.currentBaseline.fingerprint?.slice(0, 8) ?? "none (nothing installed)"}`,
+      `current sessions: ${sessions}`,
+      ...(report.observation.historicalSessions + report.observation.unbaselinedSessions > 0
+        ? [
+            `historical sessions ignored: ${
+              report.observation.historicalSessions + report.observation.unbaselinedSessions
+            }`,
+          ]
+        : []),
+      ...(report.observation.negativeEvidence === "paused-pending-install"
+        ? [
+            "utilization paused for negative recommendations until installed state matches configuration (run agentyx install)",
+          ]
+        : []),
+      ...(report.observation.store.legacyData
+        ? [`legacy usage-v1.jsonl found and ignored (sessions were not tied to a harness)`]
+        : []),
       ...providers.map((provider) =>
         provider.runtimeObservation === "unavailable"
           ? `${provider.name}: static only — runtime usage observation unavailable (${provider.reason ?? "no project-local hooks"})`
-          : `${provider.name}: ${provider.sessions} session(s), capability visibility ${provider.visibility}; hooks ${
+          : `${provider.name}: ${provider.currentBaselineSessions} current session(s) of ${provider.sessions} recorded, capability visibility ${provider.visibility}, observer ${provider.coverage}; hooks ${
               provider.hooks?.configured === true ? "configured" : "not configured"
             }${provider.hooks?.trust === "review-may-be-required" ? ", user review may be required" : ""}${
               provider.lastReportedContextTokens === undefined
@@ -630,7 +655,7 @@ function renderHarnessSections(report: DoctorReport): string[] {
         ? "no Git checkout: nothing is recorded (Agentyx never writes to $HOME)"
         : "state: Git-local, never committed",
     ]),
-    section(`Pack activity — observed session rate, last ${sessions} session(s)`, [
+    section(`Pack activity — observed session rate, ${sessions} current session(s)`, [
       ...(sessions > 0
         ? [
             "rate = sessions with observed activity / sessions that could show it; not token or cost share",
@@ -642,7 +667,7 @@ function renderHarnessSections(report: DoctorReport): string[] {
       "Potential cleanup",
       cleanup.map(
         (capability) =>
-          `${capability.name}: ${capability.contextCost ?? "unclassified"} context cost, ${capability.observedCalls} observed calls / ${capability.eligibleSessions} observable sessions`,
+          `${capability.name}: ${capability.contextCost ?? "unclassified"} context cost, ${capability.observedCalls} observed calls / ${capability.eligibleSessions} current-harness observable sessions`,
       ),
     ),
   ];
