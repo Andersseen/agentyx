@@ -1,6 +1,32 @@
 import { createHookRegistry, type HookSource } from "./registry.js";
 
 /**
+ * The harness observer: `agentyx hook observe` reads the provider's hook JSON on stdin, keeps a few
+ * metadata fields (never prompts, tool arguments or tool output), appends them to project-local
+ * Git metadata and prints nothing. It exits 0 whatever happens, so it can never break a session.
+ * The `{provider}` placeholder is filled in by each adapter. Like the doctor hook, it needs
+ * `@agentyx/cli` as a project dependency and never reaches the network.
+ */
+function observerHook(
+  name: string,
+  event: "SessionStart" | "SessionEnd" | "PostToolUse",
+  description: string,
+  options: { readonly matcher: string; readonly async?: boolean; readonly timeout?: number },
+): HookSource {
+  return {
+    name,
+    load: () => ({
+      name,
+      description,
+      event,
+      command: "npx",
+      args: ["--no-install", "agentyx", "hook", "observe", "--provider", "{provider}"],
+      ...options,
+    }),
+  };
+}
+
+/**
  * The hooks Agentyx ships with.
  *
  * `session-doctor-bootstrap` runs `agentyx doctor --hook` on session start: silent when the project
@@ -33,6 +59,20 @@ export const builtInHookSources: readonly HookSource[] = [
       args: ["--no-install", "agentyx", "doctor", "--hook"],
     }),
   },
+  observerHook("observe-session-start", "SessionStart", "Records that a session started.", {
+    matcher: "*",
+    async: true,
+  }),
+  observerHook("observe-session-end", "SessionEnd", "Records that a session ended.", {
+    matcher: "*",
+    timeout: 3,
+  }),
+  observerHook(
+    "observe-tool-use",
+    "PostToolUse",
+    "Records which MCP servers and Skills were used.",
+    { matcher: "mcp__.*|Skill", async: true },
+  ),
 ];
 
 export const builtInHookRegistry = createHookRegistry(builtInHookSources);

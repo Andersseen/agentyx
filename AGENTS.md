@@ -8,9 +8,13 @@ configuration — Agentyx does not generate or read this file.
 Agentyx is a provider-agnostic CLI for defining reusable development environments for coding agents.
 The current scope is deliberately narrow: a configuration model (`.agentyx.json`), pack and Skill
 registries, provider-agnostic MCP definitions, pack/Skill/MCP resolution, optimization profiles,
-project detection, `init`, `doctor`, and provider adapters that install into Codex
+project detection, `init`, `doctor` (configuration health, harness footprint, observed activity and
+cleanup hints), provider-neutral lifecycle hooks (`SessionStart`, `SessionEnd`, `PostToolUse`), and
+provider adapters that install into Codex
 (`.agents/skills`), Claude Code (`.claude/skills`) and Kimi Code (`.agents/skills`). Installation is
-project-local, plan-first, and covers Skill files plus project MCP configuration. It is also
+project-local, plan-first, and covers Skill files, project MCP configuration and project hooks
+(Claude `.claude/settings.json`, Codex `.codex/hooks.json`; Kimi Code supports hooks only in
+user-level config, so Agentyx installs none). It is also
 reversible: `.agentyx.lock.json` records what was written, which is what `install --prune` and
 `uninstall` act on.
 
@@ -72,9 +76,10 @@ swallow the conversation.
 ```
 packages/core        domain: config schema/loader/resolver, pack, skill, MCP and tool
                      schema/registry/resolver/errors, install manifest schema and loader,
-                     SKILL.md parsing and serialization
+                     SKILL.md parsing and serialization, harness footprint/provenance/utilization,
+                     the metadata-only observation schema and its bounded Git-local store
 packages/core/skills built-in SKILL.md files, published as package assets
-packages/cli         Commander program and terminal output only
+packages/cli         Commander program and terminal output only (incl. the hidden `hook observe`)
 packages/adapters    adapter contract, adapter registry, provider adapters,
                      install planning, filesystem executor
 examples/angular     .agentyx.json fixture, referenced by core, cli and adapter tests
@@ -105,7 +110,10 @@ Dependencies point one way: `cli → core`, `adapters → core`. Core depends on
 8. **Installation plans and writes stay separate.** Planning reads; only `applyInstallPlan` and
    `applyInstallPlans` write. Agentyx writes UTF-8 files inside the directory or project config file a
    target owns, plus `.agentyx.lock.json` at the project root, and nothing else — no shell commands,
-   no network and no `$HOME`.
+   no network and no `$HOME`. The one runtime exception is the hook observer
+   (`agentyx hook observe`), which appends metadata to `<git dir>/agentyx/usage-v1.jsonl`; it never
+   stores prompts, tool arguments or output, commands, file names or secrets, fails open, prints
+   nothing, and records nothing outside a Git checkout.
 9. **Agentyx only touches what it recorded.** `.agentyx.lock.json` names every managed path and hashes
    its content. A destination that is not in the manifest, or whose content no longer matches the
    hash, is a `conflict`: never overwritten, never deleted, unless `--force` says so. Deletion is
@@ -114,7 +122,11 @@ Dependencies point one way: `cli → core`, `adapters → core`. Core depends on
    Agentyx added. This is what makes the shared `.agents/skills` directory safe: the root
    `.agentyx.json` dogfoods Agentyx itself, and repository-development Skills live in the same
    directory as built-in ones.
-10. **Do not implement the future roadmap.** OpenCode, Cursor, global installs, token budgets, remote
+10. **Observation is honest.** "No observed use" is not "unused": a capability a provider cannot reliably
+    show is *unobservable*, never dormant. Provider observability lives in each adapter's
+    `capabilities.observability`; core aggregation never branches on a provider id. Percentages are
+    observed session rates (always with numerator and denominator), never token or cost shares.
+11. **Do not implement the future roadmap.** OpenCode, Cursor, global installs, token budgets, remote
     registries, plugins, npm registry integration and an update system are all out of scope until
     asked for.
 

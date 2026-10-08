@@ -137,18 +137,22 @@ describe("agentyx install hooks", () => {
       await readFile(join(projectDir, ".claude", "settings.json"), "utf8"),
     );
 
-    expect(settings.hooks.SessionStart).toEqual([
-      {
-        matcher: "startup",
-        hooks: [
-          {
-            type: "command",
-            command: "npx",
-            args: ["--no-install", "agentyx", "doctor", "--hook"],
-            statusMessage: "agentyx:session-doctor-bootstrap",
-          },
-        ],
-      },
+    expect(settings.hooks.SessionStart[0]).toEqual({
+      matcher: "startup",
+      hooks: [
+        {
+          type: "command",
+          command: "npx",
+          args: ["--no-install", "agentyx", "doctor", "--hook"],
+          statusMessage: "agentyx:session-doctor-bootstrap",
+        },
+      ],
+    });
+    expect(Object.keys(settings.hooks).sort()).toEqual([
+      "PostToolUse",
+      "SessionEnd",
+      "SessionStart",
+      "UserPromptExpansion",
     ]);
   });
 

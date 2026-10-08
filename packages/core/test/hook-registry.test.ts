@@ -8,7 +8,12 @@ import {
 
 describe("builtInHookRegistry", () => {
   it("lists the built-in hooks", () => {
-    expect(builtInHookRegistry.names).toEqual(["session-doctor-bootstrap"]);
+    expect(builtInHookRegistry.names).toEqual([
+      "session-doctor-bootstrap",
+      "observe-session-start",
+      "observe-session-end",
+      "observe-tool-use",
+    ]);
   });
 
   it("retrieves known hooks and metadata", () => {
@@ -18,13 +23,11 @@ describe("builtInHookRegistry", () => {
       command: "npx",
       args: ["--no-install", "agentyx", "doctor", "--hook"],
     });
-    expect(builtInHookRegistry.listMetadata()).toEqual([
-      {
-        name: "session-doctor-bootstrap",
-        description: "Reports Agentyx project health at session start; silent when healthy.",
-        event: "SessionStart",
-      },
-    ]);
+    expect(builtInHookRegistry.listMetadata()[0]).toEqual({
+      name: "session-doctor-bootstrap",
+      description: "Reports Agentyx project health at session start; silent when healthy.",
+      event: "SessionStart",
+    });
   });
 
   it("fails on unknown and duplicate hooks", () => {

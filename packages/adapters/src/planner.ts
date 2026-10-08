@@ -361,7 +361,14 @@ async function planHooks(input: PlanHooksInput): Promise<{
   }
 
   const existingContent = await readExistingProviderConfig(configPath);
-  const planned = adapter.planHookConfig(context, { content: existingContent, remove });
+  const siblingPath = adapter.hooksSiblingConfigPath?.(projectDir);
+  const sibling =
+    siblingPath === undefined ? undefined : await readExistingProviderConfig(siblingPath);
+  const planned = adapter.planHookConfig(context, { content: existingContent, remove, sibling });
+
+  if (planned.skipped !== undefined) {
+    return { operations: [], deletions: [] };
+  }
 
   if (planned.empty && recordedEntry?.created === true) {
     return {

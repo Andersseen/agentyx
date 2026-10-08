@@ -1,7 +1,13 @@
 import { builtInHookRegistry } from "@agentyx/core";
 import { describe, expect, it } from "vitest";
+import type { ExistingHookConfig } from "../src/adapter.js";
 import { ProviderConfigParseError } from "../src/errors.js";
-import { renderClaudeHooksConfig } from "../src/hook-rendering.js";
+import { renderJsonHooksConfig } from "../src/hook-rendering.js";
+
+const renderClaudeHooksConfig = (
+  hooks: Parameters<typeof renderJsonHooksConfig>[2],
+  existing: ExistingHookConfig,
+) => renderJsonHooksConfig("claude", "claude", hooks, existing);
 
 const bootstrap = builtInHookRegistry.get("session-doctor-bootstrap");
 

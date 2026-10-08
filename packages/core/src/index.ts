@@ -36,6 +36,43 @@ export {
   skillDirectorySchema,
 } from "./config/schema.js";
 export { AgentyxError } from "./errors.js";
+export type { ContextSurfaceEntry, FootprintInput, HarnessFootprint } from "./harness/footprint.js";
+export { computeHarnessFootprint } from "./harness/footprint.js";
+export type {
+  HarnessObservation,
+  ObservationCapabilityKind,
+  ObservationEvent,
+} from "./harness/observation.js";
+export {
+  harnessObservationSchema,
+  hashSessionKey,
+  OBSERVATION_CAPABILITY_KINDS,
+  OBSERVATION_EVENTS,
+  OBSERVATION_VERSION,
+  parseObservationLine,
+} from "./harness/observation.js";
+export type { CapabilityKind, CapabilityProvenance } from "./harness/provenance.js";
+export { deriveCapabilityProvenance } from "./harness/provenance.js";
+export {
+  COMPACTION_THRESHOLD_BYTES,
+  compactObservations,
+  MAX_RETAINED_SESSIONS,
+  MAX_USAGE_FILE_BYTES,
+  readObservations,
+  recordObservation,
+  resolveUsageFile,
+  USAGE_FILE_NAME,
+} from "./harness/store.js";
+export type {
+  CapabilityState,
+  Evidence,
+  ProviderVisibility,
+  UtilizationCapability,
+  UtilizationInput,
+  UtilizationPack,
+  UtilizationReport,
+} from "./harness/utilization.js";
+export { computeUtilization, DORMANCY_MIN_SESSIONS } from "./harness/utilization.js";
 export { builtInHookNames, builtInHookRegistry } from "./hook/built-in.js";
 export {
   DuplicateHookError,
