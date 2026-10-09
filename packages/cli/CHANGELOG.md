@@ -1,5 +1,17 @@
 # @agentyx/cli
 
+## 0.13.0
+
+### Minor Changes
+
+- 52240e2: Add optional provider-neutral project agents and native installation for Claude Code, Kimi Code, and Codex CLI.
+
+### Patch Changes
+
+- Updated dependencies [52240e2]
+  - @agentyx/core@0.13.0
+  - @agentyx/adapters@0.13.0
+
 ## 0.12.0
 
 ### Minor Changes
