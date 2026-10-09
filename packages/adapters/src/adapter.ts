@@ -1,4 +1,9 @@
-import type { HookDefinition, McpServerDefinition, SkillDefinition } from "@agentyx/core";
+import type {
+  AgentDefinition,
+  HookDefinition,
+  McpServerDefinition,
+  SkillDefinition,
+} from "@agentyx/core";
 import type { HookPayloadNormalizer } from "./hook-observer.js";
 
 export interface AdapterCapabilities {
@@ -9,6 +14,7 @@ export interface AdapterCapabilities {
     readonly transports?: readonly string[];
   };
   readonly hooks: boolean;
+  readonly agents: boolean;
   /** Absent means the adapter declares nothing observable. */
   readonly observability?: AdapterObservability;
 }
@@ -47,6 +53,7 @@ export interface AdapterContext {
   readonly mcpServers?: readonly McpServerDefinition[];
   /** Resolved hooks, in resolution order. */
   readonly hooks?: readonly HookDefinition[];
+  readonly agents?: readonly AgentDefinition[];
 }
 
 /** A file an adapter wants to exist, described without touching the filesystem. */
@@ -60,6 +67,11 @@ export interface PlannedFile {
   readonly content: string;
   /** The skill this file was generated from. */
   readonly skill: string;
+}
+export interface PlannedAgentFile {
+  readonly segments: readonly string[];
+  readonly content: string;
+  readonly agent: string;
 }
 
 export interface PlannedMcpConfig {
@@ -180,10 +192,13 @@ export interface AgentAdapter {
   readonly references?: readonly string[];
   /** The absolute directory Agentyx owns for this provider in `projectDir`. */
   skillsPath(projectDir: string): string;
+  /** The absolute project-local agent directory, when supported. */
+  agentsPath?(projectDir: string): string;
   /** Reads the filesystem to report where and whether the provider is set up. Never writes. */
   detect(projectDir: string): Promise<AdapterDetection>;
   /** Maps resolved skills to the files this provider expects. No filesystem access. */
   planFiles(context: AdapterContext): readonly PlannedFile[];
+  planAgents?(context: AdapterContext): readonly PlannedAgentFile[];
   /** Path to the project-local MCP config, when supported. */
   mcpConfigPath?(projectDir: string): string;
   /** Merges resolved MCP servers into existing provider config content, minus any removals. */

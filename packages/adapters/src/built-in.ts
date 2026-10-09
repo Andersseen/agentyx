@@ -70,6 +70,11 @@ export const builtInAdapterDefinitions: readonly SkillDirectoryAdapterDefinition
       config: "codex-hooks-json",
       reference: "https://developers.openai.com/codex/hooks",
     },
+    agents: {
+      dir: [".codex", "agents"],
+      format: "codex",
+      reference: "https://developers.openai.com/codex/multi-agent",
+    },
     observability: {
       sessionLifecycle: true,
       toolUse: true,
@@ -95,6 +100,11 @@ export const builtInAdapterDefinitions: readonly SkillDirectoryAdapterDefinition
       config: "claude-settings-json",
       reference: "https://code.claude.com/docs/en/hooks",
     },
+    agents: {
+      dir: [".claude", "agents"],
+      format: "claude",
+      reference: "https://code.claude.com/docs/en/sub-agents",
+    },
     observability: {
       sessionLifecycle: true,
       toolUse: true,
@@ -114,6 +124,11 @@ export const builtInAdapterDefinitions: readonly SkillDirectoryAdapterDefinition
       config: "kimi-json",
       transports: ["stdio", "http"],
       reference: "https://www.kimi.com/code/docs/en/kimi-code-cli/customization/mcp.html",
+    },
+    agents: {
+      dir: [".agents", "agents"],
+      format: "kimi",
+      reference: "https://www.kimi.com/code/docs/en/kimi-code-cli/customization/agents.html",
     },
     observability: {
       sessionLifecycle: false,

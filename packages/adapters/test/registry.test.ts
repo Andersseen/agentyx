@@ -8,7 +8,12 @@ import { createAdapterRegistry } from "../src/registry.js";
 const fakeAdapter = (id: string): AgentAdapter => ({
   id,
   name: id,
-  capabilities: { skills: true, mcp: { project: false, global: false }, hooks: false },
+  capabilities: {
+    skills: true,
+    mcp: { project: false, global: false },
+    hooks: false,
+    agents: false,
+  },
   skillsPath: (projectDir) => projectDir,
   detect: async (projectDir) => ({
     target: id,
@@ -66,6 +71,7 @@ describe("builtInAdapterRegistry", () => {
     const allowedKeys = new Set([
       "capabilities",
       "detect",
+      "agentsPath",
       "hooksConfigPath",
       "hooksSiblingConfigPath",
       "id",
@@ -74,6 +80,7 @@ describe("builtInAdapterRegistry", () => {
       "name",
       "observeHook",
       "planFiles",
+      "planAgents",
       "planHookConfig",
       "planMcpConfig",
       "references",

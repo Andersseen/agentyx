@@ -1,3 +1,7 @@
+import { builtInAgentRegistry } from "../agent/built-in.js";
+import type { AgentRegistry } from "../agent/registry.js";
+import { collectPackAgentReferences, filterEffectiveAgents } from "../agent/resolver.js";
+import type { AgentReference } from "../agent/schema.js";
 import { builtInHookRegistry } from "../hook/built-in.js";
 import type { HookRegistry } from "../hook/registry.js";
 import { collectPackHookReferences, filterEffectiveHooks } from "../hook/resolver.js";
@@ -35,6 +39,8 @@ export interface ResolvedAgentyxConfig {
   readonly tools: readonly string[];
   readonly declaredHooks: readonly HookReference[];
   readonly hooks: readonly string[];
+  readonly declaredAgents: readonly AgentReference[];
+  readonly agents: readonly string[];
   readonly enabled: readonly string[];
   readonly targets: readonly string[];
 }
@@ -53,18 +59,21 @@ export function resolveAgentyxConfig(
   mcpRegistry: McpServerRegistry = builtInMcpServerRegistry,
   toolRegistry: ToolRegistry = builtInToolRegistry,
   hookRegistry: HookRegistry = builtInHookRegistry,
+  agentRegistry: AgentRegistry = builtInAgentRegistry,
 ): ResolvedAgentyxConfig {
   const requestedPacks = [...config.packs];
   const resolvedPacks = resolvePacks(requestedPacks, registry);
   const declaredMcpServers = collectPackMcpServerReferences(resolvedPacks, registry, mcpRegistry);
   const declaredTools = collectPackToolReferences(resolvedPacks, registry, toolRegistry);
   const declaredHooks = collectPackHookReferences(resolvedPacks, registry, hookRegistry);
+  const declaredAgents = collectPackAgentReferences(resolvedPacks, registry, agentRegistry);
   const knownOptionalCapabilities = [
     ...declaredMcpServers
       .filter((server) => server.activation === "optional")
       .map((server) => server.name),
     ...declaredTools.filter((tool) => tool.activation === "optional").map((tool) => tool.name),
     ...declaredHooks.filter((hook) => hook.activation === "optional").map((hook) => hook.name),
+    ...declaredAgents.filter((agent) => agent.activation === "optional").map((agent) => agent.name),
   ];
 
   for (const capability of config.enable) {
@@ -90,6 +99,8 @@ export function resolveAgentyxConfig(
     tools: filterEffectiveTools(declaredTools, config.enable),
     declaredHooks,
     hooks: filterEffectiveHooks(declaredHooks, config.enable),
+    declaredAgents,
+    agents: filterEffectiveAgents(declaredAgents, config.enable),
     enabled: [...config.enable],
     targets: [...config.targets],
   };

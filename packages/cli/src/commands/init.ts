@@ -5,6 +5,7 @@ import {
   AGENTYX_CONFIG_FILENAME,
   AgentyxError,
   buildAgentyxConfig,
+  builtInAgentRegistry,
   builtInMcpServerRegistry,
   builtInPacks,
   detectProject,
@@ -448,6 +449,17 @@ function optionalCapabilitiesFor(packs: readonly string[]): readonly {
       if (typeof tool === "object" && tool.activation === "optional" && !seen.has(tool.name)) {
         seen.add(tool.name);
         capabilities.push({ name: tool.name, kind: "tool", description: undefined });
+      }
+    }
+
+    for (const agent of pack.agents ?? []) {
+      if (agent.activation === "optional" && !seen.has(agent.name)) {
+        seen.add(agent.name);
+        capabilities.push({
+          name: agent.name,
+          kind: "agent",
+          description: builtInAgentRegistry.get(agent.name).description,
+        });
       }
     }
   }

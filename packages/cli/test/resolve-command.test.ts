@@ -40,6 +40,9 @@ describe("agentyx resolve <pack>", () => {
         "",
         "Hooks",
         "  (none)",
+        "",
+        "Agents",
+        "  (none)",
       ].join("\n"),
     );
   });

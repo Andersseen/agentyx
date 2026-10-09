@@ -88,6 +88,24 @@ export async function applyInstallPlan(
     written.push(operation.relativePath);
   }
 
+  for (const operation of plan.agentOperations) {
+    assertInside(operation.path, plan.agentsPath);
+    await assertInsideRealPath(operation.path, plan.agentsPath);
+    if (operation.status === "conflict") {
+      conflicts.push(operation.relativePath);
+      continue;
+    }
+    const key = operationKey(operation.path, operation.content);
+    if (operation.status === "unchanged" || applied.has(key)) {
+      unchanged.push(operation.relativePath);
+      continue;
+    }
+    await mkdir(dirname(operation.path), { recursive: true });
+    await writeFile(operation.path, operation.content, "utf8");
+    applied.add(key);
+    written.push(operation.relativePath);
+  }
+
   for (const operation of plan.mcpOperations) {
     assertInside(operation.path, plan.projectDir);
     await assertInsideRealPath(operation.path, plan.projectDir);
@@ -133,11 +151,14 @@ export async function applyInstallPlan(
   }
 
   for (const operation of plan.deletions) {
-    assertInside(operation.path, operation.kind === "skill" ? plan.skillsPath : plan.projectDir);
-    await assertInsideRealPath(
-      operation.path,
-      operation.kind === "skill" ? plan.skillsPath : plan.projectDir,
-    );
+    const destination =
+      operation.kind === "skill"
+        ? plan.skillsPath
+        : operation.kind === "agent"
+          ? plan.agentsPath
+          : plan.projectDir;
+    assertInside(operation.path, destination);
+    await assertInsideRealPath(operation.path, destination);
 
     if (operation.status === "conflict") {
       conflicts.push(operation.relativePath);
@@ -225,6 +246,22 @@ function nextManifest(previous: InstallManifest, plans: readonly InstallPlan[]):
         kind: "skill",
         path: operation.relativePath,
         skill: operation.skill,
+        targets: retainedTargets(
+          operation.usedBy,
+          previousByPath,
+          operation.relativePath,
+          plannedTargets,
+        ),
+        hash: hashContent(operation.content),
+      });
+    }
+
+    for (const operation of plan.agentOperations) {
+      if (operation.status === "conflict") continue;
+      rewritten.set(operation.relativePath, {
+        kind: "agent",
+        path: operation.relativePath,
+        agent: operation.agent ?? "",
         targets: retainedTargets(
           operation.usedBy,
           previousByPath,

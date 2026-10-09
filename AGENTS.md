@@ -13,7 +13,7 @@ footprint, baseline-aware observations and conservative cleanup hints), provider
 hooks (`SessionStart`, `SessionEnd`, `PostToolUse`), and
 provider adapters that install into Codex
 (`.agents/skills`), Claude Code (`.claude/skills`) and Kimi Code (`.agents/skills`). Installation is
-project-local, plan-first, and covers Skill files, project MCP configuration and project hooks
+project-local, plan-first, and covers Skill and agent files, project MCP configuration and project hooks
 (Claude `.claude/settings.json`, Codex `.codex/hooks.json`; Kimi Code supports hooks only in
 user-level config, so Agentyx installs none). It is also
 reversible: `.agentyx.lock.json` records Agentyx-owned installed state, which is what `sync`,
@@ -99,13 +99,15 @@ Dependencies point one way: `cli → core`, `adapters → core`. Core depends on
 2. **Agentyx is provider agnostic.** Never introduce `CodexPack`, `ClaudePack`, `CodexSkill` or any
    concept that couples a pack or a skill to a provider. `targets` stays an open list of strings —
    do not turn it into a closed enum. Provider-specific behaviour lives in `@agentyx/adapters`, and an
-   adapter owns a *destination*, never skill content: the canonical `SKILL.md` comes from
-   `formatSkillMarkdown` in core, so a provider-specific copy of a skill body is always a bug.
+   adapter owns a *destination*, never Skill or agent content: canonical Skill markdown comes from
+   `formatSkillMarkdown` in core, canonical agent instructions belong in core agent assets/domain,
+   and provider-specific rendering belongs in adapters.
 3. **Zod is the source of truth for types.** Infer with `z.infer` / `z.input`; never maintain a
    hand-written interface next to a schema.
-4. **Packs and skills are data.** New packs are entries in `builtInPacks`; new skills are a
+4. **Packs, skills and agents are data.** New packs are entries in `builtInPacks`; new skills are a
    `SKILL.md` file plus a name in `builtInSkillNames`. Resolution logic must not grow a branch per
-   pack or per skill, and skill instructions never live in TypeScript string constants.
+   pack, skill or agent. Canonical agent definitions live in core assets/domain; provider rendering
+   belongs in adapters. Skill and agent instructions never live in TypeScript string constants.
 5. **Domain errors, not strings.** Extend `AgentyxError` (`packages/core/src/errors.ts`) and give it a
    stable `code`. One inheritance level — no error hierarchies.
 6. **No premature abstraction.** No repositories, service containers, DI, factories, or plugin

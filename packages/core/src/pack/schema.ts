@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { agentReferenceSchema } from "../agent/schema.js";
 import { hookReferenceSchema } from "../hook/schema.js";
 import { mcpServerReferenceSchema } from "../mcp/schema.js";
 import { skillNameSchema } from "../skill/schema.js";
@@ -47,6 +48,7 @@ export const packDefinitionSchema = z.strictObject({
     .array(hookReferenceSchema)
     .describe("Provider lifecycle hooks this pack contributes, in declaration order.")
     .default([]),
+  agents: z.array(agentReferenceSchema).default([]),
 });
 
 /** A validated pack definition, with defaults always present. */

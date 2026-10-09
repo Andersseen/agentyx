@@ -41,6 +41,7 @@ export interface InstallOperation {
   readonly relativePath: string;
   /** The skill this file was generated from, and the attribution the manifest records. */
   readonly skill: string;
+  readonly agent?: string;
   readonly content: string;
   /** Targets that are satisfied by this exact physical write. */
   readonly usedBy: readonly string[];
@@ -61,11 +62,12 @@ export interface DeleteOperation {
    * `hook` file is only ever removed when Agentyx created it and nothing is
    * left in it.
    */
-  readonly kind: "skill" | "mcp" | "hook";
+  readonly kind: "skill" | "agent" | "mcp" | "hook";
   readonly path: string;
   readonly relativePath: string;
   /** The skill the file was generated from, for `skill` removals. */
   readonly skill: string | undefined;
+  readonly agent?: string;
   /** Targets the manifest recorded for this file. */
   readonly usedBy: readonly string[];
 }
@@ -114,10 +116,12 @@ export interface InstallPlan {
   readonly projectDir: string;
   /** Absolute directory Agentyx owns for this target. Every operation lands inside it. */
   readonly skillsPath: string;
+  readonly agentsPath: string;
   /** `skillsPath` relative to the project root, with `/` separators. */
   readonly relativeSkillsPath: string;
   /** Operations in skill resolution order. */
   readonly operations: readonly InstallOperation[];
+  readonly agentOperations: readonly InstallOperation[];
   /** Project-local MCP configuration operation, when the target supports it. */
   readonly mcpOperations: readonly McpInstallOperation[];
   /** Project-local hook configuration operation, when the target supports it. */
@@ -126,6 +130,7 @@ export interface InstallPlan {
   readonly deletions: readonly DeleteOperation[];
   /** MCP servers that could not be installed into the requested project scope. */
   readonly unsupportedMcp: readonly string[];
+  readonly unsupportedAgents: readonly string[];
 }
 
 /** How many operations of each status a set of plans holds. */
@@ -143,7 +148,12 @@ export function summarizeInstallPlans(plans: readonly InstallPlan[]): InstallPla
   const seen = new Set<string>();
 
   for (const plan of plans) {
-    for (const operation of [...plan.operations, ...plan.mcpOperations, ...plan.hookOperations]) {
+    for (const operation of [
+      ...plan.operations,
+      ...plan.agentOperations,
+      ...plan.mcpOperations,
+      ...plan.hookOperations,
+    ]) {
       const key = operationKey(operation.path, operation.content);
       if (seen.has(key)) {
         continue;
@@ -170,7 +180,7 @@ export function collectInstallConflicts(plans: readonly InstallPlan[]): readonly
   const conflicts = new Set<string>();
 
   for (const plan of plans) {
-    for (const operation of [...plan.operations, ...plan.deletions]) {
+    for (const operation of [...plan.operations, ...plan.agentOperations, ...plan.deletions]) {
       if (operation.status === "conflict") {
         conflicts.add(operation.relativePath);
       }

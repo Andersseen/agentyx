@@ -86,6 +86,28 @@ That is a property of the command itself, not of Agentyx, and every server that 
 "may fetch a package on first launch" above; `agentyx mcp show <name>` and `agentyx pack show <pack>`
 print the same distinction (`runtime: local` vs `runtime: may-download`) before you enable anything.
 
+## Project agents
+
+The `agentic` pack exposes optional native project agents. Enable the roles you want with
+`agentyx configure --enable agentyx-reviewer --yes`, then run `agentyx sync`. Agentyx renders one
+canonical provider-neutral definition through each provider adapter. Claude Code, Kimi Code, and
+Codex CLI install their documented project-local formats; unsupported providers continue to use
+Skills normally. Subagents isolate task context, but each may consume additional model tokens.
+Agentyx defines the harness and does not orchestrate agents or call provider APIs. Review project
+agent files in repositories you do not trust.
+
+```json
+{
+  "packs": ["technical", "agentic"],
+  "enable": ["agentyx-reviewer"],
+  "targets": ["codex", "claude", "kimi"]
+}
+```
+
+Provider references: [Claude Code subagents](https://code.claude.com/docs/en/sub-agents),
+[Kimi Code agents](https://www.kimi.com/code/docs/en/kimi-code-cli/customization/agents.html),
+[Codex CLI subagents](https://developers.openai.com/codex/multi-agent).
+
 ## Harness observability
 
 `agentyx doctor` answers a practical question: is the harness you configured actually useful, or have

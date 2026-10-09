@@ -23,6 +23,7 @@ export {
   DuplicateAdapterError,
   InstallConflictError,
   InstallPathError,
+  InvalidAdapterConfigurationError,
   MissingInstallTargetsError,
   ProviderConfigParseError,
   SharedInstallConflictError,

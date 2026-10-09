@@ -94,6 +94,11 @@ export const builtInPacks: readonly PackDefinitionInput[] = [
       "subagent-driven-development",
       "requesting-code-review",
     ],
+    agents: [
+      { name: "agentyx-planner", activation: "optional" },
+      { name: "agentyx-reviewer", activation: "optional" },
+      { name: "agentyx-verifier", activation: "optional" },
+    ],
   },
   {
     name: "testing",
