@@ -1,5 +1,16 @@
 # @agentyx/cli
 
+## 0.12.0
+
+### Minor Changes
+
+- 3053a22: Add declarative `configure` and `sync` commands for editing desired project configuration and converging Agentyx-owned provider state.
+
+### Patch Changes
+
+- @agentyx/adapters@0.12.0
+- @agentyx/core@0.12.0
+
 ## 0.11.0
 
 ### Minor Changes
