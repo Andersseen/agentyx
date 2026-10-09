@@ -40,6 +40,13 @@ export const skillManifestEntrySchema = z.strictObject({
   targets: targetsSchema,
   hash: contentHashSchema,
 });
+export const agentManifestEntrySchema = z.strictObject({
+  kind: z.literal("agent"),
+  path: managedPathSchema,
+  agent: z.string().min(1),
+  targets: targetsSchema,
+  hash: contentHashSchema,
+});
 
 /**
  * A provider MCP configuration file Agentyx contributed entries to.
@@ -76,6 +83,7 @@ export const hookManifestEntrySchema = z.strictObject({
 
 export const installManifestEntrySchema = z.discriminatedUnion("kind", [
   skillManifestEntrySchema,
+  agentManifestEntrySchema,
   mcpManifestEntrySchema,
   hookManifestEntrySchema,
 ]);
@@ -87,6 +95,7 @@ export const installManifestSchema = z.strictObject({
 });
 
 export type SkillManifestEntry = z.infer<typeof skillManifestEntrySchema>;
+export type AgentManifestEntry = z.infer<typeof agentManifestEntrySchema>;
 export type McpManifestEntry = z.infer<typeof mcpManifestEntrySchema>;
 export type HookManifestEntry = z.infer<typeof hookManifestEntrySchema>;
 export type InstallManifestEntry = z.infer<typeof installManifestEntrySchema>;

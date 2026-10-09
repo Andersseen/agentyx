@@ -12,6 +12,7 @@ import {
 } from "@agentyx/adapters";
 import {
   AgentyxError,
+  builtInAgentRegistry,
   builtInHookRegistry,
   builtInMcpServerRegistry,
   builtInSkillRegistry,
@@ -121,6 +122,10 @@ export async function executeInstall(input: InstallCommandInput): Promise<Instal
   const hooks = input.skillsOnly
     ? []
     : environment.hooks.map((name) => builtInHookRegistry.get(name));
+  const agents =
+    input.skillsOnly || input.mcpOnly
+      ? []
+      : environment.agents.map((name) => builtInAgentRegistry.get(name));
   const manifest = await loadInstallManifest(input.cwd);
   const activePlans =
     environment.targets.length === 0 && input.pruneRemovedTargets === true
@@ -131,6 +136,7 @@ export async function executeInstall(input: InstallCommandInput): Promise<Instal
           skills,
           mcpServers,
           hooks,
+          agents,
           manifest,
           prune: input.prune === true,
           force: input.force === true,
@@ -148,6 +154,7 @@ export async function executeInstall(input: InstallCommandInput): Promise<Instal
         skills: [],
         mcpServers: [],
         hooks: [],
+        agents: [],
         manifest,
         prune: true,
         force: input.force === true,
@@ -182,6 +189,8 @@ interface ResolvedEnvironment {
   readonly tools: readonly string[];
   readonly declaredHooks: readonly { readonly name: string; readonly activation: string }[];
   readonly hooks: readonly string[];
+  readonly declaredAgents: readonly { readonly name: string; readonly activation: string }[];
+  readonly agents: readonly string[];
   readonly enabled: readonly string[];
   readonly targets: readonly string[];
   readonly skillRegistry: SkillRegistry;
@@ -219,6 +228,8 @@ async function resolveEnvironment(input: InstallCommandInput): Promise<ResolvedE
       tools: [],
       declaredHooks: [],
       hooks: [],
+      declaredAgents: [],
+      agents: [],
       enabled: [],
       targets: selected.targets,
       skillRegistry: builtInSkillRegistry,
@@ -242,6 +253,8 @@ async function resolveEnvironment(input: InstallCommandInput): Promise<ResolvedE
       tools: resolved.tools,
       declaredHooks: resolved.declaredHooks,
       hooks: resolved.hooks,
+      declaredAgents: resolved.declaredAgents,
+      agents: resolved.agents,
       enabled: resolved.enabled,
       targets: input.targets,
       skillRegistry: builtInSkillRegistry,
@@ -268,6 +281,8 @@ async function resolveEnvironment(input: InstallCommandInput): Promise<ResolvedE
     tools: resolved.tools,
     declaredHooks: resolved.declaredHooks,
     hooks: resolved.hooks,
+    declaredAgents: resolved.declaredAgents,
+    agents: resolved.agents,
     enabled: resolved.enabled,
     targets: input.targets.length > 0 ? input.targets : resolved.targets,
     skillRegistry: project.skillRegistry,
@@ -380,6 +395,12 @@ function renderText(
             renderOperationLine(operation.status, operation.relativePath, operation.usedBy),
           ),
       ),
+      section("Agents", [
+        ...plan.agentOperations.map((operation) =>
+          renderOperationLine(operation.status, operation.relativePath, operation.usedBy),
+        ),
+        ...plan.unsupportedAgents.map((name) => `unsupported project scope ${name}`),
+      ]),
       section("MCP", [
         ...plan.mcpOperations
           .filter((operation) => operation.usedBy[0] === plan.target)
@@ -465,6 +486,8 @@ function buildInstallReport(
     tools: environment.tools,
     declaredHooks: environment.declaredHooks,
     hooks: environment.hooks,
+    declaredAgents: environment.declaredAgents,
+    agents: environment.agents,
     enabled: environment.enabled,
     targets: plans.map((plan) => plan.target),
     plans: plans.map((plan) => ({
@@ -475,6 +498,13 @@ function buildInstallReport(
         type: operation.type,
         status: operation.status,
         skill: operation.skill,
+        path: operation.relativePath,
+        usedBy: operation.usedBy,
+      })),
+      agentOperations: plan.agentOperations.map((operation) => ({
+        type: operation.type,
+        status: operation.status,
+        agent: operation.agent,
         path: operation.relativePath,
         usedBy: operation.usedBy,
       })),
@@ -501,6 +531,7 @@ function buildInstallReport(
         usedBy: operation.usedBy,
       })),
       unsupportedMcp: plan.unsupportedMcp,
+      unsupportedAgents: plan.unsupportedAgents,
     })),
     summary: summarizeInstallPlans(plans),
   };

@@ -212,6 +212,9 @@ async function promptConfiguration(
     ...declared.declaredHooks
       .filter((item) => item.activation === "optional")
       .map((item) => ({ name: item.name, kind: "hook" })),
+    ...declared.declaredAgents
+      .filter((item) => item.activation === "optional")
+      .map((item) => ({ name: item.name, kind: "agent" })),
   ];
   const doctor = await runDoctorCommand({ cwd, json: false });
   const selectedCaps = new Set(

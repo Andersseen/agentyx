@@ -43,6 +43,10 @@ export function runPackShowCommand(input: PackShowCommandInput): string {
       "Hooks",
       pack.hooks.map((hook) => `${hook.name}    ${hook.activation}`),
     ),
+    section(
+      "Agents",
+      pack.agents.map((agent) => `${agent.name}    ${agent.activation}`),
+    ),
   ].join("\n");
 }
 

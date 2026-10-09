@@ -171,6 +171,26 @@
               ]
             },
             "description": "Provider lifecycle hooks this pack contributes, in declaration order."
+          },
+          "agents": {
+            "default": [],
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+                },
+                "activation": {
+                  "default": "default",
+                  "type": "string",
+                  "enum": ["default", "optional"]
+                }
+              },
+              "required": ["name"],
+              "additionalProperties": false
+            }
           }
         },
         "required": ["name"],

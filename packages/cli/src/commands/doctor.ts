@@ -16,6 +16,7 @@ import {
   AgentyxManifestParseError,
   AgentyxManifestValidationError,
   type AgentyxProject,
+  builtInAgentRegistry,
   builtInHookRegistry,
   builtInMcpServerRegistry,
   builtInSkillRegistry,
@@ -86,6 +87,16 @@ export interface DoctorReport {
       readonly name: string;
       readonly activation: string;
       readonly active: boolean;
+    }[];
+    readonly agents: readonly {
+      readonly name: string;
+      readonly activation: string;
+      readonly active: boolean;
+      readonly targets: readonly {
+        readonly target: string;
+        readonly supported: boolean;
+        readonly state: string;
+      }[];
     }[];
   };
   /**
@@ -300,6 +311,7 @@ export async function runDoctorCommand(input: DoctorCommandInput): Promise<Docto
       ),
       mcpServers: resolved.mcpServers.map((name) => builtInMcpServerRegistry.get(name)),
       hooks: resolved.hooks.map((name) => builtInHookRegistry.get(name)),
+      agents: resolved.agents.map((name) => builtInAgentRegistry.get(name)),
       manifest,
       prune: true,
     });
@@ -361,6 +373,38 @@ export async function runDoctorCommand(input: DoctorCommandInput): Promise<Docto
       name: hook.name,
       activation: hook.activation,
       active: resolved?.hooks.includes(hook.name) ?? false,
+    })) ?? [];
+  const agentReports =
+    resolved?.declaredAgents.map((agent) => ({
+      name: agent.name,
+      activation: agent.activation,
+      active: resolved.agents.includes(agent.name),
+      targets: configuredTargets.map((target) => {
+        const adapter = builtInAdapterRegistry.has(target)
+          ? builtInAdapterRegistry.get(target)
+          : undefined;
+        const op = plans
+          ?.find((plan) => plan.target === target)
+          ?.agentOperations.find((item) => item.agent === agent.name);
+        const state =
+          op?.status === "unchanged"
+            ? "installed"
+            : op?.status === "conflict"
+              ? "conflict"
+              : op?.status === "create" || op?.status === "update"
+                ? "pending"
+                : "pending";
+        return {
+          target,
+          supported: adapter?.capabilities.agents ?? false,
+          state:
+            adapter === undefined || !adapter.capabilities.agents
+              ? "unsupported"
+              : !resolved.agents.includes(agent.name)
+                ? "disabled"
+                : state,
+        };
+      }),
     })) ?? [];
   const summary = plans === undefined ? undefined : summarizeInstallPlans(plans);
 
@@ -438,6 +482,7 @@ export async function runDoctorCommand(input: DoctorCommandInput): Promise<Docto
       mcp: mcpReports,
       tools: toolReports,
       hooks: hookReports,
+      agents: agentReports,
     },
     recommendations: { missingPacks },
     targets: targetReports,
@@ -603,7 +648,15 @@ function renderHarnessSections(report: DoctorReport): string[] {
       `MCP servers: ${footprint.mcp.active} active / ${footprint.mcp.declared} declared`,
       `local tools: ${footprint.tools.active} active / ${footprint.tools.declared} declared`,
       `hooks: ${footprint.hooks.active} active / ${footprint.hooks.declared} declared`,
+      `agents: ${report.resolution.agents.filter((agent) => agent.active).length} active / ${report.resolution.agents.length} declared`,
     ]),
+    section(
+      "Agents",
+      report.resolution.agents.map(
+        (agent) =>
+          `${agent.name}: ${agent.targets.map((target) => `${target.target} ${target.state}`).join(", ")}`,
+      ),
+    ),
     section("Context surface (qualitative, not token counts)", [
       `low-cost MCP: ${footprint.contextSurface.low}`,
       `medium-cost MCP: ${footprint.contextSurface.medium}`,

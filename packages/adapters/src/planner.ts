@@ -1,6 +1,8 @@
 import { readFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import {
+  type AgentDefinition,
+  type AgentManifestEntry,
   emptyInstallManifest,
   type HookDefinition,
   type HookManifestEntry,
@@ -13,9 +15,13 @@ import {
   type SkillDefinition,
   type SkillManifestEntry,
 } from "@agentyx/core";
-import type { AgentAdapter, PlannedFile } from "./adapter.js";
+import type { AgentAdapter, PlannedAgentFile, PlannedFile } from "./adapter.js";
 import { builtInAdapterRegistry } from "./built-in.js";
-import { MissingInstallTargetsError, SharedInstallConflictError } from "./errors.js";
+import {
+  InvalidAdapterConfigurationError,
+  MissingInstallTargetsError,
+  SharedInstallConflictError,
+} from "./errors.js";
 import { assertInside, assertInsideRealPath, toDisplayPath } from "./path.js";
 import type {
   DeleteOperation,
@@ -38,6 +44,7 @@ export interface PlanTargetInstallInput {
   readonly mcpServers?: readonly McpServerDefinition[];
   /** Resolved hooks, in resolution order. */
   readonly hooks?: readonly HookDefinition[];
+  readonly agents?: readonly AgentDefinition[];
   /**
    * What Agentyx installed last time. Without it every existing file looks like
    * someone else's, which is the safe default but makes reinstalling impossible.
@@ -83,18 +90,37 @@ export async function planTargetInstall(input: PlanTargetInstallInput): Promise<
   const adapter = (input.registry ?? builtInAdapterRegistry).get(input.target);
   const projectDir = resolve(input.projectDir);
   const skillsPath = adapter.skillsPath(projectDir);
+  const ownedAgentsPath = adapter.agentsPath?.(projectDir);
+  const agentsPath = ownedAgentsPath ?? projectDir;
 
   assertInside(skillsPath, projectDir);
   await assertInsideRealPath(skillsPath, projectDir);
+  if (ownedAgentsPath !== undefined) {
+    assertInside(agentsPath, projectDir);
+    await assertInsideRealPath(agentsPath, projectDir);
+  }
 
   const manifest = input.manifest ?? emptyInstallManifest();
   const recorded = manifestEntriesByPath(manifest);
   const mcpServers = input.mcpServers ?? [];
   const hooks = input.hooks ?? [];
-  const context = { projectDir, skills: input.skills, mcpServers, hooks };
+  const agents = input.agents ?? [];
+  const context = { projectDir, skills: input.skills, mcpServers, hooks, agents };
   const files = adapter.planFiles(context);
   const operations = await Promise.all(
     files.map((file) => planFile(file, projectDir, skillsPath, adapter.id, recorded, input.force)),
+  );
+  const agentFiles = adapter.capabilities.agents ? (adapter.planAgents?.(context) ?? []) : [];
+  if (agentFiles.length > 0 && ownedAgentsPath === undefined) {
+    throw new InvalidAdapterConfigurationError(
+      adapter.id,
+      "it plans agents without declaring its owned directory",
+    );
+  }
+  const agentOperations = await Promise.all(
+    agentFiles.map((file) =>
+      planAgentFile(file, projectDir, agentsPath, adapter.id, recorded, input.force),
+    ),
   );
   const mcp = await planMcp({
     adapter,
@@ -121,6 +147,16 @@ export async function planTargetInstall(input: PlanTargetInstallInput): Promise<
         })),
         ...mcp.deletions,
         ...hookConfig.deletions,
+        ...(ownedAgentsPath === undefined
+          ? []
+          : await planAgentDeletions({
+              manifest,
+              target: adapter.id,
+              projectDir,
+              agentsPath,
+              desired: new Set(agentOperations.map((op) => op.relativePath)),
+              plannedTargets: new Set(input.plannedTargets ?? [input.target]),
+            })),
       ]
     : [];
 
@@ -129,8 +165,10 @@ export async function planTargetInstall(input: PlanTargetInstallInput): Promise<
     name: adapter.name,
     projectDir,
     skillsPath,
+    agentsPath,
     relativeSkillsPath: toDisplayPath(projectDir, skillsPath),
     operations,
+    agentOperations,
     mcpOperations: mcp.operations,
     hookOperations: hookConfig.operations,
     deletions,
@@ -138,6 +176,8 @@ export async function planTargetInstall(input: PlanTargetInstallInput): Promise<
       mcpServers.length > 0 && !adapter.capabilities.mcp.project
         ? mcpServers.map((server) => server.name)
         : [],
+    unsupportedAgents:
+      agents.length > 0 && !adapter.capabilities.agents ? agents.map(({ name }) => name) : [],
   };
 }
 
@@ -175,9 +215,73 @@ export async function planInstall(input: PlanInstallInput): Promise<InstallPlan[
  * @throws {MissingInstallTargetsError} when no target is supplied.
  */
 export async function planUninstall(
-  input: Omit<PlanInstallInput, "skills" | "mcpServers" | "hooks" | "prune">,
+  input: Omit<PlanInstallInput, "skills" | "mcpServers" | "hooks" | "agents" | "prune">,
 ): Promise<InstallPlan[]> {
-  return planInstall({ ...input, skills: [], mcpServers: [], hooks: [], prune: true });
+  return planInstall({ ...input, skills: [], mcpServers: [], hooks: [], agents: [], prune: true });
+}
+
+async function planAgentFile(
+  file: PlannedAgentFile,
+  projectDir: string,
+  agentsPath: string,
+  target: string,
+  recorded: ReadonlyMap<string, InstallManifestEntry>,
+  force: boolean | undefined,
+): Promise<InstallOperation> {
+  const path = resolve(projectDir, join(...file.segments));
+  assertInside(path, agentsPath);
+  await assertInsideRealPath(path, agentsPath);
+  const relativePath = toDisplayPath(projectDir, path);
+  const entry = recorded.get(relativePath);
+  return {
+    type: "write-file",
+    status: await statusOf(
+      path,
+      file.content,
+      entry?.kind === "agent" ? entry.hash : undefined,
+      force,
+    ),
+    path,
+    relativePath,
+    skill: "",
+    agent: file.agent,
+    content: file.content,
+    usedBy: [target],
+  };
+}
+
+async function planAgentDeletions(input: {
+  manifest: InstallManifest;
+  target: string;
+  projectDir: string;
+  agentsPath: string;
+  desired: ReadonlySet<string>;
+  plannedTargets: ReadonlySet<string>;
+}): Promise<DeleteOperation[]> {
+  const entries = input.manifest.entries.filter(
+    (entry): entry is AgentManifestEntry =>
+      entry.kind === "agent" &&
+      entry.targets.includes(input.target) &&
+      !input.desired.has(entry.path) &&
+      entry.targets.every((target) => input.plannedTargets.has(target)),
+  );
+  return Promise.all(
+    entries.map(async (entry) => {
+      const path = resolve(input.projectDir, ...entry.path.split("/"));
+      assertInside(path, input.agentsPath);
+      await assertInsideRealPath(path, input.agentsPath);
+      return {
+        type: "delete-file" as const,
+        status: await deletionStatusOf(path, entry.hash),
+        kind: "agent" as const,
+        path,
+        relativePath: entry.path,
+        skill: undefined,
+        agent: entry.agent,
+        usedBy: entry.targets,
+      };
+    }),
+  );
 }
 
 async function planFile(
@@ -532,7 +636,12 @@ function annotateSharedOperations(plans: readonly InstallPlan[]): InstallPlan[] 
   const byPath = new Map<string, { readonly content: string; readonly targets: Set<string> }>();
 
   for (const plan of plans) {
-    for (const operation of [...plan.operations, ...plan.mcpOperations, ...plan.hookOperations]) {
+    for (const operation of [
+      ...plan.operations,
+      ...plan.agentOperations,
+      ...plan.mcpOperations,
+      ...plan.hookOperations,
+    ]) {
       const found = byPath.get(operation.path);
 
       if (found !== undefined && found.content !== operation.content) {
@@ -562,6 +671,10 @@ function annotateSharedOperations(plans: readonly InstallPlan[]): InstallPlan[] 
   return plans.map((plan) => ({
     ...plan,
     operations: plan.operations.map((operation) => ({
+      ...operation,
+      usedBy: usedBy.get(operationKey(operation.path, operation.content)) ?? [plan.target],
+    })),
+    agentOperations: plan.agentOperations.map((operation) => ({
       ...operation,
       usedBy: usedBy.get(operationKey(operation.path, operation.content)) ?? [plan.target],
     })),

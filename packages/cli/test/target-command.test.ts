@@ -39,6 +39,7 @@ describe("agentyx target show", () => {
         "Reference: https://developers.openai.com/codex/skills",
         "Reference: https://developers.openai.com/codex/mcp",
         "Reference: https://developers.openai.com/codex/hooks",
+        "Reference: https://developers.openai.com/codex/multi-agent",
       ].join("\n"),
     );
     expect(await runTargetShowCommand({ target: "claude", json: false, cwd: projectDir })).toBe(
@@ -52,6 +53,7 @@ describe("agentyx target show", () => {
         "Reference: https://code.claude.com/docs/en/skills",
         "Reference: https://docs.anthropic.com/en/docs/claude-code/mcp",
         "Reference: https://code.claude.com/docs/en/hooks",
+        "Reference: https://code.claude.com/docs/en/sub-agents",
       ].join("\n"),
     );
     expect(await runTargetShowCommand({ target: "kimi", json: false, cwd: projectDir })).toBe(
@@ -64,6 +66,7 @@ describe("agentyx target show", () => {
         "Hooks: not supported (not supported)",
         "Reference: https://www.kimi.com/code/docs/en/kimi-code-cli/customization/skills.html",
         "Reference: https://www.kimi.com/code/docs/en/kimi-code-cli/customization/mcp.html",
+        "Reference: https://www.kimi.com/code/docs/en/kimi-code-cli/customization/agents.html",
       ].join("\n"),
     );
   });
@@ -82,6 +85,7 @@ describe("agentyx target show", () => {
         "Reference: https://developers.openai.com/codex/skills",
         "Reference: https://developers.openai.com/codex/mcp",
         "Reference: https://developers.openai.com/codex/hooks",
+        "Reference: https://developers.openai.com/codex/multi-agent",
       ].join("\n"),
     );
   });
@@ -107,6 +111,7 @@ describe("agentyx target show", () => {
         "https://code.claude.com/docs/en/skills",
         "https://docs.anthropic.com/en/docs/claude-code/mcp",
         "https://code.claude.com/docs/en/hooks",
+        "https://code.claude.com/docs/en/sub-agents",
       ],
     });
   });

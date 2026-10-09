@@ -105,6 +105,10 @@ export function formatInstallManifest(manifest: InstallManifest): string {
         return { ...entry, targets: sorted(entry.targets), servers: sorted(entry.servers) };
       }
 
+      if (entry.kind === "agent") {
+        return { ...entry, targets: sorted(entry.targets) };
+      }
+
       return { ...entry, targets: sorted(entry.targets), hooks: sorted(entry.hooks) };
     })
     .sort((left, right) => left.path.localeCompare(right.path));

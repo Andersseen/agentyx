@@ -111,6 +111,7 @@ describe("built-in pack registry", () => {
       mcpServers: [],
       tools: [],
       hooks: [],
+      agents: [],
     });
     expect(builtInPackRegistry.get("rust")?.skills).toEqual([
       "rust-idiomatic-development",
@@ -167,6 +168,7 @@ describe("createPackRegistry", () => {
       mcpServers: [],
       tools: [],
       hooks: [],
+      agents: [],
     });
   });
 

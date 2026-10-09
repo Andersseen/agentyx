@@ -35,6 +35,7 @@ describe("agentyxConfigSchema", () => {
           mcpServers: [],
           tools: [],
           hooks: [],
+          agents: [],
         },
       ],
       trustedSources: [

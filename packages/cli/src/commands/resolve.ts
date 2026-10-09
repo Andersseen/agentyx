@@ -33,6 +33,7 @@ export async function runResolveCommand(input: ResolveCommandInput): Promise<str
           section("MCP", renderMcpLines(resolved.declaredMcpServers, resolved.mcpServers)),
           section("Tools", renderToolLines(resolved.declaredTools, resolved.tools)),
           section("Hooks", renderToolLines(resolved.declaredHooks, resolved.hooks)),
+          section("Agents", renderToolLines(resolved.declaredAgents, resolved.agents)),
         ].join("\n\n");
   }
 
@@ -59,6 +60,7 @@ export async function runResolveCommand(input: ResolveCommandInput): Promise<str
     section("MCP", renderMcpLines(resolved.declaredMcpServers, resolved.mcpServers)),
     section("Tools", renderToolLines(resolved.declaredTools, resolved.tools)),
     section("Hooks", renderToolLines(resolved.declaredHooks, resolved.hooks)),
+    section("Agents", renderToolLines(resolved.declaredAgents, resolved.agents)),
   ].join("\n\n");
 }
 

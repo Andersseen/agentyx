@@ -1,3 +1,25 @@
+export { builtInAgentNames, builtInAgentRegistry } from "./agent/built-in.js";
+export { DuplicateAgentError, InvalidAgentError, UnknownAgentError } from "./agent/errors.js";
+export type { AgentRegistry, AgentSource } from "./agent/registry.js";
+export { createAgentRegistry } from "./agent/registry.js";
+export {
+  collectPackAgentReferences,
+  filterEffectiveAgents,
+  resolvePackAgents,
+} from "./agent/resolver.js";
+export type {
+  AgentAccess,
+  AgentDefinition,
+  AgentDefinitionInput,
+  AgentReference,
+  AgentReferenceInput,
+} from "./agent/schema.js";
+export {
+  agentAccessSchema,
+  agentDefinitionSchema,
+  agentNameSchema,
+  agentReferenceSchema,
+} from "./agent/schema.js";
 export type { AgentyxConfigIssue } from "./config/errors.js";
 export {
   AgentyxConfigNotFoundError,
@@ -140,6 +162,7 @@ export {
   parseInstallManifest,
 } from "./manifest/io.js";
 export type {
+  AgentManifestEntry,
   HookManifestEntry,
   InstallManifest,
   InstallManifestEntry,
@@ -148,6 +171,7 @@ export type {
   SkillManifestEntry,
 } from "./manifest/schema.js";
 export {
+  agentManifestEntrySchema,
   hookManifestEntrySchema,
   INSTALL_MANIFEST_VERSION,
   installManifestEntrySchema,

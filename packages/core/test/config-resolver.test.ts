@@ -39,6 +39,8 @@ describe("resolveAgentyxConfig", () => {
       "tools",
       "declaredHooks",
       "hooks",
+      "declaredAgents",
+      "agents",
       "enabled",
       "targets",
     ]);
@@ -77,6 +79,8 @@ describe("resolveAgentyxConfig", () => {
       tools: [],
       declaredHooks: [],
       hooks: [],
+      declaredAgents: [],
+      agents: [],
       enabled: [],
       targets: [],
     });

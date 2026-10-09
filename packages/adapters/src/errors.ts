@@ -31,6 +31,13 @@ export class DuplicateAdapterError extends AgentyxError {
   }
 }
 
+export class InvalidAdapterConfigurationError extends AgentyxError {
+  constructor(adapterId: string, detail: string) {
+    super("invalid_adapter_configuration", `Adapter "${adapterId}" is invalid: ${detail}`);
+    this.name = "InvalidAdapterConfigurationError";
+  }
+}
+
 /** Raised when an installation is asked for without saying where it should go. */
 export class MissingInstallTargetsError extends AgentyxError {
   constructor() {

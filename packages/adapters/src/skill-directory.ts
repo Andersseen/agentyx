@@ -1,5 +1,6 @@
 import { readFile, stat } from "node:fs/promises";
 import { join, resolve } from "node:path";
+import type { AgentDefinition } from "@agentyx/core";
 import { formatSkillMarkdown } from "@agentyx/core";
 import type {
   AdapterContext,
@@ -8,6 +9,7 @@ import type {
   ExistingHookConfig,
   ExistingMcpConfig,
   HookInstallStatus,
+  PlannedAgentFile,
   PlannedFile,
 } from "./adapter.js";
 import { normalizeClaudeHook, normalizeCodexHook } from "./hook-observer.js";
@@ -71,6 +73,11 @@ export interface SkillDirectoryAdapterDefinition {
     readonly config: "claude-settings-json" | "codex-hooks-json";
     readonly reference: string;
   };
+  readonly agents?: {
+    readonly dir: readonly string[];
+    readonly format: "claude" | "kimi" | "codex";
+    readonly reference: string;
+  };
   /** What the provider documents as observable through its hooks. */
   readonly observability?: Omit<AdapterObservability, "projectHooks">;
 }
@@ -107,6 +114,7 @@ export function createSkillDirectoryAdapter(
   if (definition.hooks !== undefined) {
     references.push(definition.hooks.reference);
   }
+  if (definition.agents !== undefined) references.push(definition.agents.reference);
 
   let adapter: AgentAdapter = {
     id: definition.id,
@@ -119,6 +127,7 @@ export function createSkillDirectoryAdapter(
         transports: definition.mcp?.project === true ? definition.mcp.transports : [],
       },
       hooks: definition.hooks !== undefined,
+      agents: definition.agents !== undefined,
       observability: {
         sessionLifecycle: false,
         toolUse: false,
@@ -147,6 +156,23 @@ export function createSkillDirectoryAdapter(
         skill: skill.name,
       })),
   };
+
+  if (definition.agents !== undefined) {
+    const agentSettings = definition.agents;
+    adapter = {
+      ...adapter,
+      agentsPath: (projectDir) => resolve(projectDir, join(...agentSettings.dir)),
+      planAgents: (context): readonly PlannedAgentFile[] =>
+        (context.agents ?? []).map((agent) => ({
+          segments: [
+            ...agentSettings.dir,
+            `${agent.name}.${agentSettings.format === "codex" ? "toml" : "md"}`,
+          ],
+          content: renderAgent(agent, agentSettings.format),
+          agent: agent.name,
+        })),
+    };
+  }
 
   if (definition.mcp?.project === true) {
     const config = definition.mcp.config;
@@ -250,6 +276,16 @@ export function createSkillDirectoryAdapter(
   }
 
   return adapter;
+}
+
+function renderAgent(agent: AgentDefinition, format: "claude" | "kimi" | "codex"): string {
+  const tools =
+    agent.access === "read-only"
+      ? ["Read", "Grep", "Glob"]
+      : ["Read", "Grep", "Glob", "Bash", "Write", "Edit"];
+  if (format === "codex")
+    return `name = ${JSON.stringify(agent.name)}\ndescription = ${JSON.stringify(agent.description)}\nsandbox_mode = ${JSON.stringify(agent.access === "read-only" ? "read-only" : "workspace-write")}\ndeveloper_instructions = ${JSON.stringify(agent.instructions)}\n`;
+  return `---\nname: ${agent.name}\ndescription: ${agent.description}\ntools: ${tools.join(", ")}\n${format === "kimi" ? "override: false\n" : ""}---\n\n${agent.instructions}\n`;
 }
 
 async function readOptional(path: string): Promise<string | undefined> {

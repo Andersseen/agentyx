@@ -118,7 +118,12 @@ describe("planTargetInstall", () => {
       {
         id: "acme",
         name: "Acme",
-        capabilities: { skills: true, mcp: { project: false, global: false }, hooks: false },
+        capabilities: {
+          skills: true,
+          mcp: { project: false, global: false },
+          hooks: false,
+          agents: false,
+        },
         skillsPath: (dir) => join(dir, ".acme"),
         detect: async (dir) => ({
           target: "acme",
@@ -300,7 +305,12 @@ describe("planTargetInstall", () => {
       {
         id: "acme",
         name: "Acme",
-        capabilities: { skills: true, mcp: { project: false, global: false }, hooks: false },
+        capabilities: {
+          skills: true,
+          mcp: { project: false, global: false },
+          hooks: false,
+          agents: false,
+        },
         skillsPath: (dir) => join(dir, ".acme"),
         detect: async (dir) => ({
           target: "acme",
@@ -348,7 +358,12 @@ describe("planTargetInstall containment", () => {
   const escaping = (segments: readonly string[]): AgentAdapter => ({
     id: "escaping",
     name: "Escaping",
-    capabilities: { skills: true, mcp: { project: false, global: false }, hooks: false },
+    capabilities: {
+      skills: true,
+      mcp: { project: false, global: false },
+      hooks: false,
+      agents: false,
+    },
     skillsPath: (dir) => join(dir, ".escaping"),
     detect: async (dir) => ({
       target: "escaping",
@@ -381,7 +396,12 @@ describe("planTargetInstall containment", () => {
       withAdapter({
         id: "escaping",
         name: "Escaping",
-        capabilities: { skills: true, mcp: { project: false, global: false }, hooks: false },
+        capabilities: {
+          skills: true,
+          mcp: { project: false, global: false },
+          hooks: false,
+          agents: false,
+        },
         skillsPath: () => tmpdir(),
         detect: async () => ({
           target: "escaping",
@@ -399,7 +419,12 @@ describe("planTargetInstall containment", () => {
       withAdapter({
         id: "escaping",
         name: "Escaping",
-        capabilities: { skills: true, mcp: { project: false, global: false }, hooks: false },
+        capabilities: {
+          skills: true,
+          mcp: { project: false, global: false },
+          hooks: false,
+          agents: false,
+        },
         skillsPath: (dir) => dir,
         detect: async (dir) => ({
           target: "escaping",
@@ -551,7 +576,12 @@ describe("planInstall", () => {
     const shared = (id: string, content: string): AgentAdapter => ({
       id,
       name: id,
-      capabilities: { skills: true, mcp: { project: false, global: false }, hooks: false },
+      capabilities: {
+        skills: true,
+        mcp: { project: false, global: false },
+        hooks: false,
+        agents: false,
+      },
       skillsPath: (dir) => join(dir, ".agents", "skills"),
       detect: async (dir) => ({
         target: id,

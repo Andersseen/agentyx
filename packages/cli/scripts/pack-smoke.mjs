@@ -54,7 +54,7 @@ await writeFile(
 );
 await writeFile(join(projectDir, "tsconfig.json"), '{"compilerOptions":{"strict":true}}\n');
 
-await run("pnpm", ["install", "--ignore-scripts"], projectDir);
+await run("pnpm", ["install", "--ignore-scripts", "--store-dir", packageCacheDir], projectDir);
 
 const agentyx = process.platform === "win32" ? "agentyx.cmd" : "agentyx";
 
@@ -151,6 +151,61 @@ assertIncludes(
   "Smoke API",
 );
 const cli = join(projectDir, "node_modules", ".bin", agentyx);
+await run(
+  cli,
+  ["configure", "--add-pack", "agentic", "--enable", "agentyx-reviewer", "--yes"],
+  projectDir,
+);
+for (const [path, body] of [
+  [".claude/agents/unrelated.md", "user Claude agent\n"],
+  [".agents/agents/unrelated.md", "user Kimi agent\n"],
+  [".codex/agents/unrelated.toml", 'name = "user_agent"\n'],
+]) {
+  await mkdir(dirname(join(projectDir, path)), { recursive: true });
+  await writeFile(join(projectDir, path), body);
+}
+await mkdir(join(projectDir, ".claude", "agents"), { recursive: true });
+await writeFile(join(projectDir, ".claude/agents/agentyx-reviewer.md"), "unmanaged conflict\n");
+const agentConflict = JSON.parse(
+  (await run(cli, ["sync", "--dry-run", "--json"], projectDir)).stdout,
+);
+if (!agentConflict.conflicts.includes(".claude/agents/agentyx-reviewer.md"))
+  throw new Error("An unmanaged same-name project agent was not reported as a conflict.");
+await rm(join(projectDir, ".claude/agents/agentyx-reviewer.md"));
+await run(cli, ["sync", "--dry-run"], projectDir);
+await run(cli, ["sync"], projectDir);
+for (const path of [
+  ".claude/agents/agentyx-reviewer.md",
+  ".agents/agents/agentyx-reviewer.md",
+  ".codex/agents/agentyx-reviewer.toml",
+])
+  await readFile(join(projectDir, path), "utf8");
+const agentSecondSync = JSON.parse((await run(cli, ["sync", "--json"], projectDir)).stdout);
+if (agentSecondSync.summary.create !== 0 || agentSecondSync.summary.update !== 0)
+  throw new Error("A second sync with the reviewer enabled was not a no-op.");
+const agentDoctor = JSON.parse((await run(cli, ["doctor", "--json"], projectDir)).stdout);
+const installedReviewer = agentDoctor.resolution.agents.find(
+  (agent) => agent.name === "agentyx-reviewer",
+);
+if (
+  !installedReviewer?.active ||
+  installedReviewer.targets.some((target) => target.state !== "installed")
+)
+  throw new Error("Doctor did not report the enabled reviewer as installed for every target.");
+await run(cli, ["configure", "--disable", "agentyx-reviewer", "--yes", "--sync"], projectDir);
+for (const path of [
+  ".claude/agents/agentyx-reviewer.md",
+  ".agents/agents/agentyx-reviewer.md",
+  ".codex/agents/agentyx-reviewer.toml",
+])
+  if ((await readdir(dirname(join(projectDir, path)))).includes(path.split("/").at(-1)))
+    throw new Error(`Managed agent was not pruned: ${path}`);
+for (const path of [
+  ".claude/agents/unrelated.md",
+  ".agents/agents/unrelated.md",
+  ".codex/agents/unrelated.toml",
+])
+  await readFile(join(projectDir, path), "utf8");
 assertIncludes(await run(cli, ["configure", "--dry-run"], projectDir), "No configuration changes.");
 assertIncludes(
   await run(
@@ -253,6 +308,7 @@ assertPublishedDependency(cliPackage, "@agentyx/core");
 assertPublishedDependency(cliPackage, "@agentyx/adapters");
 assertPublishedDependency(adaptersPackage, "@agentyx/core");
 await readFile(join(corePackageRoot, "skills", "planning", "SKILL.md"), "utf8");
+await readFile(join(corePackageRoot, "agents", "agentyx-reviewer.json"), "utf8");
 await readFile(join(corePackageRoot, "templates", "project-context.md"), "utf8");
 await readFile(join(corePackageRoot, "schema", "agentyx.schema.json"), "utf8");
 await readFile(join(cliPackageRoot, "dist", "index.mjs"), "utf8");

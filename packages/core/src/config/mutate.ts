@@ -69,6 +69,9 @@ export function mutateAgentyxConfig(
     ...declared.declaredHooks
       .filter((item) => item.activation === "optional")
       .map((item) => item.name),
+    ...declared.declaredAgents
+      .filter((item) => item.activation === "optional")
+      .map((item) => item.name),
   ]);
   const enable = unique(mutations.enable ?? []);
   const disable = unique(mutations.disable ?? []);

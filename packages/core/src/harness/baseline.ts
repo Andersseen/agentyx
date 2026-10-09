@@ -47,6 +47,7 @@ export interface HarnessBaseline {
  */
 export function installedCapabilities(manifest: InstallManifest): BaselineCapability[] {
   return manifest.entries.flatMap((entry): BaselineCapability[] => {
+    if (entry.kind === "agent") return [];
     const names =
       entry.kind === "skill" ? [entry.skill] : entry.kind === "mcp" ? entry.servers : entry.hooks;
 
