@@ -1,5 +1,14 @@
 # @agentyx/cli
 
+## 0.13.1
+
+### Patch Changes
+
+- 8c9ce11: Fix MCP environment references for Codex and Kimi Code, which previously received the variable *name* as a literal value. Codex now forwards the variable with `env_vars`; Kimi Code, which documents no reference mechanism, no longer gets a wrong literal. A server transport an adapter does not declare now fails with `unsupported_mcp_transport` instead of being rendered, and `uninstall --help` now mentions agents. Codex documentation links point at the current official pages.
+- Updated dependencies [8c9ce11]
+  - @agentyx/adapters@0.13.1
+  - @agentyx/core@0.13.1
+
 ## 0.13.0
 
 ### Minor Changes
