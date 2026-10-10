@@ -28,6 +28,8 @@ export {
   ProviderConfigParseError,
   SharedInstallConflictError,
   UnknownAdapterError,
+  UnsupportedMcpEnvReferenceError,
+  UnsupportedMcpTransportError,
 } from "./errors.js";
 export type { ApplyInstallOptions, InstallResult } from "./executor.js";
 export { applyInstallPlan, applyInstallPlans } from "./executor.js";

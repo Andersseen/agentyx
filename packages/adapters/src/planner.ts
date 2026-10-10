@@ -21,6 +21,7 @@ import {
   InvalidAdapterConfigurationError,
   MissingInstallTargetsError,
   SharedInstallConflictError,
+  UnsupportedMcpTransportError,
 } from "./errors.js";
 import { assertInside, assertInsideRealPath, toDisplayPath } from "./path.js";
 import type {
@@ -353,6 +354,16 @@ async function planMcp(input: PlanMcpInput): Promise<{
 
   if (configPath === undefined) {
     return { operations: [], deletions: [] };
+  }
+
+  const supported = adapter.capabilities.mcp.transports;
+
+  if (supported !== undefined) {
+    for (const server of context.mcpServers) {
+      if (!supported.includes(server.transport)) {
+        throw new UnsupportedMcpTransportError(adapter.id, server.name, server.transport);
+      }
+    }
   }
 
   assertInside(configPath, projectDir);

@@ -36,10 +36,10 @@ describe("agentyx target show", () => {
         "MCP: .codex/config.toml",
         "MCP transports: stdio, http",
         "Hooks: .codex/hooks.json",
-        "Reference: https://developers.openai.com/codex/skills",
-        "Reference: https://developers.openai.com/codex/mcp",
-        "Reference: https://developers.openai.com/codex/hooks",
-        "Reference: https://developers.openai.com/codex/multi-agent",
+        "Reference: https://learn.chatgpt.com/docs/build-skills",
+        "Reference: https://learn.chatgpt.com/docs/extend/mcp?surface=cli",
+        "Reference: https://learn.chatgpt.com/docs/hooks",
+        "Reference: https://learn.chatgpt.com/docs/agent-configuration/subagents",
       ].join("\n"),
     );
     expect(await runTargetShowCommand({ target: "claude", json: false, cwd: projectDir })).toBe(
@@ -51,7 +51,7 @@ describe("agentyx target show", () => {
         "MCP transports: stdio, http",
         "Hooks: .claude/settings.json",
         "Reference: https://code.claude.com/docs/en/skills",
-        "Reference: https://docs.anthropic.com/en/docs/claude-code/mcp",
+        "Reference: https://code.claude.com/docs/en/mcp",
         "Reference: https://code.claude.com/docs/en/hooks",
         "Reference: https://code.claude.com/docs/en/sub-agents",
       ].join("\n"),
@@ -82,10 +82,10 @@ describe("agentyx target show", () => {
         "MCP: .codex/config.toml",
         "MCP transports: stdio, http",
         "Hooks: .codex/hooks.json",
-        "Reference: https://developers.openai.com/codex/skills",
-        "Reference: https://developers.openai.com/codex/mcp",
-        "Reference: https://developers.openai.com/codex/hooks",
-        "Reference: https://developers.openai.com/codex/multi-agent",
+        "Reference: https://learn.chatgpt.com/docs/build-skills",
+        "Reference: https://learn.chatgpt.com/docs/extend/mcp?surface=cli",
+        "Reference: https://learn.chatgpt.com/docs/hooks",
+        "Reference: https://learn.chatgpt.com/docs/agent-configuration/subagents",
       ].join("\n"),
     );
   });
@@ -109,7 +109,7 @@ describe("agentyx target show", () => {
       },
       references: [
         "https://code.claude.com/docs/en/skills",
-        "https://docs.anthropic.com/en/docs/claude-code/mcp",
+        "https://code.claude.com/docs/en/mcp",
         "https://code.claude.com/docs/en/hooks",
         "https://code.claude.com/docs/en/sub-agents",
       ],
