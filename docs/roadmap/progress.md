@@ -176,8 +176,8 @@ Release status: not published; Changeset prepares the minor release.
 
 ## R100-01 — Concrete provider + platform compatibility evidence
 
-Status: complete for local verification; macOS, Windows and Node 24 results are pending the CI run of
-this branch (`chore/1-0-compatibility-evidence`)
+Status: complete. CI on PR #108 passed: Linux Node 22 and Node 24 (full gate and pack smoke), macOS
+Node 22 and Windows Node 22 (packed-CLI smoke)
 Starting commit: `1203324` (`main`, packages at `0.13.0`)
 Prerequisites checked: R090-04 is not recorded in this log, but current source already ships the
 lock, frozen install and migration behavior it describes. The task was executed against the 0.13.x
@@ -231,7 +231,7 @@ Verification (local, macOS, Node 22.23.1):
   this repository. Root desired state was not changed. They report the repository's own checkout as
   not converged (2 blocked destinations for repository-development Skills, 36 files to create), which
   predates this task.
-- Not run locally: Node 24, Linux, Windows. Do not treat those as passing until the CI jobs are green.
+- Not run locally: Node 24, Linux, Windows. Those were covered by the PR #108 CI jobs, which passed.
 
 Not covered, by design: whether any provider loads or uses what Agentyx writes (R100-03/R100-04); live
 MCP connections; Kimi project-local hooks (provider is user-level only); SSE MCP.
