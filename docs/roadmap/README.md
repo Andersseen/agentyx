@@ -1,6 +1,13 @@
 # Agentyx roadmap to 1.0
 
-Status: proposed implementation plan, updated for the 0.7.0 source baseline and expanded 0.8 scope.
+Status: proposed implementation plan, originally written against the 0.7.0 source baseline.
+
+**Current state (2026-10-10):** the packages are at 0.13.0. Since this plan was written the product
+gained lifecycle hooks, provider-native project agents, `configure`/`sync`, Doctor observation and
+a `.agentyx.lock.json` with skill, MCP, hook and agent entries. Historical milestone text below is
+preserved as written and its task IDs are unchanged; read it against current behavior. Task
+[R100-01](0.10-validation.md#r100-01--establish-a-concrete-compatibility-matrix) was executed
+against that 0.13.x contract. R100-02 is next; R100-03 and R100-04 are not started.
 
 ## Product outcome
 

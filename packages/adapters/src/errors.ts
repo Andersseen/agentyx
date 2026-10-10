@@ -125,3 +125,38 @@ export class SharedInstallConflictError extends AgentyxError {
     this.targets = targets;
   }
 }
+
+/** Raised when a resolved MCP server uses a transport the target provider does not declare. */
+export class UnsupportedMcpTransportError extends AgentyxError {
+  readonly adapterId: string;
+  readonly server: string;
+  readonly transport: string;
+
+  constructor(adapterId: string, server: string, transport: string) {
+    super(
+      "unsupported_mcp_transport",
+      `MCP server "${server}" uses the ${transport} transport, which "${adapterId}" does not support.`,
+    );
+    this.name = "UnsupportedMcpTransportError";
+    this.adapterId = adapterId;
+    this.server = server;
+    this.transport = transport;
+  }
+}
+
+/**
+ * Raised when an environment reference cannot be expressed in a provider's documented MCP format
+ * without writing a wrong literal value.
+ */
+export class UnsupportedMcpEnvReferenceError extends AgentyxError {
+  readonly server: string;
+
+  constructor(adapterId: string, server: string, detail: string) {
+    super(
+      "unsupported_mcp_env_reference",
+      `MCP server "${server}" cannot be rendered for "${adapterId}": ${detail}`,
+    );
+    this.name = "UnsupportedMcpEnvReferenceError";
+    this.server = server;
+  }
+}

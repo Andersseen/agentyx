@@ -135,7 +135,9 @@ function collectTarget(value: string, previous: string[]): string[] {
 
 export function createUninstallCommand(): Command {
   return new Command("uninstall")
-    .description("Remove the skills, MCP entries and hooks Agentyx installed into this project.")
+    .description(
+      "Remove the skills, agents, MCP entries and hooks Agentyx installed into this project.",
+    )
     .option(
       "--target <id>",
       "uninstall only this target instead of every recorded one; repeatable",

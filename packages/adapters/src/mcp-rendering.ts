@@ -2,7 +2,7 @@ import { resolve } from "node:path";
 import type { McpServerDefinition } from "@agentyx/core";
 import { parse, stringify } from "@iarna/toml";
 import type { ExistingMcpConfig } from "./adapter.js";
-import { ProviderConfigParseError } from "./errors.js";
+import { ProviderConfigParseError, UnsupportedMcpEnvReferenceError } from "./errors.js";
 import { type JsonRecord, optionalRecord, parseJsonObject, sortRecord } from "./json-config.js";
 
 export const CODEX_MCP_CONFIG_SEGMENTS = [".codex", "config.toml"] as const;
@@ -144,14 +144,37 @@ function mergeServers(
   return sortRecord(configured);
 }
 
+/**
+ * Codex's `env` table holds literal values; `env_vars` is the documented way to forward a named
+ * variable from the host environment. A reference can therefore only be expressed when the server
+ * expects the variable under the same name, and anything else fails instead of writing a literal
+ * variable name where a secret was meant.
+ */
 export function renderCodexMcpServer(server: McpServerDefinition): JsonRecord {
   if (server.transport === "stdio") {
-    return {
+    const forwarded = Object.entries(server.env).map(([key, reference]) => {
+      if (key !== reference.fromEnv) {
+        throw new UnsupportedMcpEnvReferenceError(
+          "codex",
+          server.name,
+          `Codex can only forward ${reference.fromEnv} under its own name, not as ${key}.`,
+        );
+      }
+
+      return key;
+    });
+    const rendered: JsonRecord = {
       command: server.command,
       args: server.args,
-      env: renderPlainEnv(server.env),
+      env: {},
       enabled: true,
     };
+
+    if (forwarded.length > 0) {
+      rendered.env_vars = forwarded.sort();
+    }
+
+    return rendered;
   }
 
   const rendered: JsonRecord = {
@@ -190,25 +213,24 @@ export function renderClaudeMcpServer(server: McpServerDefinition): JsonRecord {
   return rendered;
 }
 
+/**
+ * Kimi Code documents `env` and `headers` as literal values with no reference or expansion
+ * mechanism, so environment references are not rendered at all: writing the variable *name* would
+ * hand the server a wrong literal. The server then depends on whatever environment Kimi Code
+ * itself provides; see docs/compatibility.md.
+ */
 export function renderKimiMcpServer(server: McpServerDefinition): JsonRecord {
   if (server.transport === "stdio") {
     return {
       command: server.command,
       args: server.args,
-      env: renderPlainEnv(server.env),
+      env: {},
     };
   }
 
-  const rendered: JsonRecord = {
+  return {
     url: server.url,
   };
-  const headers = renderPlainEnv(server.headers);
-
-  if (Object.keys(headers).length > 0) {
-    rendered.headers = headers;
-  }
-
-  return rendered;
 }
 
 function renderExpandedEnv(env: Record<string, { fromEnv: string }>): Record<string, string> {
@@ -219,6 +241,7 @@ function renderExpandedEnv(env: Record<string, { fromEnv: string }>): Record<str
   );
 }
 
+/** Codex `env_http_headers` maps header names to the *names* of environment variables. */
 function renderPlainEnv(env: Record<string, { fromEnv: string }>): Record<string, string> {
   return Object.fromEntries(
     Object.entries(env)
