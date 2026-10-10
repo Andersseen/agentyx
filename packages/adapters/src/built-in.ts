@@ -59,21 +59,21 @@ export const builtInAdapterDefinitions: readonly SkillDirectoryAdapterDefinition
     name: "Codex",
     skillsDir: [".agents", "skills"],
     markers: [[".codex"]],
-    reference: "https://developers.openai.com/codex/skills",
+    reference: "https://learn.chatgpt.com/docs/build-skills",
     mcp: {
       project: true,
       config: "codex-toml",
       transports: ["stdio", "http"],
-      reference: "https://developers.openai.com/codex/mcp",
+      reference: "https://learn.chatgpt.com/docs/extend/mcp?surface=cli",
     },
     hooks: {
       config: "codex-hooks-json",
-      reference: "https://developers.openai.com/codex/hooks",
+      reference: "https://learn.chatgpt.com/docs/hooks",
     },
     agents: {
       dir: [".codex", "agents"],
       format: "codex",
-      reference: "https://developers.openai.com/codex/multi-agent",
+      reference: "https://learn.chatgpt.com/docs/agent-configuration/subagents",
     },
     observability: {
       sessionLifecycle: true,
@@ -94,7 +94,7 @@ export const builtInAdapterDefinitions: readonly SkillDirectoryAdapterDefinition
       project: true,
       config: "claude-json",
       transports: ["stdio", "http"],
-      reference: "https://docs.anthropic.com/en/docs/claude-code/mcp",
+      reference: "https://code.claude.com/docs/en/mcp",
     },
     hooks: {
       config: "claude-settings-json",

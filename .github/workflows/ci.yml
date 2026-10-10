@@ -59,3 +59,29 @@ jobs:
 
       - name: Package smoke test
         run: pnpm smoke:pack
+
+  # The check job runs the full gate and smoke:pack on Linux with Node 22 and 24. This job proves the
+  # packed CLI installs, syncs, prunes and uninstalls on the other claimed platforms.
+  platform-smoke:
+    name: packaged smoke (${{ matrix.os }}, node 22)
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-latest]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Package smoke test
+        run: pnpm smoke:pack

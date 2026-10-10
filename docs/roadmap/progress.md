@@ -173,3 +173,72 @@ be resolved before beginning 0.9.
 
 Next task: R090-01, after deciding how to reconcile the incomplete 0.7 roadmap with the 0.8 release.
 Release status: not published; Changeset prepares the minor release.
+
+## R100-01 — Concrete provider + platform compatibility evidence
+
+Status: complete. CI on PR #108 passed: Linux Node 22 and Node 24 (full gate and pack smoke), macOS
+Node 22 and Windows Node 22 (packed-CLI smoke)
+Starting commit: `1203324` (`main`, packages at `0.13.0`)
+Prerequisites checked: R090-04 is not recorded in this log, but current source already ships the
+lock, frozen install and migration behavior it describes. The task was executed against the 0.13.x
+contract, so it also covers hooks, project agents, `configure`/`sync` and Doctor observability, which
+the original R100-01 text predates.
+Provider documentation verified: 2026-10-10 (Codex, Claude Code, Kimi Code; sources in
+[docs/compatibility.md](../compatibility.md)).
+
+Behavior and evidence delivered:
+- Added the dated compatibility document: per-provider matrix, exact managed destinations, agent
+  access mapping, MCP rendering, observability flags, trust behavior, platforms and exit behavior,
+  keeping "provider supports", "Agentyx supports" and "Agentyx declines" apart.
+- Added `packages/adapters/test/compatibility.test.ts` (31 tests): destinations, official-host
+  references, byte-identical Skills for all built-ins across targets, Codex TOML / Claude and Kimi
+  Markdown agent formats, read-only and workspace-write tool/sandbox mapping, shared `.agents`
+  ownership and prune, MCP and hook lifecycles per provider (install, update, prune, uninstall with
+  user entries preserved), observability flags, pre-agent manifest loading and sync, and an empty
+  `$HOME` for every operation.
+- Extended `pnpm smoke:pack`: runs on Windows-safe process spawning (no `.cmd` shim, no shell), runs
+  the packed CLI with `$HOME` pointed at an empty directory, checks the bin entry, compares the
+  packaged Skill and agent directories to source, parses `recommend`/`resolve`/`configure --dry-run`/
+  `sync --dry-run`/`doctor` JSON, asserts exit codes (missing and invalid config, unknown target,
+  invalid configure mutation, sync conflict, `doctor --check`), and runs a clean three-provider
+  lifecycle: init, sync, config-only change leaves provider files untouched, dry-run, sync, Doctor
+  convergence, no-op second sync, removing the Kimi target, disabling an agent, uninstall.
+- CI: new `platform-smoke` job (macOS and Windows, Node 22, `pnpm smoke:pack`); the existing Linux
+  `check` job already runs the full gate and the pack smoke on Node 22 and 24.
+
+Compatibility corrections:
+- Codex MCP `env` and Kimi MCP `env`/`headers` received the environment variable *name* as a literal
+  value. Codex now uses the documented `env_vars` forwarding (a rename fails with
+  `unsupported_mcp_env_reference`); Kimi documents no reference mechanism, so none is written.
+- `capabilities.mcp.transports` was declared but never enforced; an undeclared transport now fails
+  with `unsupported_mcp_transport`.
+- Codex references pointed at `developers.openai.com/codex/*` (permanent redirect) and Claude's MCP
+  reference at `docs.anthropic.com`; both now point at the current official pages.
+- `uninstall --help` omitted agents.
+
+Files changed:
+- `packages/adapters/src/{built-in,errors,index,mcp-rendering,planner}.ts`
+- `packages/adapters/test/{compatibility,mcp-rendering}.test.ts`, `packages/cli/test/target-command.test.ts`
+- `packages/cli/src/commands/uninstall.ts`, `packages/cli/scripts/pack-smoke.mjs`
+- `.github/workflows/ci.yml`, `docs/compatibility.md`, `docs/roadmap/{README,0.10-validation,progress}.md`
+- `.changeset/calm-env-refs.md` (patch; the packages are one fixed group)
+
+Verification (local, macOS, Node 22.23.1):
+- `pnpm check` — passed (647 tests, 56 files; biome, typecheck, build).
+- `pnpm eval:skills` — passed (8 scenarios; validates the suite, not agent quality).
+- `pnpm smoke:pack` — passed.
+- Dogfood with the built CLI, read-only: `doctor`, `configure --dry-run`, `sync --dry-run` ran against
+  this repository. Root desired state was not changed. They report the repository's own checkout as
+  not converged (2 blocked destinations for repository-development Skills, 36 files to create), which
+  predates this task.
+- Not run locally: Node 24, Linux, Windows. Those were covered by the PR #108 CI jobs, which passed.
+
+Not covered, by design: whether any provider loads or uses what Agentyx writes (R100-03/R100-04); live
+MCP connections; Kimi project-local hooks (provider is user-level only); SSE MCP.
+Remaining unsupported or unverified: Kimi MCP env/header references; Kimi inheritance of the host
+environment (undocumented); Claude Skill-use payload field name and Codex `enabled`/`env = {}` keys
+(not spelled out in the pages read); Codex agent sandbox can be raised by live parent overrides.
+Changeset: needed, because MCP rendering for Codex and Kimi changed (patch).
+
+Next task: R100-02 — stale-plan and partial-failure hardening. Agentyx is not claimed 1.0-ready.
+Release status: not published.

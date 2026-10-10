@@ -39,17 +39,15 @@ describe("MCP provider rendering", () => {
 
     expect(renderCodexMcpServer(server)).toMatchObject({
       command: "npx",
-      env: { SECURE_TOKEN: "SECURE_TOKEN" },
+      env_vars: ["SECURE_TOKEN"],
     });
     expect(renderClaudeMcpServer(server)).toMatchObject({
       type: "stdio",
       command: "npx",
       env: { SECURE_TOKEN: `\${SECURE_TOKEN}` },
     });
-    expect(renderKimiMcpServer(server)).toMatchObject({
-      command: "npx",
-      env: { SECURE_TOKEN: "SECURE_TOKEN" },
-    });
+    // Kimi documents no reference mechanism, so no literal variable name is written.
+    expect(renderKimiMcpServer(server)).toEqual({ command: "npx", args: ["secure-docs"], env: {} });
   });
 
   it("preserves unrelated Codex TOML while adding and updating MCP entries", () => {
