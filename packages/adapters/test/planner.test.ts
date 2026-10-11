@@ -678,6 +678,7 @@ describe("pruning", () => {
         path: join(projectDir, ".agents", "skills", "dropped", "SKILL.md"),
         relativePath: ".agents/skills/dropped/SKILL.md",
         skill: "dropped",
+        observed: { kind: "file", hash: hashContent("old\n") },
         usedBy: ["codex"],
       },
     ]);

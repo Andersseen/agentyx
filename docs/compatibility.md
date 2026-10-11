@@ -179,6 +179,50 @@ exit codes, for Codex, Claude Code and Kimi Code together. It also compares the 
 agent directories to the source tree. `engines.node` stays `>=22`; changing it is a product
 decision, not a by-product of another version passing.
 
+## Plan freshness, partial application and recovery
+
+Agentyx plans first and writes second. A plan records, for every file it intends to create, update or
+delete, the state it saw at that destination: absent, or present with a SHA-256 of its content. That
+record is internal; it is not part of `--json` output.
+
+**A plan authorizes a change only against the exact state it observed.** Before the first write the
+executor re-checks every destination; if any differs, it stops with `stale_install_plan`, naming the
+project-relative paths, and nothing has been written. It checks each destination again immediately
+before changing it. This covers Skill, agent, MCP and hook files, so an entry you add to `.mcp.json` or
+`.claude/settings.json` after a plan was made is never overwritten by the older merged document.
+
+- `--force` changes what the *planner* decides about the state it just read. It never means "overwrite
+  whatever is there when the plan runs".
+- A file that appeared where the plan expected none, or changed since, is left alone.
+- A planned deletion whose file has already disappeared counts as done; one whose content changed is
+  left alone.
+- Re-run the command to plan again against the current state.
+
+**Agentyx is not an atomic filesystem transaction.** If a write fails after earlier changes were made
+(or a file changes between the two checks), it stops with `incomplete_install` listing the
+project-relative paths that were `Completed` and those `Not applied`. Nothing is rolled back. Changes
+already made stay, and `.agentyx.lock.json` is committed last, only after every provider change
+succeeded; the previous lock stays authoritative. The lock is replaced by a rename of a same-directory
+temporary file, so a failure before the rename leaves the previous lock intact.
+Concurrent Agentyx runs in one project remain unsupported; the lock is not checked for outside changes
+between loading and committing.
+
+**Recovery** preserves your content:
+
+1. Read the `Completed` and `Not applied` paths.
+2. Run `agentyx doctor`.
+3. Inspect each file that is reported as edited or not managed. Because the lock was not updated, a
+   file written before the failure is not recorded as Agentyx-owned, and a managed file updated before
+   the failure no longer matches the old lock. That is evidence of an interrupted run, not necessarily
+   an edit of yours. Agentyx does not adopt such a file by itself; one whose bytes already equal what
+   Agentyx wants is simply recognized as up to date.
+4. Keep, move or restore each file deliberately. Use `--force` only after reviewing what it would
+   replace.
+5. Run `agentyx sync` again. A deletion that already happened is treated as done and is not recreated.
+
+`agentyx configure --sync` keeps the new `.agentyx.json` whatever happens to sync and keeps the
+`stale_install_plan` or `incomplete_install` code in the failure.
+
 ## Exit behavior (preparation for 1.0, not yet frozen)
 
 Observed and covered by the packaged smoke test:
@@ -191,6 +235,8 @@ Observed and covered by the packaged smoke test:
 | `sync`/`install` conflict (unmanaged or edited destination) | 1, nothing written |
 
 Every refusal is a nonzero exit with a message on stderr and no partial write for these cases.
+Two further failures exist once planning has passed: `stale_install_plan` and `incomplete_install`
+(next section). Both exit 1 with the message on stderr and never print the `Installed:` summary.
 Stable error codes and a formal JSON contract belong to roadmap task R1000-01.
 
 ## References

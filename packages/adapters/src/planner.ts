@@ -32,6 +32,7 @@ import type {
   InstallOperationStatus,
   InstallPlan,
   McpInstallOperation,
+  ObservedFileState,
 } from "./plan.js";
 import type { AdapterRegistry } from "./registry.js";
 
@@ -234,10 +235,11 @@ async function planAgentFile(
   await assertInsideRealPath(path, agentsPath);
   const relativePath = toDisplayPath(projectDir, path);
   const entry = recorded.get(relativePath);
+  const installed = await readInstalled(path);
   return {
     type: "write-file",
-    status: await statusOf(
-      path,
+    status: classify(
+      installed,
       file.content,
       entry?.kind === "agent" ? entry.hash : undefined,
       force,
@@ -247,6 +249,7 @@ async function planAgentFile(
     skill: "",
     agent: file.agent,
     content: file.content,
+    observed: observedState(installed),
     usedBy: [target],
   };
 }
@@ -271,14 +274,16 @@ async function planAgentDeletions(input: {
       const path = resolve(input.projectDir, ...entry.path.split("/"));
       assertInside(path, input.agentsPath);
       await assertInsideRealPath(path, input.agentsPath);
+      const installed = await readInstalled(path);
       return {
         type: "delete-file" as const,
-        status: await deletionStatusOf(path, entry.hash),
+        status: deletionStatus(installed, entry.hash),
         kind: "agent" as const,
         path,
         relativePath: entry.path,
         skill: undefined,
         agent: entry.agent,
+        observed: observedState(installed),
         usedBy: entry.targets,
       };
     }),
@@ -300,8 +305,9 @@ async function planFile(
 
   const relativePath = toDisplayPath(projectDir, path);
   const entry = recorded.get(relativePath);
-  const status = await statusOf(
-    path,
+  const installed = await readInstalled(path);
+  const status = classify(
+    installed,
     file.content,
     entry?.kind === "skill" ? entry.hash : undefined,
     force,
@@ -314,6 +320,7 @@ async function planFile(
     relativePath,
     skill: file.skill,
     content: file.content,
+    observed: observedState(installed),
     usedBy: [target],
   };
 }
@@ -390,11 +397,12 @@ async function planMcp(input: PlanMcpInput): Promise<{
       deletions: [
         {
           type: "delete-file",
-          status: await deletionStatusOf(configPath, recordedEntry.hash),
+          status: deletionStatus(existingContent, recordedEntry.hash),
           kind: "mcp",
           path: configPath,
           relativePath,
           skill: undefined,
+          observed: observedState(existingContent),
           usedBy: recordedEntry.targets,
         },
       ],
@@ -406,16 +414,20 @@ async function planMcp(input: PlanMcpInput): Promise<{
   assertInside(path, projectDir);
   await assertInsideRealPath(path, projectDir);
 
+  // The merged document was built from `existingContent`, so that read is the state to guard.
+  const installed = path === configPath ? existingContent : await readInstalled(path);
+
   return {
     operations: [
       {
         type: "configure-mcp",
-        status: await statusOf(path, planned.content, undefined, true),
+        status: classify(installed, planned.content, undefined, true),
         path,
         relativePath: toDisplayPath(projectDir, path),
         servers: planned.servers,
         content: planned.content,
         created: existingContent === undefined,
+        observed: observedState(installed),
         usedBy: [adapter.id],
       },
     ],
@@ -491,11 +503,12 @@ async function planHooks(input: PlanHooksInput): Promise<{
       deletions: [
         {
           type: "delete-file",
-          status: await deletionStatusOf(configPath, recordedEntry.hash),
+          status: deletionStatus(existingContent, recordedEntry.hash),
           kind: "hook",
           path: configPath,
           relativePath,
           skill: undefined,
+          observed: observedState(existingContent),
           usedBy: recordedEntry.targets,
         },
       ],
@@ -507,16 +520,19 @@ async function planHooks(input: PlanHooksInput): Promise<{
   assertInside(path, projectDir);
   await assertInsideRealPath(path, projectDir);
 
+  const installed = path === configPath ? existingContent : await readInstalled(path);
+
   return {
     operations: [
       {
         type: "configure-hooks",
-        status: await statusOf(path, planned.content, undefined, true),
+        status: classify(installed, planned.content, undefined, true),
         path,
         relativePath: toDisplayPath(projectDir, path),
         hooks: planned.hooks,
         content: planned.content,
         created: existingContent === undefined,
+        observed: observedState(installed),
         usedBy: [adapter.id],
       },
     ],
@@ -561,13 +577,16 @@ async function planSkillDeletions(
       assertInside(path, adapter.skillsPath(projectDir));
       await assertInsideRealPath(path, adapter.skillsPath(projectDir));
 
+      const installed = await readInstalled(path);
+
       return {
         type: "delete-file" as const,
-        status: await deletionStatusOf(path, entry.hash),
+        status: deletionStatus(installed, entry.hash),
         kind: "skill" as const,
         path,
         relativePath: entry.path,
         skill: entry.skill,
+        observed: observedState(installed),
         usedBy: entry.targets,
       };
     }),
@@ -586,30 +605,35 @@ async function readExistingProviderConfig(path: string): Promise<string | undefi
   }
 }
 
+async function readInstalled(path: string): Promise<string | undefined> {
+  return readExistingProviderConfig(path);
+}
+
+function observedState(installed: string | undefined): ObservedFileState {
+  return installed === undefined
+    ? { kind: "missing" }
+    : { kind: "file", hash: hashContent(installed) };
+}
+
 /**
- * Decides what writing `content` to `path` would mean.
+ * Decides what writing `content` over `installed` would mean.
  *
  * `recordedHash` is the digest the manifest holds for this path. When it is
  * absent, or does not match what is on disk, the file is someone else's and the
  * result is a `conflict` — the single rule that covers both a pre-existing file
  * and a managed file edited by hand.
+ *
+ * `force` only changes this decision, for the state that was just read. The
+ * executor still requires the destination to match that state when it writes.
  */
-async function statusOf(
-  path: string,
+function classify(
+  installed: string | undefined,
   content: string,
   recordedHash: string | undefined,
   force: boolean | undefined,
-): Promise<InstallOperationStatus> {
-  let installed: string;
-
-  try {
-    installed = await readFile(path, "utf8");
-  } catch (cause) {
-    if (cause instanceof Error && (cause as NodeJS.ErrnoException).code === "ENOENT") {
-      return "create";
-    }
-
-    throw cause;
+): InstallOperationStatus {
+  if (installed === undefined) {
+    return "create";
   }
 
   if (installed === content) {
@@ -624,20 +648,12 @@ async function statusOf(
 }
 
 /** A managed file may only be deleted while it still holds exactly what Agentyx wrote. */
-async function deletionStatusOf(
-  path: string,
+function deletionStatus(
+  installed: string | undefined,
   recordedHash: string,
-): Promise<DeleteOperationStatus> {
-  let installed: string;
-
-  try {
-    installed = await readFile(path, "utf8");
-  } catch (cause) {
-    if (cause instanceof Error && (cause as NodeJS.ErrnoException).code === "ENOENT") {
-      return "unchanged";
-    }
-
-    throw cause;
+): DeleteOperationStatus {
+  if (installed === undefined) {
+    return "unchanged";
   }
 
   return hashContent(installed) === recordedHash ? "delete" : "conflict";

@@ -22,6 +22,19 @@ export type InstallOperationStatus = "create" | "update" | "unchanged" | "confli
 export type DeleteOperationStatus = "delete" | "conflict" | "unchanged";
 
 /**
+ * What the planner saw at a destination when it made its decision.
+ *
+ * Only presence and a SHA-256 of the content: that is already how Agentyx decides
+ * ownership, and it keeps old file bodies out of the plan. The executor refuses to
+ * act unless the destination still matches, because a plan authorizes a mutation
+ * only against the exact state it observed. This is internal to execution and is
+ * deliberately not part of the `--json` reports.
+ */
+export type ObservedFileState =
+  | { readonly kind: "missing" }
+  | { readonly kind: "file"; readonly hash: string };
+
+/**
  * One planned filesystem change.
  *
  * Missing parent directories are created by the executor, which removes the
@@ -43,6 +56,8 @@ export interface InstallOperation {
   readonly skill: string;
   readonly agent?: string;
   readonly content: string;
+  /** The destination as the planner found it. */
+  readonly observed: ObservedFileState;
   /** Targets that are satisfied by this exact physical write. */
   readonly usedBy: readonly string[];
 }
@@ -68,6 +83,8 @@ export interface DeleteOperation {
   /** The skill the file was generated from, for `skill` removals. */
   readonly skill: string | undefined;
   readonly agent?: string;
+  /** The destination as the planner found it. */
+  readonly observed: ObservedFileState;
   /** Targets the manifest recorded for this file. */
   readonly usedBy: readonly string[];
 }
@@ -85,6 +102,8 @@ export interface McpInstallOperation {
    * Agentyx created.
    */
   readonly created: boolean;
+  /** The destination as the planner found it, including the user content it merged into. */
+  readonly observed: ObservedFileState;
   /** Targets that are satisfied by this exact physical write. */
   readonly usedBy: readonly string[];
 }
@@ -102,6 +121,8 @@ export interface HookInstallOperation {
    * Agentyx created.
    */
   readonly created: boolean;
+  /** The destination as the planner found it, including the user content it merged into. */
+  readonly observed: ObservedFileState;
   /** Targets that are satisfied by this exact physical write. */
   readonly usedBy: readonly string[];
 }
