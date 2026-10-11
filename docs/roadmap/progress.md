@@ -242,3 +242,88 @@ Changeset: needed, because MCP rendering for Codex and Kimi changed (patch).
 
 Next task: R100-02 — stale-plan and partial-failure hardening. Agentyx is not claimed 1.0-ready.
 Release status: not published.
+
+## Correction — R070 and R090 are not implemented (2026-10-11)
+
+A source audit of `main` at 0.13.1 found that the R100-01 entry above is wrong where it says the lock,
+frozen install and migration behavior of R090 "already ship". The historical text is kept as written.
+Current source shows:
+
+- R090 is **not** implemented: the manifest format is still version 1, and there is no
+  `install --frozen`, no `doctor --locked` and no `install --migrate-lock`.
+- R070 is **not** implemented: there was no `resolve --explain` and no typed `exclude` configuration.
+
+R100-01 itself (the compatibility matrix and platform smoke) stands; only its prerequisite claim was
+false. The prerequisite chain is therefore resumed at R070-01 before R100-03, R090 or any 1.0 claim.
+This correction is documentation only and needs no Changeset.
+
+## R100-02 — Stale-plan and partial-failure hardening
+
+Status: complete. Merged as PR #110 (`dd5dc46`, implementation `ec06aa0`). CI on PR #110 passed:
+Linux Node 22 and Node 24, packaged smoke on macOS Node 22 and Windows Node 22.
+Starting commit: `3769a92` (packages at `0.13.1`)
+
+Delivered:
+- Stale-plan protection: every planned write or deletion records the destination state it observed
+  and the executor revalidates it; a mismatch fails with `stale_install_plan`.
+- Preflight validation before the first write, and just-in-time validation before each change.
+- Bounded `--force`: it can resolve a recorded conflict but never overwrites or deletes a file that
+  changed after planning, including user edits to `.mcp.json` and `.claude/settings.json`.
+- Incomplete-install semantics: a failure after earlier changes fails with `incomplete_install`,
+  listing completed and not-applied paths; the lock is committed only after every provider change
+  succeeded. `configure --sync` keeps these codes.
+- Atomic lock replacement through a same-directory temporary file and a rename.
+
+Verification: 669 tests at the time; local validation passed; PR CI green as listed above.
+
+Current limitations: installation as a whole is not atomic; there is no rollback; concurrent
+installers are not supported; external mutation of `.agentyx.lock.json` between planning and writing
+is not locked.
+
+Changeset: `.changeset/steady-plan-state.md` (patch) is still pending, not yet released.
+Roadmap reconciliation: R100-02 is recorded here after the fact; the next prerequisite resumed is
+R070-01.
+
+## R070-01 — Resolution provenance and explain output
+
+Status: complete locally; PR CI pending at the time of writing.
+Starting commit: `dd5dc46` (`main`, packages at `0.13.1`)
+Why now: R100-02 was completed before its R070/R090 prerequisites were found to be missing (see the
+correction above); this resumes the chain at its first task.
+
+Delivered:
+- `explainAgentyxResolution(resolved, packRegistry)` in `@agentyx/core` (`config/explain.ts`), with
+  Zod schemas for the entry and a typed origin (`pack` or `project-context`). Pure: no filesystem, no
+  second resolution, no terminal formatting. Entries carry kind, name, origins, activation, active
+  and reason (`default`, `explicitly-enabled`, `optional-disabled`, `project-context`). `excluded`
+  is not modelled; exclusions are R070-02.
+- One provenance source: the explanation derives from `deriveCapabilityProvenance`, the helper Doctor
+  already uses, which now also covers `agent`. The synthesized `agentyx-project-context` Skill is
+  recognized as a Skill no pack contributes and is attributed to project context, never to a pack.
+- Resolution fix found while doing this: provenance treated a capability as default when any pack
+  declares it default, but the MCP/tool/hook/agent collectors kept the first pack's activation. They
+  now agree (default wins, position kept), so an optional-then-default shared capability is active.
+  No built-in pack mixes activations; this affects local packs.
+- Doctor: footprint gains `agents: { active, declared }`. Agents are excluded from utilization like
+  hooks, so they are never "used", "unused" or dormant, and existing Skill/MCP/tool semantics are
+  unchanged.
+- CLI: `resolve --explain` (grouped text) and `resolve --explain --json` (`{ resolution,
+  explanation }`; `resolution` is the unchanged `resolve --json` object). Plain `resolve` and
+  `resolve --json` are untouched. Explicit pack arguments keep bypassing project packs; `--enable`
+  applies as before. Output has identifiers and selection metadata only.
+- README example, help text, roadmap 0.7 implementation note, packed-CLI smoke for `--explain` and
+  `--explain --json` (default Skill, project context, disabled/enabled optional MCP, agent).
+
+Tests: `config-explain.test.ts` (default, optional disabled/enabled, shared, mixed activation, agent,
+project context, local pack, ordering, schema), `resolve-explain.test.ts` (explicit mode, config mode
+with local pack and context, JSON compatibility), an Agent utilization regression, an updated tool
+collector test.
+Verification (local, macOS, Node 22.23.1): `pnpm check` passed (685 tests, 60 files), `pnpm eval:skills`
+passed (8 scenarios), `pnpm smoke:pack` passed.
+Changeset: `.changeset/explain-resolution.md` (minor); `steady-plan-state.md` (patch) left in place.
+Compatibility: additive CLI/JSON output; the only behavior change is the mixed-activation fix above.
+
+Remaining: R070-02 (typed exclusions), R070-03, R070-04, then R090 and the rest of R100. R090 and
+R100-03 are not ready; Agentyx is not claimed 1.0-ready. Not published.
+
+Next task: R070-02 — typed exclusions.

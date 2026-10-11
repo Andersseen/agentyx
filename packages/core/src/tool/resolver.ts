@@ -11,11 +11,18 @@ export function collectPackToolReferences(
   toolRegistry: ToolRegistry,
 ): ToolReference[] {
   const tools: ToolReference[] = [];
-  const seen = new Set<string>();
+  const seen = new Map<string, number>();
 
   for (const packName of resolvedPacks) {
     for (const tool of packRegistry.get(packName)?.tools ?? []) {
-      if (seen.has(tool.name)) {
+      const existing = seen.get(tool.name);
+
+      if (existing !== undefined) {
+        // One capability, many packs: a default contribution wins over an optional one.
+        if (tool.activation === "default" && tools[existing]?.activation === "optional") {
+          tools[existing] = tool;
+        }
+
         continue;
       }
 
@@ -23,7 +30,7 @@ export function collectPackToolReferences(
         throw new UnknownToolError(tool.name, packName, toolRegistry.names);
       }
 
-      seen.add(tool.name);
+      seen.set(tool.name, tools.length);
       tools.push(tool);
     }
   }

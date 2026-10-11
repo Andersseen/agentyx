@@ -11,13 +11,20 @@ export function collectPackMcpServerReferences(
   mcpRegistry: McpServerRegistry,
 ): McpServerReference[] {
   const servers: McpServerReference[] = [];
-  const seen = new Set<string>();
+  const seen = new Map<string, number>();
 
   for (const packName of resolvedPacks) {
     for (const server of packRegistry.get(packName)?.mcpServers ?? []) {
       const serverName = server.name;
 
-      if (seen.has(serverName)) {
+      const existing = seen.get(serverName);
+
+      if (existing !== undefined) {
+        // One capability, many packs: a default contribution wins over an optional one.
+        if (server.activation === "default" && servers[existing]?.activation === "optional") {
+          servers[existing] = server;
+        }
+
         continue;
       }
 
@@ -25,7 +32,7 @@ export function collectPackMcpServerReferences(
         throw new UnknownMcpServerError(serverName, packName, mcpRegistry.names);
       }
 
-      seen.add(serverName);
+      seen.set(serverName, servers.length);
       servers.push(server);
     }
   }

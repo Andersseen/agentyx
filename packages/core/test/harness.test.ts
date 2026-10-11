@@ -140,6 +140,8 @@ describe("capability provenance", () => {
       declaredTools: 0,
       activeHooks: 0,
       declaredHooks: 0,
+      activeAgents: 0,
+      declaredAgents: 0,
       provenance,
       mcpRegistry: builtInMcpServerRegistry,
     });
@@ -203,6 +205,23 @@ describe("utilization", () => {
     expect(skill?.state).toBe("unobservable");
     expect(skill?.observedSessionRate).toBeNull();
     expect(report.packs.find((pack) => pack.name === "angular")?.evidence).toBe("unavailable");
+  });
+
+  it("never reports an agent as used or unused", () => {
+    const report = utilization(sessions("claude", 30), ["claude"], {
+      capabilities: [
+        playwright,
+        { kind: "agent", name: "agentyx-reviewer", packs: ["agentic"], activation: "optional" },
+      ],
+    });
+
+    expect(report.capabilities.map((c) => c.kind)).toEqual(["mcp"]);
+    expect(deriveCapabilityProvenance(["agentic"], builtInPackRegistry)).toContainEqual({
+      kind: "agent",
+      name: "agentyx-reviewer",
+      packs: ["agentic"],
+      activation: "optional",
+    });
   });
 
   it("never rules out a tool, even over many sessions", () => {

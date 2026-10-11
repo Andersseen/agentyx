@@ -127,6 +127,8 @@ export async function buildHarnessReports(input: HarnessInput): Promise<HarnessR
     declaredTools: resolved?.declaredTools.length ?? 0,
     activeHooks: resolved?.hooks.length ?? 0,
     declaredHooks: resolved?.declaredHooks.length ?? 0,
+    activeAgents: resolved?.agents.length ?? 0,
+    declaredAgents: resolved?.declaredAgents.length ?? 0,
     provenance,
     mcpRegistry: builtInMcpServerRegistry,
   });

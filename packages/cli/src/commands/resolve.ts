@@ -1,4 +1,12 @@
-import { loadAgentyxProject, resolveAgentyxConfig } from "@agentyx/core";
+import {
+  builtInPackRegistry,
+  explainAgentyxResolution,
+  loadAgentyxProject,
+  type PackRegistry,
+  type ResolutionExplanationEntry,
+  type ResolvedAgentyxConfig,
+  resolveAgentyxConfig,
+} from "@agentyx/core";
 import { Command } from "commander";
 import { emit, section, toJson } from "../output.js";
 
@@ -6,6 +14,7 @@ export interface ResolveCommandInput {
   readonly packs: readonly string[];
   readonly enable?: readonly string[];
   readonly json: boolean;
+  readonly explain?: boolean;
   readonly cwd: string;
 }
 
@@ -24,6 +33,10 @@ export async function runResolveCommand(input: ResolveCommandInput): Promise<str
       targets: [],
       relations: [],
     });
+
+    if (input.explain === true) {
+      return renderExplained(resolved, builtInPackRegistry, input.json, false);
+    }
 
     return input.json
       ? toJson(resolved)
@@ -48,6 +61,10 @@ export async function runResolveCommand(input: ResolveCommandInput): Promise<str
     project.skillRegistry,
   );
 
+  if (input.explain === true) {
+    return renderExplained(resolved, project.packRegistry, input.json, true);
+  }
+
   if (input.json) {
     return toJson(resolved);
   }
@@ -62,6 +79,58 @@ export async function runResolveCommand(input: ResolveCommandInput): Promise<str
     section("Hooks", renderToolLines(resolved.declaredHooks, resolved.hooks)),
     section("Agents", renderToolLines(resolved.declaredAgents, resolved.agents)),
   ].join("\n\n");
+}
+
+const EXPLAIN_SECTIONS = [
+  ["skill", "Skills"],
+  ["mcp", "MCP"],
+  ["tool", "Tools"],
+  ["hook", "Hooks"],
+  ["agent", "Agents"],
+] as const;
+
+function renderExplained(
+  resolved: ResolvedAgentyxConfig,
+  packRegistry: PackRegistry,
+  json: boolean,
+  configMode: boolean,
+): string {
+  const explanation = explainAgentyxResolution(resolved, packRegistry);
+
+  if (json) {
+    return toJson({ resolution: resolved, explanation });
+  }
+
+  return [
+    configMode ? "Agentyx resolution (project configuration)" : "Agentyx resolution",
+    ...EXPLAIN_SECTIONS.map(([kind, title]) =>
+      section(
+        title,
+        explanation.filter((entry) => entry.kind === kind).flatMap(renderExplanationEntry),
+      ),
+    ),
+  ].join("\n\n");
+}
+
+function renderExplanationEntry(entry: ResolutionExplanationEntry): string[] {
+  const status = {
+    default: "active · default",
+    "explicitly-enabled": "active · explicitly enabled",
+    "optional-disabled": "inactive · optional",
+    "project-context": "active · project context",
+  }[entry.reason];
+  const lines = [entry.name, `  ${status}`];
+  const packs = entry.origins.flatMap((origin) => (origin.kind === "pack" ? [origin.name] : []));
+
+  if (packs.length > 0) {
+    lines.push(`  from ${packs.join(", ")}`);
+  }
+
+  if (entry.reason === "optional-disabled") {
+    lines.push("  reason: not explicitly enabled");
+  }
+
+  return lines;
 }
 
 function renderMcpLines(
@@ -108,15 +177,19 @@ export function createResolveCommand(): Command {
       collectName,
       [],
     )
+    .option("--explain", "explain why each declared capability is active or inactive", false)
     .option("--json", "print machine-readable JSON only", false)
-    .action(async (packs: string[], options: { enable: string[]; json: boolean }) => {
-      await emit(() =>
-        runResolveCommand({
-          packs,
-          enable: options.enable,
-          json: options.json,
-          cwd: process.cwd(),
-        }),
-      );
-    });
+    .action(
+      async (packs: string[], options: { enable: string[]; explain: boolean; json: boolean }) => {
+        await emit(() =>
+          runResolveCommand({
+            packs,
+            enable: options.enable,
+            json: options.json,
+            explain: options.explain,
+            cwd: process.cwd(),
+          }),
+        );
+      },
+    );
 }

@@ -29,6 +29,12 @@ export {
   ProjectContextPathError,
   UnknownEnabledCapabilityError,
 } from "./config/errors.js";
+export type { ResolutionExplanationEntry, ResolutionOrigin } from "./config/explain.js";
+export {
+  explainAgentyxResolution,
+  resolutionExplanationEntrySchema,
+  resolutionOriginSchema,
+} from "./config/explain.js";
 export { AGENTYX_CONFIG_SCHEMA_ID, buildAgentyxConfigJsonSchema } from "./config/json-schema.js";
 export {
   AGENTYX_CONFIG_FILENAME,
