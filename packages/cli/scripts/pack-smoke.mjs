@@ -295,6 +295,43 @@ assertArrays(
 for (const target of ["codex", "claude", "kimi"])
   if (!resolvedJson.targets.includes(target))
     throw new Error(`resolve --json omitted target ${target}.`);
+const explainedJson = await parseJson(["resolve", "--explain", "--json"]);
+if (!Array.isArray(explainedJson.resolution?.skills) || !Array.isArray(explainedJson.explanation))
+  throw new Error("resolve --explain --json lacks resolution/explanation.");
+const explainedEntry = (entries, kind, name) =>
+  entries.find((e) => e.kind === kind && e.name === name);
+const contextEntry = explainedEntry(explainedJson.explanation, "skill", "agentyx-project-context");
+if (
+  contextEntry?.reason !== "project-context" ||
+  contextEntry.origins[0]?.kind !== "project-context"
+)
+  throw new Error(
+    "resolve --explain did not attribute the project-context skill to project context.",
+  );
+const projectAgent = explainedEntry(explainedJson.explanation, "agent", "agentyx-reviewer");
+if (projectAgent?.active !== false || projectAgent.reason !== "optional-disabled")
+  throw new Error("resolve --explain did not report the disabled reviewer agent.");
+if (!explainedJson.explanation.some((e) => e.kind === "skill" && e.reason === "default"))
+  throw new Error("resolve --explain reported no default skill.");
+const disabledExplained = await parseJson(["resolve", "testing", "--explain", "--json"]);
+const disabledEntry = explainedEntry(disabledExplained.explanation, "mcp", "playwright");
+if (disabledEntry?.active !== false || disabledEntry.reason !== "optional-disabled")
+  throw new Error("resolve --explain did not report playwright as optional-disabled.");
+const agentExplained = await parseJson([
+  "resolve",
+  "agentic",
+  "--enable",
+  "agentyx-reviewer",
+  "--explain",
+  "--json",
+]);
+const agentEntry = explainedEntry(agentExplained.explanation, "agent", "agentyx-reviewer");
+if (agentEntry?.active !== true || agentEntry.reason !== "explicitly-enabled")
+  throw new Error("resolve --explain did not explain the enabled agent.");
+assertIncludes(
+  await run(CLI, ["resolve", "testing", "--explain"], projectDir),
+  "inactive · optional",
+);
 const configureJson = await parseJson(["configure", "--dry-run", "--json"]);
 if (configureJson.dryRun !== true || typeof configureJson.changed !== "boolean")
   throw new Error("configure --dry-run --json lacks dryRun/changed.");

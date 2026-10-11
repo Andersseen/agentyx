@@ -14,6 +14,7 @@ export interface HarnessFootprint {
   readonly mcp: { readonly active: number; readonly declared: number };
   readonly tools: { readonly active: number; readonly declared: number };
   readonly hooks: { readonly active: number; readonly declared: number };
+  readonly agents: { readonly active: number; readonly declared: number };
   /**
    * Counts of active MCP servers per qualitative `contextCost`. Never summed into a token figure:
    * the classification is a rough signal, not accounting.
@@ -44,6 +45,8 @@ export interface FootprintInput {
   readonly declaredTools: number;
   readonly activeHooks: number;
   readonly declaredHooks: number;
+  readonly activeAgents: number;
+  readonly declaredAgents: number;
   readonly provenance: readonly CapabilityProvenance[];
   readonly mcpRegistry: McpServerRegistry;
 }
@@ -66,6 +69,7 @@ export function computeHarnessFootprint(input: FootprintInput): HarnessFootprint
     mcp: { active: input.activeMcp.length, declared: input.declaredMcp },
     tools: { active: input.activeTools, declared: input.declaredTools },
     hooks: { active: input.activeHooks, declared: input.declaredHooks },
+    agents: { active: input.activeAgents, declared: input.declaredAgents },
     contextSurface: {
       low: count("low"),
       medium: count("medium"),

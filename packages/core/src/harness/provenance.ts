@@ -1,6 +1,6 @@
 import type { PackRegistry } from "../pack/registry.js";
 
-export type CapabilityKind = "skill" | "mcp" | "tool" | "hook";
+export type CapabilityKind = "skill" | "mcp" | "tool" | "hook" | "agent";
 
 export interface CapabilityProvenance {
   readonly kind: CapabilityKind;
@@ -39,7 +39,9 @@ export function deriveCapabilityProvenance(
       return;
     }
 
-    existing.packs.push(pack);
+    if (!existing.packs.includes(pack)) {
+      existing.packs.push(pack);
+    }
 
     if (activation === "default") {
       existing.activation = "default";
@@ -67,6 +69,10 @@ export function deriveCapabilityProvenance(
 
     for (const hook of pack.hooks) {
       add("hook", hook.name, packName, hook.activation);
+    }
+
+    for (const agent of pack.agents) {
+      add("agent", agent.name, packName, agent.activation);
     }
   }
 

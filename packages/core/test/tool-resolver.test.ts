@@ -34,14 +34,14 @@ describe("collectPackToolReferences", () => {
     ]);
   });
 
-  it("keeps the first occurrence of a repeated tool", () => {
+  it("keeps one reference per repeated tool, in first position, and prefers a default contribution", () => {
     const packs = createPackRegistry([
       { name: "left", tools: [{ name: "a", activation: "optional" }] },
       { name: "right", tools: ["a", "b"] },
     ]);
 
     expect(collectPackToolReferences(["left", "right"], packs, tools)).toEqual([
-      { name: "a", activation: "optional" },
+      { name: "a", activation: "default" },
       { name: "b", activation: "default" },
     ]);
   });

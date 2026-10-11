@@ -149,7 +149,9 @@ export function computeUtilization(input: UtilizationInput): UtilizationReport {
     configured.some((provider) => sees(provider, kind));
 
   const capabilities: UtilizationCapability[] = input.capabilities
-    .filter((capability) => capability.kind !== "hook")
+    // Hooks and agents have no provider-neutral runtime signal: they are reported statically only,
+    // never as unused.
+    .filter((capability) => capability.kind !== "hook" && capability.kind !== "agent")
     .map((capability) => {
       const hit = `${capability.kind}:${capability.name}`;
       let eligible = 0;

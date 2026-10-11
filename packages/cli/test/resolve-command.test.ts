@@ -185,7 +185,11 @@ describe("resolve command wiring", () => {
     const command = createResolveCommand();
 
     expect(command.name()).toBe("resolve");
-    expect(command.options.map((option) => option.long)).toEqual(["--enable", "--json"]);
+    expect(command.options.map((option) => option.long)).toEqual([
+      "--enable",
+      "--explain",
+      "--json",
+    ]);
     expect(command.registeredArguments.map((argument) => argument.name())).toEqual(["packs"]);
     expect(command.registeredArguments[0]?.variadic).toBe(true);
   });

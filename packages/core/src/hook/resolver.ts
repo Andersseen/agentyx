@@ -11,13 +11,20 @@ export function collectPackHookReferences(
   hookRegistry: HookRegistry,
 ): HookReference[] {
   const hooks: HookReference[] = [];
-  const seen = new Set<string>();
+  const seen = new Map<string, number>();
 
   for (const packName of resolvedPacks) {
     for (const hook of packRegistry.get(packName)?.hooks ?? []) {
       const hookName = hook.name;
 
-      if (seen.has(hookName)) {
+      const existing = seen.get(hookName);
+
+      if (existing !== undefined) {
+        // One capability, many packs: a default contribution wins over an optional one.
+        if (hook.activation === "default" && hooks[existing]?.activation === "optional") {
+          hooks[existing] = hook;
+        }
+
         continue;
       }
 
@@ -25,7 +32,7 @@ export function collectPackHookReferences(
         throw new UnknownHookError(hookName, packName, hookRegistry.names);
       }
 
-      seen.add(hookName);
+      seen.set(hookName, hooks.length);
       hooks.push(hook);
     }
   }

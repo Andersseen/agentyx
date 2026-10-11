@@ -7,7 +7,8 @@ gained lifecycle hooks, provider-native project agents, `configure`/`sync`, Doct
 a `.agentyx.lock.json` with skill, MCP, hook and agent entries. Historical milestone text below is
 preserved as written and its task IDs are unchanged; read it against current behavior. Task
 [R100-01](0.10-validation.md#r100-01--establish-a-concrete-compatibility-matrix) was executed
-against that 0.13.x contract. R100-02 is next; R100-03 and R100-04 are not started.
+against that 0.13.x contract. R100-02 is complete (see the 2026-10-11 correction in [progress](progress.md)); R070-01 was then resumed
+because R070 and R090 are not implemented. R100-03 and R100-04 are not started.
 
 ## Product outcome
 

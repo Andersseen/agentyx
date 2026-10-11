@@ -265,6 +265,19 @@ pnpm dlx @agentyx/cli resolve technical typescript angular
 pnpm dlx @agentyx/cli resolve efficiency --enable rtk --json
 ```
 
+Explain where each capability comes from and why an optional one is or is not active:
+
+```sh
+pnpm dlx @agentyx/cli resolve --explain
+pnpm dlx @agentyx/cli resolve testing --explain --json
+```
+
+`--explain` lists every declared Skill, MCP server, tool, hook and agent with the packs that
+contribute it (or project context, for the generated `agentyx-project-context` Skill), whether it is
+active, and whether it was a default or explicitly enabled. Optional capabilities that are not
+enabled stay listed as inactive, so you can see why they are absent. It reads configuration only; it
+does not report runtime usage (that is `agentyx doctor`).
+
 Install into configured targets:
 
 ```sh

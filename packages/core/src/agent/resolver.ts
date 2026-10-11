@@ -11,13 +11,20 @@ export function collectPackAgentReferences(
   agentRegistry: AgentRegistry,
 ): AgentReference[] {
   const result: AgentReference[] = [];
-  const seen = new Set<string>();
+  const seen = new Map<string, number>();
   for (const pack of packs)
     for (const reference of packRegistry.get(pack)?.agents ?? []) {
       if (!agentRegistry.has(reference.name)) throw new UnknownAgentError(reference.name, pack);
-      if (!seen.has(reference.name)) {
-        seen.add(reference.name);
+      const existing = seen.get(reference.name);
+      if (existing === undefined) {
+        seen.set(reference.name, result.length);
         result.push(reference);
+      } else if (
+        reference.activation === "default" &&
+        result[existing]?.activation === "optional"
+      ) {
+        // One capability, many packs: a default contribution wins over an optional one.
+        result[existing] = reference;
       }
     }
   return result;
