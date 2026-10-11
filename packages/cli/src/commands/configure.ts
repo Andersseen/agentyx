@@ -1,7 +1,11 @@
 import { randomUUID } from "node:crypto";
 import { readFile, rename, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { detectConfiguredTargets } from "@agentyx/adapters";
+import {
+  detectConfiguredTargets,
+  IncompleteInstallError,
+  StaleInstallPlanError,
+} from "@agentyx/adapters";
 import {
   type AgentyxConfig,
   type AgentyxConfigInput,
@@ -37,6 +41,24 @@ export class ConfigureCommandError extends AgentyxError {
     super(code, message);
     this.name = "ConfigureCommandError";
   }
+}
+
+/**
+ * `.agentyx.json` keeps the new desired state whatever happens to sync. A stale or partly applied
+ * sync keeps its own code, because what to do next differs from resolving a plain conflict.
+ */
+function syncFailure(cause: AgentyxError): ConfigureCommandError {
+  if (cause instanceof StaleInstallPlanError || cause instanceof IncompleteInstallError) {
+    return new ConfigureCommandError(
+      cause.code,
+      `Configuration updated: .agentyx.json keeps the new desired state. Sync did not finish.\n${cause.message}\nThen run agentyx sync again.`,
+    );
+  }
+
+  return new ConfigureCommandError(
+    "configure_sync_failed",
+    `Configuration updated. Sync blocked: ${cause.message}\nResolve the conflict and run agentyx sync.`,
+  );
 }
 
 export async function runConfigureCommand(input: ConfigureCommandInput): Promise<string> {
@@ -136,10 +158,7 @@ export async function runConfigureCommand(input: ConfigureCommandInput): Promise
         return toJson({ ...report, sync: JSON.parse(syncOutput) });
       } catch (cause) {
         if (cause instanceof AgentyxError) {
-          throw new ConfigureCommandError(
-            "configure_sync_failed",
-            `Configuration updated. Sync blocked: ${cause.message}\nResolve the conflict and run agentyx sync.`,
-          );
+          throw syncFailure(cause);
         }
         throw cause;
       }
@@ -159,10 +178,7 @@ export async function runConfigureCommand(input: ConfigureCommandInput): Promise
       text += "\n\nNext: agentyx doctor";
     } catch (cause) {
       if (cause instanceof AgentyxError) {
-        throw new ConfigureCommandError(
-          "configure_sync_failed",
-          `Configuration updated. Sync blocked: ${cause.message}\nResolve the conflict and run agentyx sync.`,
-        );
+        throw syncFailure(cause);
       }
       throw cause;
     }

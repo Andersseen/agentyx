@@ -21,12 +21,14 @@ export {
 export { detectConfiguredTargets } from "./detect.js";
 export {
   DuplicateAdapterError,
+  IncompleteInstallError,
   InstallConflictError,
   InstallPathError,
   InvalidAdapterConfigurationError,
   MissingInstallTargetsError,
   ProviderConfigParseError,
   SharedInstallConflictError,
+  StaleInstallPlanError,
   UnknownAdapterError,
   UnsupportedMcpEnvReferenceError,
   UnsupportedMcpTransportError,
@@ -51,6 +53,7 @@ export type {
   InstallPlan,
   InstallPlanSummary,
   McpInstallOperation,
+  ObservedFileState,
 } from "./plan.js";
 export { collectInstallConflicts, summarizeInstallPlans } from "./plan.js";
 export type { PlanInstallInput, PlanTargetInstallInput } from "./planner.js";

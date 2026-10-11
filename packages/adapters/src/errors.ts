@@ -160,3 +160,87 @@ export class UnsupportedMcpEnvReferenceError extends AgentyxError {
     this.server = server;
   }
 }
+
+/**
+ * Raised when a destination no longer matches what the plan observed.
+ *
+ * A plan authorizes a mutation only against the exact state it saw, so a file
+ * created, edited, replaced or removed since planning is left alone — `--force`
+ * included. When this is raised before the first write, nothing was changed.
+ */
+export class StaleInstallPlanError extends AgentyxError {
+  readonly paths: readonly string[];
+
+  constructor(paths: readonly string[]) {
+    const list = [...paths].sort().map((path) => `  - ${path}`);
+
+    super(
+      "stale_install_plan",
+      [
+        `The install plan is stale: ${paths.length} destination(s) changed after it was planned:`,
+        ...list,
+        "Nothing at these paths was overwritten. Re-run the command to plan against the current state.",
+      ].join("\n"),
+    );
+    this.name = "StaleInstallPlanError";
+    this.paths = paths;
+  }
+}
+
+/**
+ * Raised when an install stopped after it had already changed the project.
+ *
+ * Agentyx does not roll back: earlier changes stay in place, and the lock file
+ * was not committed, so the previous lock remains the record of what Agentyx
+ * owns. Paths are project-relative; neither file contents nor the underlying
+ * system message are included.
+ */
+export class IncompleteInstallError extends AgentyxError {
+  readonly completed: readonly string[];
+  readonly pending: readonly string[];
+  readonly reason: string;
+
+  constructor(completed: readonly string[], pending: readonly string[], cause: unknown) {
+    const reason = describeFailure(cause);
+    const list = (title: string, paths: readonly string[]) => [
+      title,
+      ...(paths.length > 0 ? paths.map((path) => `  - ${path}`) : ["  (none)"]),
+    ];
+
+    super(
+      "incomplete_install",
+      [
+        `The install was only partially applied: ${reason}`,
+        ...list("Completed:", completed),
+        ...list("Not applied:", pending),
+        ".agentyx.lock.json was not updated, so files written above are not recorded as Agentyx-owned.",
+        "Nothing was rolled back. Run `agentyx doctor`, review the paths above, resolve any conflict, then re-run.",
+      ].join("\n"),
+      { cause },
+    );
+    this.name = "IncompleteInstallError";
+    this.completed = completed;
+    this.pending = pending;
+    this.reason = reason;
+  }
+}
+
+function describeFailure(cause: unknown): string {
+  if (cause instanceof StaleInstallPlanError) {
+    return `a destination changed after planning (${cause.paths.join(", ")}).`;
+  }
+
+  if (cause instanceof InstallPathError) {
+    return "a destination resolved outside the directory Agentyx owns.";
+  }
+
+  if (cause instanceof AgentyxError) {
+    return `${cause.code}.`;
+  }
+
+  const code = cause instanceof Error ? (cause as NodeJS.ErrnoException).code : undefined;
+
+  return code === undefined
+    ? "a filesystem operation failed."
+    : `a filesystem operation failed (${code}).`;
+}

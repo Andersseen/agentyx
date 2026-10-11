@@ -176,6 +176,7 @@ describe("applyInstallPlan", () => {
       relativePath: "escaped.md",
       skill: "planning",
       content: "nope",
+      observed: { kind: "missing" },
       usedBy: ["codex"],
     };
 
