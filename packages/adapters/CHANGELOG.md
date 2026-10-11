@@ -1,5 +1,12 @@
 # @agentyx/adapters
 
+## 0.14.0
+
+### Patch Changes
+
+- Updated dependencies [a99c2de]
+  - @agentyx/core@0.14.0
+
 ## 0.13.2
 
 ### Patch Changes
