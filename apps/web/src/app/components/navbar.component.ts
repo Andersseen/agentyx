@@ -43,13 +43,12 @@ interface NavLink {
         </a>
 
         <div class="flex items-center gap-1 md:gap-4">
-          <ul class="hidden items-center gap-1 md:flex" role="menubar">
+          <ul class="hidden items-center gap-1 md:flex">
             @for (link of links; track link.href) {
-              <li role="none">
+              <li>
                 <a
                   [href]="link.href"
                   class="rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                  role="menuitem"
                 >
                   {{ link.label }}
                 </a>
@@ -101,8 +100,8 @@ interface NavLink {
 export class NavbarComponent {
   readonly menuOpen = signal(false);
   readonly links: NavLink[] = [
-    { label: "About", href: "#about" },
-    { label: "Features", href: "#features" },
+    { label: "How it works", href: "#workflow" },
+    { label: "Doctor", href: "#doctor" },
     { label: "Packs", href: "#packs" },
   ];
 
