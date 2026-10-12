@@ -69,11 +69,11 @@ importers:
         specifier: 21.2.19
         version: 21.2.19(@angular/common@21.2.19(@angular/core@21.2.19(@angular/compiler@21.2.19)(rxjs@7.8.2)(zone.js@0.15.1))(rxjs@7.8.2))(@angular/core@21.2.19(@angular/compiler@21.2.19)(rxjs@7.8.2)(zone.js@0.15.1))(@angular/platform-browser@21.2.19(@angular/animations@21.2.19(@angular/core@21.2.19(@angular/compiler@21.2.19)(rxjs@7.8.2)(zone.js@0.15.1)))(@angular/common@21.2.19(@angular/core@21.2.19(@angular/compiler@21.2.19)(rxjs@7.8.2)(zone.js@0.15.1))(rxjs@7.8.2))(@angular/core@21.2.19(@angular/compiler@21.2.19)(rxjs@7.8.2)(zone.js@0.15.1)))(rxjs@7.8.2)
       '@voltui/components':
-        specifier: 1.0.0
-        version: 1.0.0(7d63a7804770058f2cdb498e07a986bc)
+        specifier: 1.1.0
+        version: 1.1.0(7d63a7804770058f2cdb498e07a986bc)
       angular-movement:
-        specifier: 0.7.0
-        version: 0.7.0(@angular/common@21.2.19(@angular/core@21.2.19(@angular/compiler@21.2.19)(rxjs@7.8.2)(zone.js@0.15.1))(rxjs@7.8.2))(@angular/core@21.2.19(@angular/compiler@21.2.19)(rxjs@7.8.2)(zone.js@0.15.1))
+        specifier: 1.2.0
+        version: 1.2.0(@angular/common@21.2.19(@angular/core@21.2.19(@angular/compiler@21.2.19)(rxjs@7.8.2)(zone.js@0.15.1))(rxjs@7.8.2))(@angular/core@21.2.19(@angular/compiler@21.2.19)(rxjs@7.8.2)(zone.js@0.15.1))
       front-matter:
         specifier: ^4.0.2
         version: 4.0.2
@@ -2720,8 +2720,8 @@ packages:
   '@vitest/spy@5.0.3':
     resolution: {integrity: sha512-XhFysQTB8AZ+P4gMi+Lpo99vg2AZi0qKpaB9yXQl37+CaMEAPO3iH/wGVnSyL5MPERiLezpqTVtrR6UZH5GCXg==}
 
-  '@voltui/components@1.0.0':
-    resolution: {integrity: sha512-n8882GvW29sRuW3wzLu+9IOk+15faH9DMZs22R+SehWZ9GFHOzfxTs68wh2JJbfEeR8bAruAO2PLMTB7hnXVPQ==}
+  '@voltui/components@1.1.0':
+    resolution: {integrity: sha512-OuwBBGRo/Anr3AQ9BoXR2WtAobE9C9dUEgBz8JMWvupT/9UE4mrGkmdJut918yYe1Ur4vmYBvszjtEhCzdgKZw==}
     peerDependencies:
       '@angular/common': ^21.2.0
       '@angular/core': ^21.2.0
@@ -2919,11 +2919,11 @@ packages:
   ajv@8.18.0:
     resolution: {integrity: sha512-PlXPeEWMXMZ7sPYOHqmDyCJzcfNrUr3fGNKtezX14ykXOEIvyK81d+qydx89KY5O71FKMPaQ2vBfBFI5NHR63A==}
 
-  angular-movement@0.7.0:
-    resolution: {integrity: sha512-1r6XF5+eXw9jjSxiEelkwTMsrMT8/3wWLN9UsuKI3A77uJ1NRIwsfuVOUntYlB7Y/lpJeVkAIv2Yfo8Vf10zkA==}
+  angular-movement@1.2.0:
+    resolution: {integrity: sha512-7cBnPMlkY61vGZXHdEpWRcBsS0p3pdu9WqxZ7kd8GaBDzbLTF4WMODa1pJTK4ifuY0Q7uO5YyDUhswcbn2gDJA==}
     peerDependencies:
-      '@angular/common': ^21.2.0
-      '@angular/core': ^21.2.0
+      '@angular/common': ^21.2.0 || ^22.0.0
+      '@angular/core': ^21.2.0 || ^22.0.0
 
   ansi-escapes@7.3.0:
     resolution: {integrity: sha512-BvU8nYgGQBxcmMuEeUEmNTvrMVjJNSH7RgW24vXexN4Ven6qCvy4TntnvlnwnMLTVlcRQQdbRY8NKnaIoeWDNg==}
@@ -7218,7 +7218,7 @@ snapshots:
 
   '@vitest/spy@5.0.3': {}
 
-  '@voltui/components@1.0.0(7d63a7804770058f2cdb498e07a986bc)':
+  '@voltui/components@1.1.0(7d63a7804770058f2cdb498e07a986bc)':
     dependencies:
       '@angular/common': 21.2.19(@angular/core@21.2.19(@angular/compiler@21.2.19)(rxjs@7.8.2)(zone.js@0.15.1))(rxjs@7.8.2)
       '@angular/core': 21.2.19(@angular/compiler@21.2.19)(rxjs@7.8.2)(zone.js@0.15.1)
@@ -7334,7 +7334,7 @@ snapshots:
       json-schema-traverse: 1.0.0
       require-from-string: 2.0.2
 
-  angular-movement@0.7.0(@angular/common@21.2.19(@angular/core@21.2.19(@angular/compiler@21.2.19)(rxjs@7.8.2)(zone.js@0.15.1))(rxjs@7.8.2))(@angular/core@21.2.19(@angular/compiler@21.2.19)(rxjs@7.8.2)(zone.js@0.15.1)):
+  angular-movement@1.2.0(@angular/common@21.2.19(@angular/core@21.2.19(@angular/compiler@21.2.19)(rxjs@7.8.2)(zone.js@0.15.1))(rxjs@7.8.2))(@angular/core@21.2.19(@angular/compiler@21.2.19)(rxjs@7.8.2)(zone.js@0.15.1)):
     dependencies:
       '@angular/common': 21.2.19(@angular/core@21.2.19(@angular/compiler@21.2.19)(rxjs@7.8.2)(zone.js@0.15.1))(rxjs@7.8.2)
       '@angular/core': 21.2.19(@angular/compiler@21.2.19)(rxjs@7.8.2)(zone.js@0.15.1)

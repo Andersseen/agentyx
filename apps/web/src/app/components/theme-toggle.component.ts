@@ -1,5 +1,5 @@
 import { Component, inject } from "@angular/core";
-import { VoltButton } from "@voltui/components";
+import { VoltNativeButton } from "@voltui/components";
 import { MoveTapDirective } from "angular-movement";
 import { LmnMoonIcon } from "lumen-icons/moon";
 import { LmnSunIcon } from "lumen-icons/sun";
@@ -7,9 +7,11 @@ import { ThemeService } from "../services/theme.service.js";
 
 @Component({
   selector: "app-theme-toggle",
-  imports: [LmnMoonIcon, LmnSunIcon, MoveTapDirective, VoltButton],
+  imports: [LmnMoonIcon, LmnSunIcon, MoveTapDirective, VoltNativeButton],
   template: `
-    <volt-button
+    <button
+      voltButton
+      type="button"
       variant="ghost"
       size="icon"
       [attr.aria-label]="theme() === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'"
@@ -21,7 +23,7 @@ import { ThemeService } from "../services/theme.service.js";
       } @else {
         <lmn-moon class="h-5 w-5" aria-hidden="true" />
       }
-    </volt-button>
+    </button>
   `,
 })
 export class ThemeToggleComponent {

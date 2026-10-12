@@ -1,231 +1,59 @@
-import { Component } from "@angular/core";
-import {
-  VoltBadge,
-  VoltCard,
-  VoltCardContent,
-  VoltCardHeader,
-  VoltCardTitle,
-} from "@voltui/components";
-import { MoveHoverDirective, MoveInViewDirective, MoveStaggerDirective } from "angular-movement";
-import { LmnCodeBracketIcon } from "lumen-icons/code-bracket";
-import { LmnCpuChipIcon } from "lumen-icons/cpu-chip";
-import { LmnSparklesIcon } from "lumen-icons/sparkles";
-import { LmnUsersIcon } from "lumen-icons/users";
-import { LmnZapIcon } from "lumen-icons/zap";
-
-interface Pack {
-  name: string;
-  category: string;
-  purpose: string;
-  icon: string;
-  span: string;
-}
+import { Component, computed, signal } from "@angular/core";
+import { VoltNativeButton } from "@voltui/components";
+import { MoveStaggerDirective, MoveTapDirective } from "angular-movement";
+import { PACK_CATEGORIES, PACKS, type PackCategory } from "../data/packs.js";
+import { PackCardComponent } from "./pack-card.component.js";
+import { PackDetailComponent } from "./pack-detail.component.js";
 
 @Component({
   selector: "app-packs",
   imports: [
-    VoltCard,
-    VoltCardContent,
-    VoltCardHeader,
-    VoltCardTitle,
-    VoltBadge,
-    LmnCodeBracketIcon,
-    LmnCpuChipIcon,
-    LmnSparklesIcon,
-    LmnZapIcon,
-    LmnUsersIcon,
-    MoveHoverDirective,
-    MoveInViewDirective,
+    VoltNativeButton,
     MoveStaggerDirective,
+    MoveTapDirective,
+    PackCardComponent,
+    PackDetailComponent,
   ],
   template: `
-    <section id="packs" class="section-band border-t border-border">
-      <div class="mx-auto max-w-6xl px-4 py-20 sm:px-6 lg:py-24">
-      <div class="mx-auto mb-12 max-w-3xl text-center" moveInView="fade-up" [moveInViewMargin]="'0px'">
-        <h2 class="text-3xl font-semibold tracking-tight text-foreground sm:text-5xl">
-          Composable packs
-        </h2>
-        <p class="mt-4 text-lg text-muted-foreground">
-          Mix and match capability packs to match your project. Technology packs do not hide
-          inheritance; select exactly what you need.
-        </p>
-      </div>
-
-      <div
-        class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 lg:auto-rows-[15rem]"
-        moveInView="fade-up"
-        [moveInViewMargin]="'0px'"
-        moveStagger
-        [moveStaggerStep]="0.08"
-      >
-        @for (pack of packs; track pack.name) {
-          <volt-card class="pack-card h-full p-2 {{ pack.span }}" [moveWhileHover]="{ y: [0, -9], scale: [1, 1.012] }">
-            <volt-card-header>
-              <div class="flex items-center gap-3">
-                @switch (pack.name) {
-                  @case ("technical") {
-                    <span class="icon-shell text-foreground">
-                      <lmn-code-bracket class="h-5 w-5" aria-hidden="true" />
-                    </span>
-                  }
-                  @case ("typescript") {
-                    <span class="icon-shell text-info">
-                      <lmn-cpu-chip class="h-5 w-5" aria-hidden="true" />
-                    </span>
-                  }
-                  @case ("rust") {
-                    <span class="icon-shell text-warning">
-                      <lmn-cpu-chip class="h-5 w-5" aria-hidden="true" />
-                    </span>
-                  }
-                  @case ("angular") {
-                    <span class="icon-shell text-danger">
-                      <lmn-sparkles class="h-5 w-5" aria-hidden="true" />
-                    </span>
-                  }
-                  @case ("efficiency") {
-                    <span class="icon-shell text-warning">
-                      <lmn-zap class="h-5 w-5" aria-hidden="true" />
-                    </span>
-                  }
-                  @case ("agentic") {
-                    <span class="icon-shell text-secondary">
-                      <lmn-users class="h-5 w-5" aria-hidden="true" />
-                    </span>
-                  }
-                  @default {
-                    <span class="icon-shell text-foreground">
-                      <lmn-code-bracket class="h-5 w-5" aria-hidden="true" />
-                    </span>
-                  }
-                }
-                <volt-card-title>{{ pack.name }}</volt-card-title>
-              </div>
-              <volt-badge variant="secondary" class="w-fit">{{ pack.category }}</volt-badge>
-            </volt-card-header>
-            <volt-card-content>
-              <p class="text-muted-foreground">{{ pack.purpose }}</p>
-            </volt-card-content>
-          </volt-card>
-        }
-      </div>
+    <section id="packs" class="section-band border-b border-border">
+      <div class="mx-auto max-w-6xl px-4 py-20 sm:px-6 lg:py-28">
+        <div class="max-w-3xl">
+          <p class="text-xs font-bold uppercase tracking-[0.15em] text-primary">03 / THE PACK CATALOGUE</p>
+          <h2 class="mt-4 text-4xl font-semibold tracking-tight sm:text-5xl">Pick capabilities with a purpose.</h2>
+          <p class="mt-5 text-lg leading-8 text-muted-foreground">Packs are composable. Add a language, then layer engineering and workflow practices that fit the project. Select one to see what it brings.</p>
+        </div>
+        <div class="mt-9 flex flex-wrap gap-2" role="group" aria-label="Filter packs">
+          @for (category of categories; track category) {
+            <button voltButton type="button" variant="outline" size="sm" class="rounded-full capitalize" [class.border-primary]="activeCategory() === category" [class.text-primary]="activeCategory() === category" [attr.aria-pressed]="activeCategory() === category" (click)="selectCategory(category)" moveWhileTap="press">{{ category === 'all' ? 'All packs' : category }}</button>
+          }
+        </div>
+        <div data-testid="pack-catalogue" class="mt-6 grid min-w-0 gap-6 lg:grid-cols-[minmax(0,1.18fr)_minmax(0,0.82fr)]">
+          <div data-testid="pack-list" class="grid min-w-0 content-start gap-2 sm:grid-cols-2" moveStagger="65ms">
+            @for (pack of visiblePacks(); track pack.name) {
+              <app-pack-card [pack]="pack" [selected]="selectedPack().name === pack.name" (packSelected)="selectedPack.set($event)" />
+            }
+          </div>
+          <aside class="min-w-0 lg:sticky lg:top-24 lg:self-start">
+            <app-pack-detail [pack]="selectedPack()" />
+          </aside>
+        </div>
       </div>
     </section>
   `,
 })
 export class PacksComponent {
-  readonly packs: Pack[] = [
-    {
-      name: "technical",
-      category: "engineering",
-      purpose: "General engineering quality, API design, and code review.",
-      icon: "code-bracket",
-      span: "",
-    },
-    {
-      name: "typescript",
-      category: "language",
-      purpose: "Strict, modeled, modern TypeScript practices.",
-      icon: "cpu-chip",
-      span: "",
-    },
-    {
-      name: "rust",
-      category: "language",
-      purpose: "Idiomatic Rust, filesystem safety, portable tests, and Cargo verification.",
-      icon: "cpu-chip",
-      span: "",
-    },
-    {
-      name: "angular",
-      category: "framework",
-      purpose: "Modern Angular APIs, signals, architecture, and testing.",
-      icon: "sparkles",
-      span: "",
-    },
-    {
-      name: "efficiency",
-      category: "efficiency",
-      purpose: "Context-efficient exploration, output, iteration, and verification.",
-      icon: "zap",
-      span: "",
-    },
-    {
-      name: "agentic",
-      category: "workflow",
-      purpose: "Brainstorming, planning, debugging, parallel and review flows.",
-      icon: "users",
-      span: "",
-    },
-    {
-      name: "testing",
-      category: "engineering",
-      purpose: "Test level choice, doubles, end-to-end scope, and flaky tests.",
-      icon: "code-bracket",
-      span: "",
-    },
-    {
-      name: "security",
-      category: "engineering",
-      purpose: "Input validation, secrets, dependencies, and authorization.",
-      icon: "code-bracket",
-      span: "",
-    },
-    {
-      name: "performance",
-      category: "engineering",
-      purpose: "Profiling, web vitals, and database query performance.",
-      icon: "code-bracket",
-      span: "",
-    },
-    {
-      name: "accessibility",
-      category: "engineering",
-      purpose: "Semantic markup, ARIA patterns, and keyboard navigation.",
-      icon: "code-bracket",
-      span: "",
-    },
-    {
-      name: "refactoring",
-      category: "engineering",
-      purpose: "Safe restructuring, legacy code, and dependency hygiene.",
-      icon: "code-bracket",
-      span: "",
-    },
-    {
-      name: "documentation",
-      category: "engineering",
-      purpose: "Technical writing, API reference, and decision records.",
-      icon: "code-bracket",
-      span: "",
-    },
-    {
-      name: "observability",
-      category: "engineering",
-      purpose: "Structured logging, metrics, tracing, and incident response.",
-      icon: "code-bracket",
-      span: "",
-    },
-    {
-      name: "data",
-      category: "engineering",
-      purpose: "Schema design, migrations, and transactional consistency.",
-      icon: "code-bracket",
-      span: "",
-    },
-    {
-      name: "git",
-      category: "workflow",
-      purpose: "Commit hygiene, branching, and reviewable pull requests.",
-      icon: "code-bracket",
-      span: "",
-    },
-    {
-      name: "devops",
-      category: "workflow",
-      purpose: "CI pipelines, containers, deployment safety, and infrastructure.",
-      icon: "code-bracket",
-      span: "",
-    },
-  ];
+  readonly categories = PACK_CATEGORIES;
+  readonly activeCategory = signal<PackCategory>("all");
+  readonly selectedPack = signal(PACKS[0]);
+  readonly visiblePacks = computed(() =>
+    this.activeCategory() === "all"
+      ? PACKS
+      : PACKS.filter((pack) => pack.category === this.activeCategory()),
+  );
+
+  selectCategory(category: PackCategory): void {
+    this.activeCategory.set(category);
+    const first = category === "all" ? PACKS[0] : PACKS.find((pack) => pack.category === category);
+    if (first) this.selectedPack.set(first);
+  }
 }

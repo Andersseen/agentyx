@@ -1,6 +1,6 @@
 import { Component } from "@angular/core";
 import { AboutComponent } from "../components/about.component.js";
-import { FeaturesComponent } from "../components/features.component.js";
+import { DoctorComponent } from "../components/doctor.component.js";
 import { FooterComponent } from "../components/footer.component.js";
 import { HeroComponent } from "../components/hero.component.js";
 import { NavbarComponent } from "../components/navbar.component.js";
@@ -12,7 +12,7 @@ import { PacksComponent } from "../components/packs.component.js";
     NavbarComponent,
     HeroComponent,
     AboutComponent,
-    FeaturesComponent,
+    DoctorComponent,
     PacksComponent,
     FooterComponent,
   ],
@@ -22,7 +22,7 @@ import { PacksComponent } from "../components/packs.component.js";
       <main id="main-content">
         <app-hero />
         <app-about />
-        <app-features />
+        <app-doctor />
         <app-packs />
       </main>
       <app-footer />
