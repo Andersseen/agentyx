@@ -23,7 +23,44 @@ Verification:
 - `pnpm smoke:pack` — passed; packaged configure/exclude/include/sync lifecycle across Codex,
   Claude and Kimi, including owned-file pruning and unrelated-file preservation.
 
-Next task: R070-03 Doctor local readiness contract
+## R070-03 — Doctor local readiness contract
+
+Status: complete on `feat/doctor-local-readiness`.
+Starting main commit: `970dd4f`.
+
+Behavior delivered:
+- Added additive `ready` / `not-ready` / `unknown` states for configuration, installation
+  convergence and locally inspectable prerequisites while preserving global Doctor status and
+  `doctor --check` semantics.
+- Active stdio MCP launchers, referenced `env`/HTTP-header variable names, selected Tools and
+  Agentyx hook runtime availability now contribute local-prerequisite diagnostics. Disabled and
+  excluded capabilities remain out of scope.
+- Added structured MCP diagnostics for missing commands, missing environment references and
+  provider scope/transport incompatibility. Provider parse/planning failures are reported without
+  crashing and leave installation readiness unknown.
+- Hardened executable lookup for project-relative commands, Windows PATH delimiters and PATHEXT
+  candidates. Doctor remains read-only, offline and does not execute MCP commands.
+- Documented that local readiness does not verify MCP startup, package downloads, connectivity,
+  authentication, authorization, provider trust or semantic correctness. Extended packaged smoke
+  coverage for pending, converged and missing-local-prerequisite states.
+
+Files changed:
+- `packages/cli/src/commands/doctor.ts`
+- `packages/core/src/project/executable.ts`
+- `packages/adapters/src/errors.ts`
+- Doctor/core tests and packaged smoke assertions
+- README, compatibility and roadmap documentation
+
+Verification:
+- `pnpm check` — passed; 61 test files and 703 tests.
+- `pnpm eval:skills` — passed; 11 scenarios.
+- `pnpm smoke:pack` — passed; packaged readiness assertions passed across Codex, Claude and Kimi.
+- Changeset: `.changeset/bright-doctors-readiness.md` (minor fixed release group).
+
+Limitations: local validation did not reproduce the GitHub Actions Linux Node 22/24, macOS Node 22
+and Windows Node 22 matrix; no packages were published and R070-04 remains next.
+
+Next task: R070-04 — validate the complete selection/readiness workflow
 
 
 ## R060-01 — Validate the pending onboarding release

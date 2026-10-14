@@ -442,7 +442,10 @@ Provider MCP configuration is shared with you, so Agentyx never claims the whole
 uninstalling remove only the server entries Agentyx added, and the file itself is deleted only when
 Agentyx created it and nothing is left in it.
 
-`doctor` reports all of this — files that are stale, edited since install, or not Agentyx's to write.
+`doctor` separates configuration readiness, installed-state readiness and locally inspectable
+prerequisites in its additive `readiness` JSON section. It checks local executable presence and
+referenced environment-variable names for active capabilities; MCP startup, downloads, network
+connectivity and authorization remain unverified.
 
 ## Project Graph
 

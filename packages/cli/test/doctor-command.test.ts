@@ -54,6 +54,11 @@ describe("agentyx doctor", () => {
     const report = await runDoctorCommand({ json: false, cwd: projectDir });
 
     expect(report.status).toBe("warnings");
+    expect(report.readiness).toEqual({
+      configuration: { state: "ready" },
+      installation: { state: "not-ready" },
+      localPrerequisites: { state: "ready" },
+    });
     expect(report.diagnostics).toContainEqual({
       level: "warning",
       code: "installation_pending",
@@ -86,6 +91,11 @@ describe("agentyx doctor", () => {
     const report = await runDoctorCommand({ json: false, cwd: projectDir });
 
     expect(report.status).toBe("warnings");
+    expect(report.readiness).toMatchObject({
+      configuration: { state: "not-ready" },
+      installation: { state: "unknown" },
+      localPrerequisites: { state: "unknown" },
+    });
     expect(report.diagnostics).toContainEqual({
       level: "warning",
       code: "agentyx_config_missing",
@@ -99,6 +109,11 @@ describe("agentyx doctor", () => {
     const report = await runDoctorCommand({ json: false, cwd: projectDir });
 
     expect(report.status).toBe("errors");
+    expect(report.readiness).toMatchObject({
+      configuration: { state: "not-ready" },
+      installation: { state: "unknown" },
+      localPrerequisites: { state: "unknown" },
+    });
     expect(
       report.diagnostics.some((diagnostic) => diagnostic.code === "agentyx_config_parse_error"),
     ).toBe(true);
@@ -172,6 +187,115 @@ describe("agentyx doctor", () => {
     expect(
       report.diagnostics.some((diagnostic) => diagnostic.code === "required_tool_missing"),
     ).toBe(false);
+  });
+
+  it("checks active stdio MCP commands without executing them", async () => {
+    await writeConfig({ packs: ["efficiency"], enable: ["codebase-memory"], targets: ["codex"] });
+    const originalPath = process.env.PATH;
+    process.env.PATH = "";
+
+    try {
+      const report = await runDoctorCommand({ json: false, cwd: projectDir });
+
+      expect(report.readiness.localPrerequisites.state).toBe("not-ready");
+      expect(report.diagnostics).toContainEqual(
+        expect.objectContaining({
+          code: "mcp_command_missing",
+          capability: { kind: "mcp", name: "codebase-memory" },
+          requirement: { kind: "command", name: "codebase-memory-mcp" },
+        }),
+      );
+    } finally {
+      if (originalPath === undefined) delete process.env.PATH;
+      else process.env.PATH = originalPath;
+    }
+  });
+
+  it("does not check disabled or excluded MCP servers", async () => {
+    await writeConfig({ packs: ["testing", "ui-ux"], targets: ["codex"] });
+    const originalPath = process.env.PATH;
+    process.env.PATH = "";
+
+    try {
+      const disabled = await runDoctorCommand({ json: false, cwd: projectDir });
+      expect(
+        disabled.diagnostics.some((diagnostic) => diagnostic.code === "mcp_command_missing"),
+      ).toBe(false);
+
+      await writeConfig({
+        packs: ["testing", "ui-ux"],
+        exclude: { mcpServers: ["playwright"] },
+        targets: ["codex"],
+      });
+      const excluded = await runDoctorCommand({ json: false, cwd: projectDir });
+      expect(
+        excluded.diagnostics.some((diagnostic) => diagnostic.code === "mcp_command_missing"),
+      ).toBe(false);
+      expect(excluded.readiness.localPrerequisites.state).toBe("ready");
+    } finally {
+      if (originalPath === undefined) delete process.env.PATH;
+      else process.env.PATH = originalPath;
+    }
+  });
+
+  it("checks MCP environment names without exposing secret values", async () => {
+    await writeConfig({ packs: ["data"], enable: ["supabase"], targets: ["codex"] });
+    const original = process.env.SUPABASE_ACCESS_TOKEN;
+    process.env.SUPABASE_ACCESS_TOKEN = "agentyx-test-secret-do-not-print";
+
+    try {
+      const report = await runDoctorCommand({ json: false, cwd: projectDir });
+      const text = renderDoctorReport(report, false);
+      const json = renderDoctorReport(report, true);
+
+      expect(
+        report.diagnostics.some((diagnostic) => diagnostic.code === "mcp_environment_missing"),
+      ).toBe(false);
+      expect(text).not.toContain("agentyx-test-secret-do-not-print");
+      expect(json).not.toContain("agentyx-test-secret-do-not-print");
+    } finally {
+      if (original === undefined) delete process.env.SUPABASE_ACCESS_TOKEN;
+      else process.env.SUPABASE_ACCESS_TOKEN = original;
+    }
+  });
+
+  it("reports missing and empty MCP environment references", async () => {
+    await writeConfig({ packs: ["data"], enable: ["supabase"], targets: ["codex"] });
+    const original = process.env.SUPABASE_ACCESS_TOKEN;
+
+    try {
+      delete process.env.SUPABASE_ACCESS_TOKEN;
+      const missing = await runDoctorCommand({ json: false, cwd: projectDir });
+      expect(missing.diagnostics).toContainEqual(
+        expect.objectContaining({
+          code: "mcp_environment_missing",
+          capability: { kind: "mcp", name: "supabase" },
+          requirement: { kind: "environment", name: "SUPABASE_ACCESS_TOKEN" },
+        }),
+      );
+
+      process.env.SUPABASE_ACCESS_TOKEN = "";
+      const empty = await runDoctorCommand({ json: false, cwd: projectDir });
+      expect(
+        empty.diagnostics.some((diagnostic) => diagnostic.code === "mcp_environment_missing"),
+      ).toBe(true);
+    } finally {
+      if (original === undefined) delete process.env.SUPABASE_ACCESS_TOKEN;
+      else process.env.SUPABASE_ACCESS_TOKEN = original;
+    }
+  });
+
+  it("turns malformed provider MCP configuration into a diagnostic", async () => {
+    await writeConfig({ packs: ["testing"], enable: ["playwright"], targets: ["claude"] });
+    await writeFile(join(projectDir, ".mcp.json"), "{\n", "utf8");
+
+    const report = await runDoctorCommand({ json: false, cwd: projectDir });
+
+    expect(report.diagnostics).toContainEqual(
+      expect.objectContaining({ code: "provider_config_parse_error" }),
+    );
+    expect(report.readiness.installation.state).toBe("unknown");
+    expect(await readdir(projectDir)).toContain(".mcp.json");
   });
 
   it("warns when Angular is detected but only TypeScript is configured", async () => {

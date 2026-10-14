@@ -210,6 +210,12 @@ await run(
   projectDir,
 );
 assertIncludes(await run(cli, ["doctor"], projectDir), "not yet installed");
+const pendingDoctor = JSON.parse((await run(cli, ["doctor", "--json"], projectDir)).stdout);
+if (
+  pendingDoctor.readiness?.configuration?.state !== "ready" ||
+  pendingDoctor.readiness?.installation?.state !== "not-ready"
+)
+  throw new Error("Packaged Doctor did not expose the pending readiness contract.");
 await run(cli, ["sync", "--dry-run"], projectDir);
 await run(cli, ["sync"], projectDir);
 if (!(await readdir(join(projectDir, ".agents", "skills"))).includes("local-smoke-skill"))
@@ -433,6 +439,18 @@ for (const [path, body] of Object.entries(userFiles)) {
 assertExit(runStatus(CLI, ["doctor", "--check"], lifeDir), 1, "doctor --check before sync");
 await run(CLI, ["sync"], lifeDir);
 assertExit(runStatus(CLI, ["doctor", "--check"], lifeDir), 0, "doctor --check after sync");
+const lifeReadyDoctor = JSON.parse((await run(CLI, ["doctor", "--json"], lifeDir)).stdout);
+if (
+  lifeReadyDoctor.readiness?.configuration?.state !== "ready" ||
+  lifeReadyDoctor.readiness?.installation?.state !== "ready" ||
+  lifeReadyDoctor.readiness?.localPrerequisites?.state !== "ready"
+)
+  throw new Error("Packaged Doctor did not report all readiness layers ready after sync.");
+await rm(join(lifeDir, "node_modules", ".bin", "agentyx"));
+const missingLocalDoctor = JSON.parse((await run(CLI, ["doctor", "--json"], lifeDir)).stdout);
+if (missingLocalDoctor.readiness?.localPrerequisites?.state !== "not-ready")
+  throw new Error("Packaged Doctor did not report a missing local hook prerequisite.");
+await writeFile(join(lifeDir, "node_modules", ".bin", "agentyx"), "#!/bin/sh\n");
 for (const path of [".agents/skills/planning/SKILL.md", ".claude/skills/planning/SKILL.md"])
   await readFile(join(lifeDir, path), "utf8");
 if (
