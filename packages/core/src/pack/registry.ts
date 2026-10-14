@@ -108,6 +108,21 @@ export const builtInPacks: readonly PackDefinitionInput[] = [
     mcpServers: [{ name: "playwright", activation: "optional" }],
   },
   {
+    name: "ui-ux",
+    category: "design",
+    description:
+      "Product UI/UX design, usability, interaction, design-system consistency and visual verification.",
+    skills: [
+      "ui-visual-design",
+      "ux-usability",
+      "interaction-design",
+      "design-system-practice",
+      "ux-writing",
+      "visual-verification",
+    ],
+    mcpServers: [{ name: "playwright", activation: "optional" }],
+  },
+  {
     name: "security",
     category: "engineering",
     description: "Application security fundamentals for untrusted input, secrets and access.",

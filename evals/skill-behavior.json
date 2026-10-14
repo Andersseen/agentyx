@@ -21,6 +21,35 @@
     "expectedBehaviors": ["establishes characterization tests", "uses small reversible steps"]
   },
   {
+    "id": "ui-redesign",
+    "packs": ["ui-ux"],
+    "prompt": "Redesign an existing SaaS settings page that feels generic while preserving its current design system and functionality.",
+    "expectedSkills": ["ui-visual-design", "design-system-practice", "visual-verification"],
+    "expectedBehaviors": [
+      "inspects existing visual language",
+      "establishes hierarchy",
+      "reports whether rendered verification occurred"
+    ]
+  },
+  {
+    "id": "product-form-ux",
+    "packs": ["ui-ux"],
+    "prompt": "Improve a multi-step account setup form with validation, loading and recovery states.",
+    "expectedSkills": ["ux-usability", "interaction-design", "ux-writing"],
+    "expectedBehaviors": [
+      "groups decisions by user task",
+      "handles validation and recovery",
+      "uses outcome-specific labels and errors"
+    ]
+  },
+  {
+    "id": "mature-design-system",
+    "packs": ["ui-ux"],
+    "prompt": "Add a dashboard panel to a mature product that already has tokens and primitives.",
+    "expectedSkills": ["design-system-practice", "ui-visual-design"],
+    "expectedBehaviors": ["reuses system components and tokens", "avoids one-off styling"]
+  },
+  {
     "id": "secure-input",
     "packs": ["security"],
     "prompt": "Implement a search endpoint using a user-provided query.",

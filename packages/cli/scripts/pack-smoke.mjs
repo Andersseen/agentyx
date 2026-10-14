@@ -127,6 +127,12 @@ await writeFile(
 );
 await run("git", ["init", "--quiet"], projectDir);
 await run(CLI, ["resolve"], projectDir);
+assertIncludes(await run(CLI, ["resolve", "ui-ux"], projectDir), "visual-verification");
+assertIncludes(await run(CLI, ["resolve", "ui-ux", "--explain"], projectDir), "ui-ux");
+assertIncludes(
+  await run(CLI, ["resolve", "ui-ux", "--enable", "playwright", "--json"], projectDir),
+  '"playwright"',
+);
 assertIncludes(await run(CLI, ["graph"], projectDir), "consumes [backend-api]");
 assertIncludes(await run(CLI, ["graph", "--json"], projectDir), '"id": "smoke-api"');
 assertIncludes(await run(CLI, ["graph", "--format", "mermaid"], projectDir), "graph LR");

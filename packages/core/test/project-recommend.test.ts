@@ -276,7 +276,7 @@ describe("recommendCapabilities", () => {
       const playwright = withTesting.capabilities.find(
         (capability) => capability.name === "playwright",
       );
-      expect(playwright?.contributedBy).toEqual(["testing"]);
+      expect(playwright?.contributedBy).toEqual(["testing", "ui-ux"]);
       expect(playwright?.reasons.length).toBeGreaterThan(0);
     });
 

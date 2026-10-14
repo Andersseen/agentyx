@@ -14,6 +14,7 @@ describe("agentyx pack list", () => {
         "efficiency     efficiency",
         "agentic        workflow",
         "testing        engineering",
+        "ui-ux          design",
         "security       engineering",
         "performance    engineering",
         "accessibility  engineering",

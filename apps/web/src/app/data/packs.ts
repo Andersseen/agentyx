@@ -1,6 +1,6 @@
 export interface Pack {
   name: string;
-  category: "engineering" | "language" | "framework" | "workflow" | "efficiency";
+  category: "engineering" | "language" | "framework" | "workflow" | "efficiency" | "design";
   purpose: string;
   includes: string;
 }
@@ -12,6 +12,7 @@ export const PACK_CATEGORIES = [
   "framework",
   "workflow",
   "efficiency",
+  "design",
 ] as const;
 
 export type PackCategory = (typeof PACK_CATEGORIES)[number];
@@ -60,6 +61,13 @@ export const PACKS: readonly [Pack, ...Pack[]] = [
     category: "engineering",
     purpose: "Choose test levels and keep end-to-end suites stable.",
     includes: "Test strategy, doubles, E2E and flaky-test Skills; optional Playwright MCP.",
+  },
+  {
+    name: "ui-ux",
+    category: "design",
+    purpose: "Make product interfaces clearer, more coherent and easier to verify.",
+    includes:
+      "Visual design, usability, interaction, design-system, UX-writing and visual-verification Skills; optional Playwright MCP.",
   },
   {
     name: "security",

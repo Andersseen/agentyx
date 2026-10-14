@@ -19,7 +19,7 @@ builtInPacks.map((pack) => pack.name);
 // [
 //   "technical", "typescript", "rust", "angular", "efficiency", "agentic",
 //   "testing", "security", "performance", "accessibility", "refactoring",
-//   "documentation", "observability", "data", "git", "devops"
+//   "ui-ux", "documentation", "observability", "data", "git", "devops"
 // ]
 
 resolvePacks(["technical", "typescript", "angular"]);
