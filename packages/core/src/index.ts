@@ -174,20 +174,39 @@ export {
   parseInstallManifest,
 } from "./manifest/io.js";
 export type {
+  ResolutionCapability,
+  ResolutionDifference,
+  ResolutionSnapshot,
+  ResolutionSnapshotInput,
+} from "./manifest/resolution.js";
+export {
+  compareResolutionSnapshots,
+  createResolutionSnapshot,
+  RESOLUTION_DIFFERENCE_KINDS,
+  resolutionDifferenceSchema,
+  resolutionSnapshotSchema,
+} from "./manifest/resolution.js";
+export type {
   AgentManifestEntry,
   HookManifestEntry,
   InstallManifest,
   InstallManifestEntry,
   InstallManifestInput,
+  InstallManifestV1,
+  InstallManifestV2,
   McpManifestEntry,
   SkillManifestEntry,
 } from "./manifest/schema.js";
 export {
   agentManifestEntrySchema,
   hookManifestEntrySchema,
+  INSTALL_MANIFEST_V1_VERSION,
+  INSTALL_MANIFEST_V2_VERSION,
   INSTALL_MANIFEST_VERSION,
   installManifestEntrySchema,
   installManifestSchema,
+  installManifestV1Schema,
+  installManifestV2Schema,
   mcpManifestEntrySchema,
   skillManifestEntrySchema,
 } from "./manifest/schema.js";

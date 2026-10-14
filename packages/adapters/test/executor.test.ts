@@ -5,6 +5,7 @@ import {
   builtInHookRegistry,
   builtInMcpServerRegistry,
   builtInSkillRegistry,
+  formatInstallManifest,
   formatSkillMarkdown,
   hashContent,
   loadInstallManifest,
@@ -306,6 +307,34 @@ describe("applyInstallPlans manifest", () => {
       skill: "planning",
       targets: ["codex", "kimi"],
       hash: hashContent(formatSkillMarkdown(builtInSkillRegistry.get("planning"))),
+    });
+  });
+
+  it("invalidates a v2 resolution snapshot when the transitional writer mutates ownership", async () => {
+    const resolution = {
+      agentyxVersion: "0.17.0",
+      configHash: hashContent("config"),
+      targets: ["codex"],
+      skills: [],
+      mcpServers: [],
+      tools: [],
+      hooks: [],
+      agents: [],
+    };
+    await writeFile(
+      join(projectDir, ".agentyx.lock.json"),
+      formatInstallManifest({ version: 2, entries: [], resolution }),
+      "utf8",
+    );
+
+    const manifest = await loadInstallManifest(projectDir);
+    await applyInstallPlans(await planInstall({ targets: ["codex"], projectDir, skills }), {
+      manifest,
+    });
+
+    await expect(loadInstallManifest(projectDir)).resolves.toMatchObject({
+      version: 2,
+      resolution: null,
     });
   });
 

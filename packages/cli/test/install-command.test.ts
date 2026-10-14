@@ -361,9 +361,11 @@ describe("agentyx install ownership", () => {
     await runInstallCommand({ ...baseInput, cwd: projectDir });
 
     const manifest = JSON.parse(await readFile(join(projectDir, ".agentyx.lock.json"), "utf8")) as {
+      version: number;
       entries: { path: string; targets: string[] }[];
     };
 
+    expect(manifest.version).toBe(1);
     expect(manifest.entries).toHaveLength(4);
     expect(manifest.entries[0]?.targets).toEqual(["codex"]);
   });

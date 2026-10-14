@@ -72,8 +72,58 @@ describe("parseInstallManifest", () => {
     );
   });
 
-  it("rejects a manifest version it does not understand", () => {
+  it("accepts a v2 manifest with a null resolution", () => {
+    const manifest = parseInstallManifest({ version: 2, entries: [], resolution: null });
+
+    expect(manifest).toEqual({ version: 2, entries: [], resolution: null });
+  });
+
+  it("requires the resolution field on v2 manifests", () => {
     expect(() => parseInstallManifest({ version: 2, entries: [] })).toThrow(
+      AgentyxManifestValidationError,
+    );
+  });
+
+  it("accepts and preserves a complete v2 resolution snapshot", () => {
+    const resolution = {
+      agentyxVersion: "0.17.0",
+      configHash: hashContent("config"),
+      targets: ["codex"],
+      skills: [
+        {
+          name: "planning",
+          hash: hashContent("skill"),
+          origins: [{ kind: "pack" as const, name: "agentic" }],
+        },
+      ],
+      mcpServers: [],
+      tools: [],
+      hooks: [
+        {
+          name: "session-doctor-bootstrap",
+          hash: hashContent("hook"),
+          origins: [{ kind: "pack" as const, name: "efficiency" }],
+        },
+      ],
+      agents: [
+        {
+          name: "agentyx-reviewer",
+          hash: hashContent("agent"),
+          origins: [{ kind: "pack" as const, name: "agentic" }],
+        },
+      ],
+    };
+    const manifest = parseInstallManifest({ version: 2, entries: [skillEntry], resolution });
+
+    const roundTrip = parseInstallManifest(JSON.parse(formatInstallManifest(manifest)));
+
+    expect(formatInstallManifest(roundTrip)).toBe(formatInstallManifest(manifest));
+    expect(roundTrip.version).toBe(2);
+    if (roundTrip.version === 2) expect(roundTrip.resolution).toEqual(resolution);
+  });
+
+  it("rejects a manifest version it does not understand", () => {
+    expect(() => parseInstallManifest({ version: 3, entries: [] })).toThrow(
       AgentyxManifestValidationError,
     );
   });
@@ -164,6 +214,31 @@ describe("manifestEntriesByPath", () => {
 
     expect(index.get(".mcp.json")).toEqual(mcpEntry);
     expect(index.get("nowhere")).toBeUndefined();
+  });
+
+  it("uses only entries for v2 ownership", () => {
+    const index = manifestEntriesByPath({
+      version: 2,
+      entries: [],
+      resolution: {
+        agentyxVersion: "0.17.0",
+        configHash: hashContent("config"),
+        targets: ["codex"],
+        skills: [
+          {
+            name: "planning",
+            hash: hashContent("skill"),
+            origins: [{ kind: "pack", name: "agentic" }],
+          },
+        ],
+        mcpServers: [],
+        tools: [],
+        hooks: [],
+        agents: [],
+      },
+    });
+
+    expect(index.get(skillEntry.path)).toBeUndefined();
   });
 });
 
