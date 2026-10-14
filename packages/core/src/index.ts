@@ -25,9 +25,11 @@ export {
   AgentyxConfigNotFoundError,
   AgentyxConfigParseError,
   AgentyxConfigValidationError,
+  ContradictoryCapabilitySelectionError,
   LocalSkillDirectoryError,
   ProjectContextPathError,
   UnknownEnabledCapabilityError,
+  UnknownExcludedCapabilityError,
 } from "./config/errors.js";
 export type { ResolutionExplanationEntry, ResolutionOrigin } from "./config/explain.js";
 export {
@@ -47,6 +49,8 @@ export {
   AgentyxConfigMutationError,
   type AgentyxConfigMutationResult,
   type AgentyxConfigMutations,
+  type CapabilitySelection,
+  type CapabilitySelectionKind,
   mutateAgentyxConfig,
 } from "./config/mutate.js";
 export type { AgentyxProject } from "./config/project.js";
@@ -56,6 +60,7 @@ export { resolveAgentyxConfig } from "./config/resolver.js";
 export type {
   AgentyxConfig,
   AgentyxConfigInput,
+  CapabilityExclusions,
   ProjectContext,
   ProjectMetadata,
   ProjectRelation,
@@ -63,6 +68,7 @@ export type {
 export {
   agentyxConfigSchema,
   agentyxTargetSchema,
+  capabilityExclusionsSchema,
   enabledCapabilityNameSchema,
   projectContextSchema,
   projectMetadataSchema,

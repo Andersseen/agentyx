@@ -43,10 +43,13 @@ export function collectPackMcpServerReferences(
 export function filterEffectiveMcpServers(
   servers: readonly McpServerReference[],
   enabledCapabilities: readonly string[],
+  excludedCapabilities: readonly string[] = [],
 ): string[] {
   const enabled = new Set(enabledCapabilities);
+  const excluded = new Set(excludedCapabilities);
 
   return servers
+    .filter((server) => !excluded.has(server.name))
     .filter((server) => server.activation === "default" || enabled.has(server.name))
     .map((server) => server.name);
 }

@@ -214,6 +214,23 @@ await run(cli, ["sync", "--dry-run"], projectDir);
 await run(cli, ["sync"], projectDir);
 if (!(await readdir(join(projectDir, ".agents", "skills"))).includes("local-smoke-skill"))
   throw new Error("The local pack Skill did not install through the packaged CLI.");
+const excludedSkillPath = join(projectDir, ".agents", "skills", "code-quality", "SKILL.md");
+await readFile(excludedSkillPath, "utf8");
+await writeFile(join(projectDir, ".agents", "user-owned.txt"), "keep me\n");
+await run(cli, ["configure", "--exclude", "skill:code-quality", "--yes"], projectDir);
+await readFile(excludedSkillPath, "utf8");
+assertIncludes(await run(cli, ["resolve", "--explain"], projectDir), "inactive · excluded");
+const exclusionPreview = JSON.parse(
+  (await run(cli, ["sync", "--dry-run", "--json"], projectDir)).stdout,
+);
+if (!exclusionPreview.summary.delete)
+  throw new Error("Exclusion dry-run did not preview Skill removal.");
+await run(cli, ["sync"], projectDir);
+await expectMissing(excludedSkillPath);
+await readFile(join(projectDir, ".agents", "user-owned.txt"), "utf8");
+await run(cli, ["configure", "--include", "skill:code-quality", "--yes"], projectDir);
+await run(cli, ["sync"], projectDir);
+await readFile(excludedSkillPath, "utf8");
 const secondSync = JSON.parse((await run(cli, ["sync", "--json"], projectDir)).stdout);
 if (
   secondSync.summary.create !== 0 ||
@@ -650,6 +667,10 @@ function assertIncludes(result, expected) {
       `Expected command output to include ${JSON.stringify(expected)}; got:\n${result.stdout}`,
     );
   }
+}
+
+async function expectMissing(path) {
+  if (await pathExists(path)) throw new Error(`Expected path to be absent: ${path}`);
 }
 
 function findTarball(files, pattern) {

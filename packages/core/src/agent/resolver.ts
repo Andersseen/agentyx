@@ -33,9 +33,12 @@ export function collectPackAgentReferences(
 export function filterEffectiveAgents(
   agents: readonly AgentReference[],
   enabled: readonly string[],
+  excluded: readonly string[] = [],
 ): string[] {
   const active = new Set(enabled);
+  const excludedNames = new Set(excluded);
   return agents
+    .filter((agent) => !excludedNames.has(agent.name))
     .filter((agent) => agent.activation === "default" || active.has(agent.name))
     .map(({ name }) => name);
 }

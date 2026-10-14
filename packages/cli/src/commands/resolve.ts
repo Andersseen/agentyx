@@ -43,10 +43,26 @@ export async function runResolveCommand(input: ResolveCommandInput): Promise<str
       : [
           section("Packs", resolved.resolvedPacks),
           section("Skills", resolved.skills),
-          section("MCP", renderMcpLines(resolved.declaredMcpServers, resolved.mcpServers)),
-          section("Tools", renderToolLines(resolved.declaredTools, resolved.tools)),
-          section("Hooks", renderToolLines(resolved.declaredHooks, resolved.hooks)),
-          section("Agents", renderToolLines(resolved.declaredAgents, resolved.agents)),
+          section(
+            "MCP",
+            renderMcpLines(
+              resolved.declaredMcpServers,
+              resolved.mcpServers,
+              resolved.excluded.mcpServers,
+            ),
+          ),
+          section(
+            "Tools",
+            renderToolLines(resolved.declaredTools, resolved.tools, resolved.excluded.tools),
+          ),
+          section(
+            "Hooks",
+            renderToolLines(resolved.declaredHooks, resolved.hooks, resolved.excluded.hooks),
+          ),
+          section(
+            "Agents",
+            renderToolLines(resolved.declaredAgents, resolved.agents, resolved.excluded.agents),
+          ),
         ].join("\n\n");
   }
 
@@ -74,10 +90,26 @@ export async function runResolveCommand(input: ResolveCommandInput): Promise<str
     section("Targets", resolved.targets),
     section("Packs", resolved.resolvedPacks),
     section("Skills", resolved.skills),
-    section("MCP", renderMcpLines(resolved.declaredMcpServers, resolved.mcpServers)),
-    section("Tools", renderToolLines(resolved.declaredTools, resolved.tools)),
-    section("Hooks", renderToolLines(resolved.declaredHooks, resolved.hooks)),
-    section("Agents", renderToolLines(resolved.declaredAgents, resolved.agents)),
+    section(
+      "MCP",
+      renderMcpLines(
+        resolved.declaredMcpServers,
+        resolved.mcpServers,
+        resolved.excluded.mcpServers,
+      ),
+    ),
+    section(
+      "Tools",
+      renderToolLines(resolved.declaredTools, resolved.tools, resolved.excluded.tools),
+    ),
+    section(
+      "Hooks",
+      renderToolLines(resolved.declaredHooks, resolved.hooks, resolved.excluded.hooks),
+    ),
+    section(
+      "Agents",
+      renderToolLines(resolved.declaredAgents, resolved.agents, resolved.excluded.agents),
+    ),
   ].join("\n\n");
 }
 
@@ -117,6 +149,7 @@ function renderExplanationEntry(entry: ResolutionExplanationEntry): string[] {
     default: "active · default",
     "explicitly-enabled": "active · explicitly enabled",
     "optional-disabled": "inactive · optional",
+    excluded: "inactive · excluded",
     "project-context": "active · project context",
   }[entry.reason];
   const lines = [entry.name, `  ${status}`];
@@ -136,26 +169,30 @@ function renderExplanationEntry(entry: ResolutionExplanationEntry): string[] {
 function renderMcpLines(
   declaredMcpServers: readonly { readonly name: string; readonly activation: string }[],
   effectiveMcpServers: readonly string[],
+  excluded: readonly string[] = [],
 ): string[] {
   const effective = new Set(effectiveMcpServers);
+  const excludedNames = new Set(excluded);
 
   return declaredMcpServers.map((server) =>
     effective.has(server.name)
       ? `${server.name}    ${server.activation}`
-      : `${server.name}    disabled (${server.activation})`,
+      : `${server.name}    ${excludedNames.has(server.name) ? "excluded" : "disabled"} (${server.activation})`,
   );
 }
 
 function renderToolLines(
   declaredTools: readonly { readonly name: string; readonly activation: string }[],
   effectiveTools: readonly string[],
+  excluded: readonly string[] = [],
 ): string[] {
   const effective = new Set(effectiveTools);
+  const excludedNames = new Set(excluded);
 
   return declaredTools.map((tool) =>
     effective.has(tool.name)
       ? `${tool.name}    ${tool.activation}`
-      : `${tool.name}    disabled (${tool.activation})`,
+      : `${tool.name}    ${excludedNames.has(tool.name) ? "excluded" : "disabled"} (${tool.activation})`,
   );
 }
 

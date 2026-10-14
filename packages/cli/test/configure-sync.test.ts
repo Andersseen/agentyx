@@ -111,6 +111,52 @@ describe("agentyx configure", () => {
     expect(await readdir(projectDir)).toEqual([".agentyx.json"]);
   });
 
+  it("adds and removes typed exclusions without touching provider state", async () => {
+    await setup({ packs: ["technical"], targets: ["codex"] });
+    const added = JSON.parse(
+      await runConfigureCommand({
+        cwd: projectDir,
+        dryRun: false,
+        json: true,
+        yes: true,
+        sync: false,
+        exclude: ["skill:api-design"],
+      }),
+    );
+    expect(added.config.after.exclude.skills).toEqual(["api-design"]);
+    expect(added.written).toBe(true);
+    expect(await readdir(projectDir)).toEqual([".agentyx.json"]);
+
+    const removed = JSON.parse(
+      await runConfigureCommand({
+        cwd: projectDir,
+        dryRun: false,
+        json: true,
+        yes: true,
+        sync: false,
+        include: ["skill:api-design"],
+      }),
+    );
+    expect(removed.config.after.exclude).toBeUndefined();
+  });
+
+  it("validates an exclusion against packs added in the same mutation", async () => {
+    await setup({ packs: [], targets: [] });
+    const report = JSON.parse(
+      await runConfigureCommand({
+        cwd: projectDir,
+        dryRun: true,
+        json: true,
+        yes: true,
+        sync: false,
+        addPacks: ["technical"],
+        exclude: ["skill:api-design"],
+      }),
+    );
+    expect(report.config.after.packs).toEqual(["technical"]);
+    expect(report.config.after.exclude.skills).toEqual(["api-design"]);
+  });
+
   it("starts interactive options from current selections, shows recommendations and confirms once", async () => {
     await setup({ packs: ["testing"], enable: ["playwright"], targets: ["codex"] });
     await writeFile(

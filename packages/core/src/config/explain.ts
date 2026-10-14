@@ -18,7 +18,13 @@ export const resolutionExplanationEntrySchema = z.strictObject({
   origins: z.array(resolutionOriginSchema),
   activation: z.enum(["default", "optional"]),
   active: z.boolean(),
-  reason: z.enum(["default", "explicitly-enabled", "optional-disabled", "project-context"]),
+  reason: z.enum([
+    "default",
+    "explicitly-enabled",
+    "optional-disabled",
+    "excluded",
+    "project-context",
+  ]),
 });
 
 export type ResolutionOrigin = z.infer<typeof resolutionOriginSchema>;
@@ -55,8 +61,9 @@ export function explainAgentyxResolution(
         origins: capability.packs.map((name) => ({ kind: "pack", name })),
         activation: capability.activation,
         active,
-        reason:
-          capability.activation === "default"
+        reason: isExcluded(resolved, kind, capability.name)
+          ? "excluded"
+          : capability.activation === "default"
             ? "default"
             : enabled.has(capability.name)
               ? "explicitly-enabled"
@@ -84,4 +91,22 @@ export function explainAgentyxResolution(
   }
 
   return entries;
+}
+
+function isExcluded(
+  resolved: ResolvedAgentyxConfig,
+  kind: (typeof CAPABILITY_ORDER)[number],
+  name: string,
+): boolean {
+  const key: keyof ResolvedAgentyxConfig["excluded"] =
+    kind === "skill"
+      ? "skills"
+      : kind === "mcp"
+        ? "mcpServers"
+        : kind === "tool"
+          ? "tools"
+          : kind === "hook"
+            ? "hooks"
+            : "agents";
+  return resolved.excluded[key].includes(name);
 }

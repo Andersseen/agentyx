@@ -417,6 +417,23 @@ provider state to match that config; it preserves unrelated provider settings an
 for unmanaged or drifted files. `install` remains available for lower-level manual installation.
 Doctor usage data is local evidence about installed harnesses, never desired state.
 
+Packs are composable defaults. Tailor a selected pack with typed exclusions:
+
+```json
+{
+  "packs": ["technical", "ui-ux"],
+  "exclude": { "skills": ["api-design"], "mcpServers": ["playwright"] },
+  "targets": ["codex", "claude"]
+}
+```
+
+Use `agentyx configure --exclude skill:api-design --yes` or
+`agentyx configure --include skill:api-design --yes`; `--include` removes an exclusion and does not
+enable an optional capability. Exclusions are typed across Skills, MCP servers, tools, hooks and
+agents. `resolve --explain` shows the excluded reason and provenance. Changing desired state alone
+does not touch provider files; use `sync --dry-run` to preview, then `sync` to safely remove only
+Agentyx-owned state.
+
 `uninstall` removes everything the manifest records and leaves `.agentyx.json` alone, so the project
 can be reinstalled afterwards. `--target <id>` limits it to one provider; a file two providers share
 in `.agents/skills` is only removed once both are gone.
@@ -477,6 +494,7 @@ manager is clear; none are selected by default, and non-interactive init does no
 | `$schema` | `string`   | none    | Optional JSON Schema path or URL             |
 | `packs`   | `string[]` | `[]`    | Capability packs selected for the project    |
 | `enable`  | `string[]` | `[]`    | Optional capabilities activated explicitly   |
+| `exclude` | `object` | none | Typed capabilities removed from selected packs |
 | `targets` | `string[]` | `[]`    | Coding-agent providers to install into       |
 | `skillDirectories` | `string[]` | none | Project-relative roots containing local Skills |
 | `localPacks` | `Pack[]` | none | Project-owned packs composed from known Skills |
@@ -485,7 +503,7 @@ manager is clear; none are selected by default, and non-interactive init does no
 | `relations` | `Relation[]` | `[]` | Direct semantic relationships to other projects |
 | `context` | `Context` | none | Explicit commands, areas and constraints for its agents |
 
-Unknown packs and unknown enabled capabilities fail with explicit Agentyx errors.
+Unknown packs, enabled capabilities and excluded capabilities fail with explicit Agentyx errors.
 
 ## Architecture
 
