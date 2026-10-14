@@ -1,5 +1,20 @@
 # @agentyx/cli
 
+## 0.17.0
+
+### Minor Changes
+
+- ecec94e: Add structured Doctor readiness states for configuration, installation convergence and locally
+  inspectable prerequisites. Doctor now reports active MCP launcher and environment-reference gaps,
+  provider compatibility errors and the boundary that MCP runtime, connectivity and authorization
+  remain unverified.
+
+### Patch Changes
+
+- Updated dependencies [ecec94e]
+  - @agentyx/core@0.17.0
+  - @agentyx/adapters@0.17.0
+
 ## 0.16.0
 
 ### Minor Changes
