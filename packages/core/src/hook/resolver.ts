@@ -43,10 +43,13 @@ export function collectPackHookReferences(
 export function filterEffectiveHooks(
   hooks: readonly HookReference[],
   enabledCapabilities: readonly string[],
+  excludedCapabilities: readonly string[] = [],
 ): string[] {
   const enabled = new Set(enabledCapabilities);
+  const excluded = new Set(excludedCapabilities);
 
   return hooks
+    .filter((hook) => !excluded.has(hook.name))
     .filter((hook) => hook.activation === "default" || enabled.has(hook.name))
     .map((hook) => hook.name);
 }

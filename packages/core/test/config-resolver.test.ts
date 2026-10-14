@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
+  ContradictoryCapabilitySelectionError,
   parseAgentyxConfig,
   resolveAgentyxConfig,
   UnknownEnabledCapabilityError,
+  UnknownExcludedCapabilityError,
 } from "../src/index.js";
 import { UnknownPackError } from "../src/pack/errors.js";
 import { createPackRegistry } from "../src/pack/registry.js";
@@ -42,6 +44,7 @@ describe("resolveAgentyxConfig", () => {
       "declaredAgents",
       "agents",
       "enabled",
+      "excluded",
       "targets",
     ]);
   });
@@ -82,6 +85,7 @@ describe("resolveAgentyxConfig", () => {
       declaredAgents: [],
       agents: [],
       enabled: [],
+      excluded: { skills: [], mcpServers: [], tools: [], hooks: [], agents: [] },
       targets: [],
     });
   });
@@ -106,6 +110,13 @@ describe("resolveAgentyxConfig", () => {
     expect(
       resolveAgentyxConfig(parseAgentyxConfig({ packs: ["app"] }), packs, skills).skills,
     ).toEqual(["a"]);
+    expect(
+      resolveAgentyxConfig(
+        parseAgentyxConfig({ packs: ["app"], exclude: { skills: ["a"] } }),
+        packs,
+        skills,
+      ).skills,
+    ).toEqual([]);
   });
 
   it("propagates unknown packs, skills, and enabled capabilities", () => {
@@ -121,5 +132,61 @@ describe("resolveAgentyxConfig", () => {
     expect(() =>
       resolveAgentyxConfig(parseAgentyxConfig({ packs: ["typescript"], enable: ["rtk"] })),
     ).toThrow(UnknownEnabledCapabilityError);
+  });
+
+  it("removes typed exclusions from effective capabilities while preserving declarations", () => {
+    const resolved = resolveAgentyxConfig(
+      parseAgentyxConfig({
+        packs: ["technical", "ui-ux"],
+        exclude: { skills: ["api-design"], mcpServers: ["playwright"] },
+      }),
+    );
+
+    expect(resolved.skills).not.toContain("api-design");
+    expect(resolved.declaredMcpServers).toContainEqual({
+      name: "playwright",
+      activation: "optional",
+    });
+    expect(resolved.mcpServers).not.toContain("playwright");
+    expect(resolved.excluded).toEqual({
+      skills: ["api-design"],
+      mcpServers: ["playwright"],
+      tools: [],
+      hooks: [],
+      agents: [],
+    });
+  });
+
+  it("validates exclusions by kind and selected declarations", () => {
+    expect(() =>
+      resolveAgentyxConfig(
+        parseAgentyxConfig({ packs: ["ui-ux"], exclude: { skills: ["playwright"] } }),
+      ),
+    ).toThrow(UnknownExcludedCapabilityError);
+    expect(() =>
+      resolveAgentyxConfig(
+        parseAgentyxConfig({ packs: ["typescript"], exclude: { skills: ["api-design"] } }),
+      ),
+    ).toThrow(UnknownExcludedCapabilityError);
+    expect(() =>
+      resolveAgentyxConfig(
+        parseAgentyxConfig({
+          packs: ["ui-ux"],
+          enable: ["playwright"],
+          exclude: { mcpServers: ["playwright"] },
+        }),
+      ),
+    ).toThrow(ContradictoryCapabilitySelectionError);
+  });
+
+  it("does not treat synthesized project context as a pack capability", () => {
+    expect(() =>
+      resolveAgentyxConfig(
+        parseAgentyxConfig({
+          project: { id: "web", name: "Web" },
+          exclude: { skills: ["agentyx-project-context"] },
+        }),
+      ),
+    ).toThrow(UnknownExcludedCapabilityError);
   });
 });

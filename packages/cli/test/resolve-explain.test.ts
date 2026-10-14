@@ -96,4 +96,16 @@ describe("agentyx resolve --explain", () => {
     expect(output).not.toContain("inactive");
     expect(output).toContain("playwright    disabled (optional)");
   });
+
+  it("explains exclusions and retains shared origins", async () => {
+    await writeFile(
+      join(dir, ".agentyx.json"),
+      JSON.stringify({ packs: ["testing", "ui-ux"], exclude: { mcpServers: ["playwright"] } }),
+    );
+    const output = await runResolveCommand({ packs: [], explain: true, json: false, cwd: dir });
+    expect(output).toContain("playwright\n    inactive · excluded\n    from testing, ui-ux");
+
+    const plain = await runResolveCommand({ packs: [], json: false, cwd: dir });
+    expect(plain).toContain("playwright    excluded (optional)");
+  });
 });

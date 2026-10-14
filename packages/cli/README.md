@@ -23,6 +23,10 @@ Configuration is pack-first:
 `packs` always install their lightweight Skills. Optional heavier capabilities such as `rtk` or
 `codebase-memory` are active only when listed in `enable` or passed with `--enable` for that run.
 
+Use `agentyx configure --exclude skill:api-design --yes` to remove a declared capability from the
+effective harness, or `agentyx configure --include skill:api-design --yes` to remove that exclusion.
+`--include` does not activate optional capabilities; it returns them to normal pack semantics.
+
 Useful inspection commands:
 
 ```sh

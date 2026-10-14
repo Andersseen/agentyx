@@ -20,6 +20,7 @@ describe("buildAgentyxConfigJsonSchema", () => {
       "$schema",
       "packs",
       "enable",
+      "exclude",
       "targets",
       "skillDirectories",
       "localPacks",

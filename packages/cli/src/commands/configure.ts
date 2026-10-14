@@ -13,6 +13,7 @@ import {
   AgentyxConfigNotFoundError,
   AgentyxError,
   builtInMcpServerRegistry,
+  type CapabilitySelection,
   detectProject,
   formatAgentyxConfig,
   loadAgentyxProject,
@@ -34,6 +35,8 @@ export interface ConfigureCommandInput extends AgentyxConfigMutations {
   readonly yes: boolean;
   readonly sync: boolean;
   readonly interactive?: boolean;
+  readonly exclude?: readonly string[];
+  readonly include?: readonly string[];
 }
 
 export class ConfigureCommandError extends AgentyxError {
@@ -213,7 +216,10 @@ async function promptConfiguration(
   );
   const base = mutateAgentyxConfig(
     config,
-    { removePacks: config.packs.filter((name) => !packs.includes(name)) },
+    {
+      addPacks: packs.filter((name) => !config.packs.includes(name)),
+      removePacks: config.packs.filter((name) => !packs.includes(name)),
+    },
     registry,
     skillRegistry,
   ).config;
@@ -275,6 +281,36 @@ async function promptConfiguration(
       ],
     }),
   );
+  const currentExclusions = [
+    ...(config.exclude?.skills ?? []).map((name) => `skill:${name}`),
+    ...(config.exclude?.mcpServers ?? []).map((name) => `mcp:${name}`),
+    ...(config.exclude?.tools ?? []).map((name) => `tool:${name}`),
+    ...(config.exclude?.hooks ?? []).map((name) => `hook:${name}`),
+    ...(config.exclude?.agents ?? []).map((name) => `agent:${name}`),
+  ];
+  const capabilityOrigins = new Map<string, string[]>();
+  for (const pack of base.packs) {
+    const definition = registry.get(pack);
+    if (definition === undefined) continue;
+    for (const name of definition.skills) addOrigin(capabilityOrigins, `skill:${name}`, pack);
+    for (const item of definition.mcpServers)
+      addOrigin(capabilityOrigins, `mcp:${item.name}`, pack);
+    for (const item of definition.tools) addOrigin(capabilityOrigins, `tool:${item.name}`, pack);
+    for (const item of definition.hooks) addOrigin(capabilityOrigins, `hook:${item.name}`, pack);
+    for (const item of definition.agents) addOrigin(capabilityOrigins, `agent:${item.name}`, pack);
+  }
+  const selectedExclusions = await promptValues(
+    multiselect({
+      message: "Excluded capabilities",
+      initialValues: currentExclusions,
+      required: false,
+      options: [...capabilityOrigins].map(([value, origins]) => ({
+        value,
+        label: `${value.replace(":", " · ")} · ${origins.join(", ")}`,
+      })),
+    }),
+    currentExclusions,
+  );
   return {
     addPacks: packs.filter((name) => !config.packs.includes(name)),
     removePacks: config.packs.filter((name) => !packs.includes(name)),
@@ -282,7 +318,19 @@ async function promptConfiguration(
     disable: config.enable.filter((name) => !enable.includes(name)),
     addTargets: targets.filter((name) => !config.targets.includes(name)),
     removeTargets: config.targets.filter((name) => !targets.includes(name)),
+    addExclusions: selectedExclusions
+      .filter((value) => !currentExclusions.includes(value))
+      .map(parseSelector),
+    removeExclusions: currentExclusions
+      .filter((value) => !selectedExclusions.includes(value))
+      .map(parseSelector),
   };
+}
+
+function addOrigin(origins: Map<string, string[]>, key: string, pack: string): void {
+  const values = origins.get(key) ?? [];
+  if (!values.includes(pack)) values.push(pack);
+  origins.set(key, values);
 }
 
 function usageHint(
@@ -303,14 +351,14 @@ function usageHint(
   return parts;
 }
 
-async function promptValues<T>(prompt: Promise<T | symbol>): Promise<T> {
+async function promptValues<T>(prompt: Promise<T | symbol>, fallback?: T): Promise<T> {
   const value = await prompt;
   if (isCancel(value))
     throw new ConfigureCommandError(
       "configure_cancelled",
       "Configure cancelled. No files were written.",
     );
-  return value;
+  return (value === undefined ? fallback : value) as T;
 }
 
 async function writeConfig(cwd: string, config: AgentyxConfigInput): Promise<void> {
@@ -336,6 +384,10 @@ function preserveRawConfigShape(
       next[key] = after[key];
     }
   }
+  if (JSON.stringify(before.exclude) !== JSON.stringify(after.exclude)) {
+    if (after.exclude === undefined) delete next.exclude;
+    else next.exclude = after.exclude;
+  }
   return next as AgentyxConfigInput;
 }
 
@@ -347,6 +399,10 @@ function hasExplicitMutations(input: ConfigureCommandInput): boolean {
     input.disable,
     input.addTargets,
     input.removeTargets,
+    input.exclude,
+    input.include,
+    input.addExclusions,
+    input.removeExclusions,
   ].some((items) => (items?.length ?? 0) > 0);
 }
 
@@ -358,6 +414,11 @@ function pickMutations(input: ConfigureCommandInput): AgentyxConfigMutations {
     ...(input.disable === undefined ? {} : { disable: input.disable }),
     ...(input.addTargets === undefined ? {} : { addTargets: input.addTargets }),
     ...(input.removeTargets === undefined ? {} : { removeTargets: input.removeTargets }),
+    addExclusions: [...(input.addExclusions ?? []), ...(input.exclude ?? []).map(parseSelector)],
+    removeExclusions: [
+      ...(input.removeExclusions ?? []),
+      ...(input.include ?? []).map(parseSelector),
+    ],
   };
 }
 
@@ -399,7 +460,38 @@ function renderChanges(
           ),
         ]
       : []),
+    "  Exclusions",
+    ...(changes.exclusions.added.length || changes.exclusions.removed.length
+      ? [
+          ...changes.exclusions.added.map((selection) => `    + ${selectionKey(selection)}`),
+          ...changes.exclusions.removed.map((selection) => `    - ${selectionKey(selection)}`),
+        ]
+      : ["    (none)"]),
+    ...(changes.exclusions.orphaned.length
+      ? [
+          "  Consequences",
+          ...changes.exclusions.orphaned.map(
+            (selection) =>
+              `    - ${selectionKey(selection)} exclusion removed because no selected pack declares it`,
+          ),
+        ]
+      : []),
   ].join("\n");
+}
+
+function parseSelector(value: string): CapabilitySelection {
+  const match = /^(skill|mcp|tool|hook|agent):([a-z0-9]+(?:-[a-z0-9]+)*)$/.exec(value);
+  if (match === null) {
+    throw new ConfigureCommandError(
+      "invalid_capability_selector",
+      `Invalid capability selector "${value}". Use skill:name, mcp:name, tool:name, hook:name, or agent:name.`,
+    );
+  }
+  return { kind: match[1] as CapabilitySelection["kind"], name: match[2] as string };
+}
+
+function selectionKey(selection: CapabilitySelection): string {
+  return `${selection.kind}:${selection.name}`;
 }
 
 function collect(value: string, previous: string[]): string[] {
@@ -413,6 +505,8 @@ export function createConfigureCommand(): Command {
     .option("--remove-pack <name>", "remove a pack", collect, [])
     .option("--enable <capability>", "enable an optional capability", collect, [])
     .option("--disable <capability>", "disable an optional capability", collect, [])
+    .option("--exclude <kind:name>", "exclude a typed capability", collect, [])
+    .option("--include <kind:name>", "remove a typed capability exclusion", collect, [])
     .option("--add-target <id>", "add a provider target", collect, [])
     .option("--remove-target <id>", "remove a provider target", collect, [])
     .option("--dry-run", "preview changes without writing", false)
@@ -428,6 +522,8 @@ export function createConfigureCommand(): Command {
           disable: options.disable,
           addTargets: options.addTarget,
           removeTargets: options.removeTarget,
+          exclude: options.exclude,
+          include: options.include,
           dryRun: options.dryRun,
           json: options.json,
           yes: options.yes,

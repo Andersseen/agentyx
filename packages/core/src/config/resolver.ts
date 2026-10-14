@@ -19,8 +19,12 @@ import { builtInToolRegistry } from "../tool/built-in.js";
 import type { ToolRegistry } from "../tool/registry.js";
 import { collectPackToolReferences, filterEffectiveTools } from "../tool/resolver.js";
 import type { ToolReference } from "../tool/schema.js";
-import { UnknownEnabledCapabilityError } from "./errors.js";
-import type { AgentyxConfig } from "./schema.js";
+import {
+  ContradictoryCapabilitySelectionError,
+  UnknownEnabledCapabilityError,
+  UnknownExcludedCapabilityError,
+} from "./errors.js";
+import type { AgentyxConfig, CapabilityExclusions } from "./schema.js";
 
 /** A project configuration with its selected packs resolved. */
 export interface ResolvedAgentyxConfig {
@@ -42,6 +46,7 @@ export interface ResolvedAgentyxConfig {
   readonly declaredAgents: readonly AgentReference[];
   readonly agents: readonly string[];
   readonly enabled: readonly string[];
+  readonly excluded: CapabilityExclusions;
   readonly targets: readonly string[];
 }
 
@@ -67,6 +72,26 @@ export function resolveAgentyxConfig(
   const declaredTools = collectPackToolReferences(resolvedPacks, registry, toolRegistry);
   const declaredHooks = collectPackHookReferences(resolvedPacks, registry, hookRegistry);
   const declaredAgents = collectPackAgentReferences(resolvedPacks, registry, agentRegistry);
+  const declaredSkills = collectPackSkills(resolvedPacks, registry, skillRegistry);
+  const excluded = normalizeExclusions(config.exclude);
+  const declaredByKind = {
+    skills: new Set(declaredSkills),
+    mcpServers: new Set(declaredMcpServers.map((item) => item.name)),
+    tools: new Set(declaredTools.map((item) => item.name)),
+    hooks: new Set(declaredHooks.map((item) => item.name)),
+    agents: new Set(declaredAgents.map((item) => item.name)),
+  } as const;
+
+  for (const [kind, names] of Object.entries(excluded) as [
+    keyof CapabilityExclusions,
+    readonly string[],
+  ][]) {
+    for (const name of names) {
+      if (!declaredByKind[kind].has(name)) {
+        throw new UnknownExcludedCapabilityError(kind, name);
+      }
+    }
+  }
   const knownOptionalCapabilities = [
     ...declaredMcpServers
       .filter((server) => server.activation === "optional")
@@ -82,11 +107,23 @@ export function resolveAgentyxConfig(
     }
   }
 
+  for (const [kind, names] of Object.entries(excluded) as [
+    keyof CapabilityExclusions,
+    readonly string[],
+  ][]) {
+    if (kind === "skills") continue;
+    for (const name of names) {
+      if (config.enable.includes(name)) {
+        throw new ContradictoryCapabilitySelectionError(name);
+      }
+    }
+  }
+
   return {
     requestedPacks,
     resolvedPacks,
     skills: unique([
-      ...collectPackSkills(resolvedPacks, registry, skillRegistry),
+      ...declaredSkills.filter((name) => !excluded.skills.includes(name)),
       ...(config.project !== undefined ||
       (config.relations?.length ?? 0) > 0 ||
       hasProjectContext(config.context)
@@ -94,15 +131,26 @@ export function resolveAgentyxConfig(
         : []),
     ]),
     declaredMcpServers,
-    mcpServers: filterEffectiveMcpServers(declaredMcpServers, config.enable),
+    mcpServers: filterEffectiveMcpServers(declaredMcpServers, config.enable, excluded.mcpServers),
     declaredTools,
-    tools: filterEffectiveTools(declaredTools, config.enable),
+    tools: filterEffectiveTools(declaredTools, config.enable, excluded.tools),
     declaredHooks,
-    hooks: filterEffectiveHooks(declaredHooks, config.enable),
+    hooks: filterEffectiveHooks(declaredHooks, config.enable, excluded.hooks),
     declaredAgents,
-    agents: filterEffectiveAgents(declaredAgents, config.enable),
+    agents: filterEffectiveAgents(declaredAgents, config.enable, excluded.agents),
     enabled: [...config.enable],
+    excluded,
     targets: [...config.targets],
+  };
+}
+
+function normalizeExclusions(exclusions: AgentyxConfig["exclude"]): CapabilityExclusions {
+  return {
+    skills: unique(exclusions?.skills ?? []),
+    mcpServers: unique(exclusions?.mcpServers ?? []),
+    tools: unique(exclusions?.tools ?? []),
+    hooks: unique(exclusions?.hooks ?? []),
+    agents: unique(exclusions?.agents ?? []),
   };
 }
 

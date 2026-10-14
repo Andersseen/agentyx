@@ -29,6 +29,62 @@
       },
       "description": "Optional capabilities to activate by explicit identifier."
     },
+    "exclude": {
+      "description": "Typed capabilities to remove from the selected packs.",
+      "type": "object",
+      "properties": {
+        "skills": {
+          "default": [],
+          "description": "Skills excluded from selected packs.",
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+          }
+        },
+        "mcpServers": {
+          "default": [],
+          "description": "MCP servers excluded from selected packs.",
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+          }
+        },
+        "tools": {
+          "default": [],
+          "description": "Tools excluded from selected packs.",
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+          }
+        },
+        "hooks": {
+          "default": [],
+          "description": "Hooks excluded from selected packs.",
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+          }
+        },
+        "agents": {
+          "default": [],
+          "description": "Agents excluded from selected packs.",
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
     "targets": {
       "default": [],
       "type": "array",

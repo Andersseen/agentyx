@@ -3,6 +3,29 @@
 One record per task, in completion order. See [session-playbook.md](session-playbook.md) for the
 template and verification requirements this log follows.
 
+## R070-02 — Add typed capability exclusions
+
+Status: complete on `feat/typed-capability-exclusions`.
+
+Behavior delivered:
+- Added optional typed `exclude` configuration for Skills, MCP servers, Tools, Hooks and Agents.
+- Exclusions validate against declarations from selected built-in or local packs, reject wrong kinds,
+  stale names and enable/exclude contradictions, and preserve shared provenance.
+- Added `configure --exclude kind:name` / `--include kind:name`, interactive exclusion selection,
+  orphan cleanup after pack removal, effective resolution filtering, explain output, and safe sync
+  pruning through the existing manifest ownership rules.
+- Kept synthesized `agentyx-project-context` intentionally non-excludable and updated the schema,
+  README, CLI README and packaged smoke lifecycle.
+
+Verification:
+- `pnpm check` — passed; 60 test files and 695 tests, with typecheck and all workspace builds.
+- `pnpm eval:skills` — passed; 11 scenarios.
+- `pnpm smoke:pack` — passed; packaged configure/exclude/include/sync lifecycle across Codex,
+  Claude and Kimi, including owned-file pruning and unrelated-file preservation.
+
+Next task: R070-03 Doctor local readiness contract
+
+
 ## R060-01 — Validate the pending onboarding release
 
 Status: complete

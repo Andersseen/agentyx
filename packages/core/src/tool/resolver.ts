@@ -41,10 +41,13 @@ export function collectPackToolReferences(
 export function filterEffectiveTools(
   tools: readonly ToolReference[],
   enabledCapabilities: readonly string[],
+  excludedCapabilities: readonly string[] = [],
 ): string[] {
   const enabled = new Set(enabledCapabilities);
+  const excluded = new Set(excludedCapabilities);
 
   return tools
+    .filter((tool) => !excluded.has(tool.name))
     .filter((tool) => tool.activation === "default" || enabled.has(tool.name))
     .map((tool) => tool.name);
 }

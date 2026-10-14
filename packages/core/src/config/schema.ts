@@ -1,6 +1,11 @@
 import { z } from "zod";
+import { agentNameSchema } from "../agent/schema.js";
+import { hookNameSchema } from "../hook/schema.js";
+import { mcpServerNameSchema } from "../mcp/schema.js";
 import { packDefinitionSchema, packNameSchema } from "../pack/schema.js";
+import { skillNameSchema } from "../skill/schema.js";
 import { trustedSourceReferenceSchema } from "../source/schema.js";
+import { toolNameSchema } from "../tool/schema.js";
 
 /**
  * Targets stay free-form strings on purpose: third-party adapters should be
@@ -15,6 +20,17 @@ export const enabledCapabilityNameSchema = z
     /^[a-z0-9]+(?:-[a-z0-9]+)*$/,
     'Enabled capability names must be lowercase kebab-case, for example "rtk".',
   );
+
+export const capabilityExclusionsSchema = z.strictObject({
+  skills: z.array(skillNameSchema).default([]).describe("Skills excluded from selected packs."),
+  mcpServers: z
+    .array(mcpServerNameSchema)
+    .default([])
+    .describe("MCP servers excluded from selected packs."),
+  tools: z.array(toolNameSchema).default([]).describe("Tools excluded from selected packs."),
+  hooks: z.array(hookNameSchema).default([]).describe("Hooks excluded from selected packs."),
+  agents: z.array(agentNameSchema).default([]).describe("Agents excluded from selected packs."),
+});
 
 /**
  * Portable project-relative path to a directory whose direct children are Agent Skills.
@@ -124,6 +140,9 @@ export const agentyxConfigSchema = z
       .array(enabledCapabilityNameSchema)
       .describe("Optional capabilities to activate by explicit identifier.")
       .default([]),
+    exclude: capabilityExclusionsSchema
+      .optional()
+      .describe("Typed capabilities to remove from the selected packs."),
     targets: z
       .array(agentyxTargetSchema)
       .describe("Coding-agent providers this project targets.")
@@ -192,3 +211,4 @@ export type AgentyxConfigInput = z.input<typeof agentyxConfigSchema>;
 export type ProjectMetadata = z.infer<typeof projectMetadataSchema>;
 export type ProjectRelation = z.infer<typeof projectRelationSchema>;
 export type ProjectContext = z.infer<typeof projectContextSchema>;
+export type CapabilityExclusions = z.infer<typeof capabilityExclusionsSchema>;

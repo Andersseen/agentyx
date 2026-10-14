@@ -62,6 +62,34 @@ export class UnknownEnabledCapabilityError extends AgentyxError {
   }
 }
 
+export class UnknownExcludedCapabilityError extends AgentyxError {
+  readonly capabilityKind: string;
+  readonly capabilityName: string;
+
+  constructor(capabilityKind: string, capabilityName: string) {
+    super(
+      "unknown_excluded_capability",
+      `Unknown excluded ${capabilityKind} capability "${capabilityName}". It is not declared by the currently selected packs.`,
+    );
+    this.name = "UnknownExcludedCapabilityError";
+    this.capabilityKind = capabilityKind;
+    this.capabilityName = capabilityName;
+  }
+}
+
+export class ContradictoryCapabilitySelectionError extends AgentyxError {
+  readonly capabilityName: string;
+
+  constructor(capabilityName: string) {
+    super(
+      "contradictory_capability_selection",
+      `Capability "${capabilityName}" is both explicitly enabled and excluded.`,
+    );
+    this.name = "ContradictoryCapabilitySelectionError";
+    this.capabilityName = capabilityName;
+  }
+}
+
 /** Raised when a configured local Skill directory cannot be loaded safely. */
 export class LocalSkillDirectoryError extends AgentyxError {
   readonly directory: string;
