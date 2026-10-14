@@ -149,6 +149,7 @@ export class UnsupportedMcpTransportError extends AgentyxError {
  * without writing a wrong literal value.
  */
 export class UnsupportedMcpEnvReferenceError extends AgentyxError {
+  readonly adapterId: string;
   readonly server: string;
 
   constructor(adapterId: string, server: string, detail: string) {
@@ -157,6 +158,7 @@ export class UnsupportedMcpEnvReferenceError extends AgentyxError {
       `MCP server "${server}" cannot be rendered for "${adapterId}": ${detail}`,
     );
     this.name = "UnsupportedMcpEnvReferenceError";
+    this.adapterId = adapterId;
     this.server = server;
   }
 }

@@ -137,6 +137,17 @@ Agentyx's MCP model has two transports (`stdio`, `http`) and values that are env
 
 ## Doctor observability
 
+### Doctor local readiness
+
+Doctor's `readiness` section independently reports `configuration`, `installation` and
+`localPrerequisites` as `ready`, `not-ready` or `unknown`. It can inspect active local executable
+presence, referenced environment-variable names, and provider MCP scope/transport compatibility.
+It does not launch MCP commands, load `.env` files, make network requests, test registry downloads,
+or claim connectivity, authentication, authorization, provider approval or semantic correctness.
+For example, finding `npx` proves only that the launcher is present; it does not prove the MCP
+package is installed or that the server will start. Kimi environment-reference forwarding remains
+provider-runtime behavior that Doctor does not verify.
+
 Flags live in each adapter's `capabilities.observability` and are asserted in
 `packages/adapters/test/compatibility.test.ts`. They describe signals Agentyx's hooks can receive,
 not whether a hook was trusted or runs.

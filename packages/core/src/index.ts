@@ -256,7 +256,8 @@ export {
   formatAgentyxConfig,
   PACKAGE_MANAGERS,
 } from "./project/detector.js";
-export { isExecutableOnPath } from "./project/executable.js";
+export type { ExecutableLookupOptions } from "./project/executable.js";
+export { executableCandidates, isExecutableOnPath } from "./project/executable.js";
 export type {
   Recommendation,
   RecommendationConfidence,

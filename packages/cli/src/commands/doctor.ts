@@ -4,8 +4,11 @@ import {
   builtInAdapterRegistry,
   collectInstallConflicts,
   type InstallPlan,
+  ProviderConfigParseError,
   planInstall,
   summarizeInstallPlans,
+  UnsupportedMcpEnvReferenceError,
+  UnsupportedMcpTransportError,
 } from "@agentyx/adapters";
 import {
   type AgentyxConfig,
@@ -27,6 +30,7 @@ import {
   isExecutableOnPath,
   loadAgentyxProject,
   loadInstallManifest,
+  type McpServerDefinition,
   manifestEntriesByPath,
   type Recommendation,
   recommendCapabilities,
@@ -43,15 +47,29 @@ import {
 
 export type DoctorLevel = "info" | "warning" | "error";
 export type DoctorStatus = "healthy" | "warnings" | "errors";
+export type ReadinessState = "ready" | "not-ready" | "unknown";
+
+export interface DoctorReadiness {
+  readonly configuration: { readonly state: ReadinessState };
+  readonly installation: { readonly state: ReadinessState };
+  readonly localPrerequisites: { readonly state: ReadinessState };
+}
 
 export interface DoctorDiagnostic {
   readonly level: DoctorLevel;
   readonly code: string;
   readonly message: string;
+  readonly capability?: { readonly kind: "mcp" | "tool"; readonly name: string };
+  readonly target?: string;
+  readonly requirement?: {
+    readonly kind: "command" | "environment" | "transport" | "scope";
+    readonly name?: string;
+  };
 }
 
 export interface DoctorReport {
   readonly status: DoctorStatus;
+  readonly readiness: DoctorReadiness;
   readonly project: {
     readonly packageManager: string | undefined;
     readonly packageManagerAmbiguous: boolean;
@@ -167,6 +185,7 @@ export async function runDoctorCommand(input: DoctorCommandInput): Promise<Docto
   const targetReports: Array<DoctorReport["targets"][number]> = [];
   let resolved: ReturnType<typeof resolveAgentyxConfig> | undefined;
   let plans: readonly InstallPlan[] | undefined;
+  let planningUnknown = false;
 
   if (project.packageManager.ambiguous) {
     diagnostics.push({
@@ -302,19 +321,59 @@ export async function runDoctorCommand(input: DoctorCommandInput): Promise<Docto
     });
   }
 
-  if (resolved !== undefined && unknownTargets.length === 0 && resolved.targets.length > 0) {
-    plans = await planInstall({
-      targets: resolved.targets,
-      projectDir: input.cwd,
-      skills: resolved.skills.map((name) =>
-        (configState.project?.skillRegistry ?? builtInSkillRegistry).get(name),
-      ),
-      mcpServers: resolved.mcpServers.map((name) => builtInMcpServerRegistry.get(name)),
-      hooks: resolved.hooks.map((name) => builtInHookRegistry.get(name)),
-      agents: resolved.agents.map((name) => builtInAgentRegistry.get(name)),
-      manifest,
-      prune: true,
-    });
+  const activeMcpServers =
+    resolved?.mcpServers.map((name) => builtInMcpServerRegistry.get(name)) ?? [];
+
+  if (resolved !== undefined && unknownTargets.length === 0) {
+    for (const target of resolved.targets) {
+      const adapter = builtInAdapterRegistry.get(target);
+
+      if (!adapter.capabilities.mcp.project && activeMcpServers.length > 0) {
+        for (const server of activeMcpServers) {
+          diagnostics.push(mcpUnsupportedDiagnostic(target, server, "scope"));
+        }
+      }
+
+      for (const server of activeMcpServers) {
+        if (
+          adapter.capabilities.mcp.transports !== undefined &&
+          !adapter.capabilities.mcp.transports.includes(server.transport)
+        ) {
+          diagnostics.push(mcpUnsupportedDiagnostic(target, server, "transport"));
+        }
+      }
+    }
+  }
+
+  if (
+    resolved !== undefined &&
+    unknownTargets.length === 0 &&
+    resolved.targets.length > 0 &&
+    !diagnostics.some((diagnostic) => diagnostic.code === "mcp_unsupported")
+  ) {
+    try {
+      plans = await planInstall({
+        targets: resolved.targets,
+        projectDir: input.cwd,
+        skills: resolved.skills.map((name) =>
+          (configState.project?.skillRegistry ?? builtInSkillRegistry).get(name),
+        ),
+        mcpServers: activeMcpServers,
+        hooks: resolved.hooks.map((name) => builtInHookRegistry.get(name)),
+        agents: resolved.agents.map((name) => builtInAgentRegistry.get(name)),
+        manifest,
+        prune: true,
+      });
+    } catch (cause) {
+      planningUnknown = true;
+      const diagnostic = planningDiagnostic(cause);
+
+      if (diagnostic !== undefined) {
+        diagnostics.push(diagnostic);
+      } else {
+        throw cause;
+      }
+    }
   }
 
   const recorded = manifestEntriesByPath(manifest);
@@ -331,7 +390,7 @@ export async function runDoctorCommand(input: DoctorCommandInput): Promise<Docto
     diagnostics.push({
       level: "warning",
       code: "stale_managed_files",
-      message: `${stale.length} installed file(s) are no longer resolved by this configuration: ${stale.join(", ")}. Run agentyx install --prune to remove them.`,
+      message: `${stale.length} installed file(s) are no longer resolved by this configuration: ${stale.join(", ")}. Run agentyx sync to remove them.`,
     });
   }
 
@@ -368,6 +427,43 @@ export async function runDoctorCommand(input: DoctorCommandInput): Promise<Docto
       activation: server.activation,
       active: resolved?.mcpServers.includes(server.name) ?? false,
     })) ?? [];
+
+  let localPrerequisitesUnavailable = false;
+
+  for (const serverName of resolved?.mcpServers ?? []) {
+    const server = builtInMcpServerRegistry.get(serverName);
+    const references = server.transport === "stdio" ? server.env : server.headers;
+
+    if (server.transport === "stdio") {
+      const commandAvailable = await isExecutableOnPath(server.command, { cwd: input.cwd });
+
+      if (!commandAvailable) {
+        localPrerequisitesUnavailable = true;
+        diagnostics.push({
+          level: "warning",
+          code: "mcp_command_missing",
+          message: `MCP server "${server.name}" is active but command "${server.command}" was not found on PATH.`,
+          capability: { kind: "mcp", name: server.name },
+          requirement: { kind: "command", name: server.command },
+        });
+      }
+    }
+
+    for (const reference of Object.values(references)) {
+      if (process.env[reference.fromEnv] !== undefined && process.env[reference.fromEnv] !== "") {
+        continue;
+      }
+
+      localPrerequisitesUnavailable = true;
+      diagnostics.push({
+        level: "warning",
+        code: "mcp_environment_missing",
+        message: `MCP server "${server.name}" requires environment variable "${reference.fromEnv}", which is not set.`,
+        capability: { kind: "mcp", name: server.name },
+        requirement: { kind: "environment", name: reference.fromEnv },
+      });
+    }
+  }
   const hookReports =
     resolved?.declaredHooks.map((hook) => ({
       name: hook.name,
@@ -441,7 +537,33 @@ export async function runDoctorCommand(input: DoctorCommandInput): Promise<Docto
         .filter((part) => part !== undefined)
         .join(" "),
     });
+    localPrerequisitesUnavailable = true;
   }
+
+  const hookUnavailable = diagnostics.some(
+    (diagnostic) => diagnostic.code === "hook_runtime_unavailable",
+  );
+  localPrerequisitesUnavailable ||= hookUnavailable;
+  const configurationReady =
+    configState.valid &&
+    resolved !== undefined &&
+    unknownTargets.length === 0 &&
+    configuredTargets.length > 0 &&
+    !diagnostics.some((diagnostic) =>
+      ["resolution_failed", "unknown_target", "no_targets_configured", "mcp_unsupported"].includes(
+        diagnostic.code,
+      ),
+    );
+  const installationState: ReadinessState =
+    !configurationReady || planningUnknown || plans === undefined
+      ? "unknown"
+      : summary === undefined ||
+          summary.create + summary.update + summary.delete + summary.conflict > 0 ||
+          stale.length > 0 ||
+          drifted.length > 0 ||
+          conflicts.length > 0
+        ? "not-ready"
+        : "ready";
 
   const harnessReports = await buildHarnessReports({
     cwd: input.cwd,
@@ -459,6 +581,18 @@ export async function runDoctorCommand(input: DoctorCommandInput): Promise<Docto
 
   return {
     status: statusOf(diagnostics),
+    readiness: {
+      configuration: { state: configurationReady ? "ready" : "not-ready" },
+      installation: { state: installationState },
+      localPrerequisites: {
+        state:
+          resolved === undefined
+            ? "unknown"
+            : localPrerequisitesUnavailable
+              ? "not-ready"
+              : "ready",
+      },
+    },
     project: {
       packageManager: project.packageManager.name,
       packageManagerAmbiguous: project.packageManager.ambiguous,
@@ -525,6 +659,13 @@ export function renderDoctorReport(report: DoctorReport, json: boolean): string 
 
   return [
     `Agentyx doctor: ${report.status}`,
+    "",
+    section("Readiness", [
+      `configuration: ${report.readiness.configuration.state}`,
+      `installation: ${report.readiness.installation.state}`,
+      `local prerequisites: ${report.readiness.localPrerequisites.state}`,
+      "runtime: MCP execution, connectivity and authorization not verified",
+    ]),
     "",
     section("Project", [
       `package manager: ${report.project.packageManager ?? "unknown"}${
@@ -860,6 +1001,59 @@ function statusOf(diagnostics: readonly DoctorDiagnostic[]): DoctorStatus {
   }
 
   return "healthy";
+}
+
+function mcpUnsupportedDiagnostic(
+  target: string,
+  server: McpServerDefinition,
+  requirement: "transport" | "scope",
+): DoctorDiagnostic {
+  const detail =
+    requirement === "transport" ? `transport "${server.transport}"` : "project MCP scope";
+
+  return {
+    level: "error",
+    code: "mcp_unsupported",
+    message: `MCP server "${server.name}" requires ${detail}, which target "${target}" does not support.`,
+    capability: { kind: "mcp", name: server.name },
+    target,
+    requirement:
+      requirement === "transport"
+        ? { kind: requirement, name: server.transport }
+        : { kind: requirement },
+  };
+}
+
+function planningDiagnostic(cause: unknown): DoctorDiagnostic | undefined {
+  if (cause instanceof ProviderConfigParseError) {
+    return { level: "error", code: cause.code, message: cause.message };
+  }
+
+  if (cause instanceof UnsupportedMcpTransportError) {
+    return {
+      level: "error",
+      code: "mcp_unsupported",
+      message: cause.message,
+      capability: { kind: "mcp", name: cause.server },
+      target: cause.adapterId,
+      requirement: { kind: "transport", name: cause.transport },
+    };
+  }
+
+  if (cause instanceof UnsupportedMcpEnvReferenceError) {
+    return {
+      level: "error",
+      code: cause.code,
+      message: cause.message,
+      capability: { kind: "mcp", name: cause.server },
+      target: cause.adapterId,
+      requirement: { kind: "environment" },
+    };
+  }
+
+  return cause instanceof AgentyxError
+    ? { level: "error", code: cause.code, message: cause.message }
+    : undefined;
 }
 
 async function fileExists(path: string): Promise<boolean> {
