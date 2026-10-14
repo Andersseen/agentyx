@@ -1,5 +1,12 @@
 # @agentyx/core
 
+## 0.16.0
+
+### Minor Changes
+
+- 5488aa0: Add typed capability exclusions to `.agentyx.json` and `configure`, covering Skills, MCP servers,
+  tools, hooks and agents while preserving resolution provenance and safe sync pruning.
+
 ## 0.15.0
 
 ### Minor Changes
