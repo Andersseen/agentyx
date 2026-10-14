@@ -407,7 +407,7 @@ R070 is complete. Next implementation task: R090-01.
 
 ## R090-01 — Version-2 manifest model and deterministic resolution snapshot
 
-Status: complete locally on `feat/reproducible-lock-v2-model`; PR CI pending.
+Status: complete. PR #121 CI passed across Linux Node 22/24 and macOS/Windows Node 22 packaged smoke.
 Starting commit: `0f6930f` (`main`, `@agentyx/cli`, `@agentyx/core` and `@agentyx/adapters` at `0.17.0`).
 
 Delivered:
@@ -430,6 +430,8 @@ Delivered:
 Changeset: `.changeset/reproducible-lock-snapshot.md` (minor fixed group).
 Verification: `pnpm check` passed — 62 test files and 721 tests; `pnpm eval:skills` passed — 11
 scenarios; `pnpm smoke:pack` passed — packed CLI version and v1 lock assertions included.
+GitHub Actions: PR #121 workflow `38565550707` passed `check (node 22)`, `check (node 24)`,
+`packaged smoke (macos-latest, node 22)` and `packaged smoke (windows-latest, node 22)`.
 Local limitations: the GitHub Actions Linux Node 22/24, macOS Node 22 and Windows Node 22 matrix
 was not reproduced locally; the escalated packaged smoke used the current macOS/Node environment.
 No packages were published. R090-02 remains deliberately out of scope.
