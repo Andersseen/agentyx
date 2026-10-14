@@ -1,9 +1,9 @@
-import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { AgentyxManifestParseError, AgentyxManifestValidationError } from "./errors.js";
+import type { ResolutionSnapshot } from "./resolution.js";
 import {
-  INSTALL_MANIFEST_VERSION,
+  INSTALL_MANIFEST_V1_VERSION,
   type InstallManifest,
   type InstallManifestEntry,
   installManifestSchema,
@@ -18,7 +18,7 @@ export function agentyxManifestPath(projectPath: string = process.cwd()): string
 
 /** A manifest that claims nothing — what a project has before its first install. */
 export function emptyInstallManifest(): InstallManifest {
-  return { version: INSTALL_MANIFEST_VERSION, entries: [] };
+  return { version: INSTALL_MANIFEST_V1_VERSION, entries: [] };
 }
 
 /**
@@ -28,9 +28,7 @@ export function emptyInstallManifest(): InstallManifest {
  * this and may replace it" from "someone else owns this file", so it is
  * computed over the exact bytes written, never over a normalised form.
  */
-export function hashContent(content: string): string {
-  return createHash("sha256").update(content, "utf8").digest("hex");
-}
+export { hashContent } from "./hashing.js";
 
 /**
  * Validates an already-parsed manifest document.
@@ -113,7 +111,16 @@ export function formatInstallManifest(manifest: InstallManifest): string {
     })
     .sort((left, right) => left.path.localeCompare(right.path));
 
-  return `${JSON.stringify({ version: manifest.version, entries }, null, 2)}\n`;
+  const document =
+    manifest.version === INSTALL_MANIFEST_V1_VERSION
+      ? { version: manifest.version, entries }
+      : {
+          version: manifest.version,
+          entries,
+          resolution: formatResolutionSnapshot(manifest.resolution),
+        };
+
+  return `${JSON.stringify(document, null, 2)}\n`;
 }
 
 /**
@@ -130,4 +137,32 @@ export function manifestEntriesByPath(
 
 function sorted(values: readonly string[]): string[] {
   return [...values].sort();
+}
+
+function formatResolutionSnapshot(
+  resolution: ResolutionSnapshot | null,
+): ResolutionSnapshot | null {
+  if (resolution === null) return null;
+
+  return {
+    agentyxVersion: resolution.agentyxVersion,
+    configHash: resolution.configHash,
+    targets: sorted(resolution.targets),
+    skills: resolution.skills.map(formatResolutionCapability),
+    mcpServers: resolution.mcpServers.map(formatResolutionCapability),
+    tools: resolution.tools.map(formatResolutionCapability),
+    hooks: resolution.hooks.map(formatResolutionCapability),
+    agents: resolution.agents.map(formatResolutionCapability),
+  };
+}
+
+function formatResolutionCapability<T extends ResolutionSnapshot["skills"][number]>(
+  capability: T,
+): T {
+  return {
+    ...capability,
+    origins: capability.origins.map((origin) =>
+      origin.kind === "pack" ? { kind: origin.kind, name: origin.name } : { kind: origin.kind },
+    ),
+  } as T;
 }

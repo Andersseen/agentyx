@@ -72,7 +72,11 @@ if (installedCliPackage.bin?.agentyx !== "./dist/index.mjs")
 if (!(await readFile(cliEntry, "utf8")).startsWith("#!"))
   throw new Error("The packaged CLI entry has no shebang, so the bin shim cannot execute it.");
 
-await run(CLI, ["--version"], projectDir);
+const packedVersion = (await run(CLI, ["--version"], projectDir)).stdout.trim();
+if (packedVersion !== installedCliPackage.version)
+  throw new Error(
+    `Packed CLI version ${packedVersion} does not match package metadata ${installedCliPackage.version}.`,
+  );
 await run(CLI, ["--help"], projectDir);
 await run(
   CLI,
@@ -438,6 +442,9 @@ for (const [path, body] of Object.entries(userFiles)) {
 }
 assertExit(runStatus(CLI, ["doctor", "--check"], lifeDir), 1, "doctor --check before sync");
 await run(CLI, ["sync"], lifeDir);
+const initialLock = JSON.parse(await readFile(join(lifeDir, ".agentyx.lock.json"), "utf8"));
+if (initialLock.version !== 1 || Object.hasOwn(initialLock, "resolution"))
+  throw new Error("Normal packed sync did not preserve the version-1 ownership lock in R090-01.");
 assertExit(runStatus(CLI, ["doctor", "--check"], lifeDir), 0, "doctor --check after sync");
 const lifeReadyDoctor = JSON.parse((await run(CLI, ["doctor", "--json"], lifeDir)).stdout);
 if (

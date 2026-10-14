@@ -2,13 +2,13 @@
 
 Status: proposed implementation plan, originally written against the 0.7.0 source baseline.
 
-**Current state (2026-10-10):** the packages are at 0.13.0. Since this plan was written the product
-gained lifecycle hooks, provider-native project agents, `configure`/`sync`, Doctor observation and
-a `.agentyx.lock.json` with skill, MCP, hook and agent entries. Historical milestone text below is
-preserved as written and its task IDs are unchanged; read it against current behavior. Task
-[R100-01](0.10-validation.md#r100-01--establish-a-concrete-compatibility-matrix) was executed
-against that 0.13.x contract. R100-02 is complete (see the 2026-10-11 correction in [progress](progress.md)); R070-01 was then resumed
-because R070 and R090 are not implemented. R100-03 and R100-04 are not started.
+**Current state (2026-10-14):** the packages are at 0.17.0. Since this plan was written the product
+gained lifecycle hooks, provider-native project agents, `configure`/`sync`, typed capability
+selection, Doctor readiness, project context and a `.agentyx.lock.json` with Skill, MCP, hook and
+agent entries. R070 is complete after the R070-04 workflow closeout recorded in [progress](progress.md).
+R090-01 now defines the explicit v1/v2 manifest model and pure resolution snapshot primitives while
+normal installs still write v1; R090-02 is next. Historical milestone text below is preserved as
+written; read it against current behavior. R100-03 and R100-04 are not started.
 
 ## Product outcome
 

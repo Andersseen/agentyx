@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { contentHashSchema } from "./hashing.js";
+import { resolutionSnapshotSchema } from "./resolution.js";
 
 /**
  * The manifest format version.
@@ -7,7 +9,12 @@ import { z } from "zod";
  * reinterpreted, because acting on a half-understood record of managed files is
  * how an installer deletes something it should not.
  */
-export const INSTALL_MANIFEST_VERSION = 1;
+/** The ownership-only manifest version currently written by normal installs. */
+export const INSTALL_MANIFEST_V1_VERSION = 1;
+/** The newest manifest version understood by core; R090-02 will make it the normal writer. */
+export const INSTALL_MANIFEST_V2_VERSION = 2;
+/** @deprecated Use `INSTALL_MANIFEST_V1_VERSION` for the current writer explicitly. */
+export const INSTALL_MANIFEST_VERSION = INSTALL_MANIFEST_V1_VERSION;
 
 /**
  * A path Agentyx manages, relative to the project root and always written with
@@ -22,11 +29,6 @@ export const managedPathSchema = z
     (value) => !value.split("/").includes(".."),
     "Managed paths must not traverse outside the project root.",
   );
-
-/** A SHA-256 digest of the exact bytes Agentyx last wrote to a managed path. */
-export const contentHashSchema = z
-  .string()
-  .regex(/^[0-9a-f]{64}$/, "Content hashes must be lowercase hexadecimal SHA-256 digests.");
 
 const targetsSchema = z
   .array(z.string().min(1, "Targets must be non-empty strings."))
@@ -89,16 +91,30 @@ export const installManifestEntrySchema = z.discriminatedUnion("kind", [
 ]);
 
 /** The `.agentyx.lock.json` record of everything Agentyx installed into a project. */
-export const installManifestSchema = z.strictObject({
-  version: z.literal(INSTALL_MANIFEST_VERSION),
+export const installManifestV1Schema = z.strictObject({
+  version: z.literal(INSTALL_MANIFEST_V1_VERSION),
   entries: z.array(installManifestEntrySchema).default([]),
 });
+
+export const installManifestV2Schema = z.strictObject({
+  version: z.literal(INSTALL_MANIFEST_V2_VERSION),
+  entries: z.array(installManifestEntrySchema).default([]),
+  resolution: resolutionSnapshotSchema.nullable(),
+});
+
+export const installManifestSchema = z.discriminatedUnion("version", [
+  installManifestV1Schema,
+  installManifestV2Schema,
+]);
 
 export type SkillManifestEntry = z.infer<typeof skillManifestEntrySchema>;
 export type AgentManifestEntry = z.infer<typeof agentManifestEntrySchema>;
 export type McpManifestEntry = z.infer<typeof mcpManifestEntrySchema>;
 export type HookManifestEntry = z.infer<typeof hookManifestEntrySchema>;
 export type InstallManifestEntry = z.infer<typeof installManifestEntrySchema>;
+
+export type InstallManifestV1 = z.infer<typeof installManifestV1Schema>;
+export type InstallManifestV2 = z.infer<typeof installManifestV2Schema>;
 
 /** A validated manifest, with defaults applied. */
 export type InstallManifest = z.infer<typeof installManifestSchema>;

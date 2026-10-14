@@ -387,3 +387,53 @@ Remaining: R070-02 (typed exclusions), R070-03, R070-04, then R090 and the rest 
 R100-03 are not ready; Agentyx is not claimed 1.0-ready. Not published.
 
 Next task: R070-02 — typed exclusions.
+
+## R070-04 — Workflow validation and release closeout
+
+Status: complete by cumulative evidence from PR #117 and PR #119; no production gap was found.
+The feature releases 0.16.0 and 0.17.0 already consumed their Changesets, so this documentation-only
+closeout needs no additional Changeset.
+
+Evidence:
+- PR #117 added typed capability exclusions, `configure --exclude` / `--include`, explain output,
+  safe sync pruning and packaged selection lifecycle coverage.
+- PR #119 added structured Doctor readiness checks, documented the local-check/runtime boundary and
+  passed its CI validation, with packaged readiness coverage across Codex, Claude and Kimi.
+- Current source provides `resolve --explain`, typed exclusions, `sync --dry-run`, safe owned-state
+  convergence, conflict preservation, structured Doctor readiness, workflow documentation and
+  packaged smoke coverage. Legacy configurations remain valid and require no R070 migration.
+
+R070 is complete. Next implementation task: R090-01.
+
+## R090-01 — Version-2 manifest model and deterministic resolution snapshot
+
+Status: complete. PR #121 CI passed across Linux Node 22/24 and macOS/Windows Node 22 packaged smoke.
+Starting commit: `0f6930f` (`main`, `@agentyx/cli`, `@agentyx/core` and `@agentyx/adapters` at `0.17.0`).
+
+Delivered:
+- Added explicit Zod-backed `InstallManifestV1`, `InstallManifestV2` and discriminated
+  `InstallManifest` types. Both reuse the existing ownership entries; v2 requires nullable
+  `resolution`, and ownership helpers consult only `entries`.
+- Added the provider-neutral `ResolutionSnapshot` contract for exact CLI version, canonical config
+  hash, deterministic targets and effective Skill, MCP, Tool, Hook and Agent entries with hashes and
+  provenance. Project context is the generated `agentyx-project-context` Skill; typed exclusions
+  affect config hashing/effective selection; optional-disabled resources are absent from arrays.
+- Added recursive canonical JSON hashing with `$schema` exclusion and set semantics for targets,
+  enabled names and exclusion lists. Skills hash `formatSkillMarkdown` bytes; MCP hashes retain only
+  env/header references, never environment values; no checkout paths or runtime observations enter.
+- Added structured deterministic snapshot comparison for version, config, targets and all modern
+  capability kinds without exposing bodies or secrets.
+- Moved CLI version lookup to a packaged-metadata helper. Normal install/sync remains a v1 writer;
+  transitional mutations of a manually supplied v2 lock invalidate a non-null snapshot.
+- Modernized the 0.9 roadmap and added packed version/v1-writer smoke assertions.
+
+Changeset: `.changeset/reproducible-lock-snapshot.md` (minor fixed group).
+Verification: `pnpm check` passed — 62 test files and 721 tests; `pnpm eval:skills` passed — 11
+scenarios; `pnpm smoke:pack` passed — packed CLI version and v1 lock assertions included.
+GitHub Actions: PR #121 workflow `38565550707` passed `check (node 22)`, `check (node 24)`,
+`packaged smoke (macos-latest, node 22)` and `packaged smoke (windows-latest, node 22)`.
+Local limitations: the GitHub Actions Linux Node 22/24, macOS Node 22 and Windows Node 22 matrix
+was not reproduced locally; the escalated packaged smoke used the current macOS/Node environment.
+No packages were published. R090-02 remains deliberately out of scope.
+
+Next task: R090-02 — persist complete snapshots and implement explicit v1 migration.

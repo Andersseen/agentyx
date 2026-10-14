@@ -476,13 +476,16 @@ function nextManifest(previous: InstallManifest, plans: readonly InstallPlan[]):
     }
   }
 
-  return {
-    version: previous.version,
-    entries: [
-      ...previous.entries.filter((entry) => !removed.has(entry.path) && !rewritten.has(entry.path)),
-      ...rewritten.values(),
-    ],
-  };
+  const entries = [
+    ...previous.entries.filter((entry) => !removed.has(entry.path) && !rewritten.has(entry.path)),
+    ...rewritten.values(),
+  ];
+
+  if (previous.version === 2) {
+    return { version: 2, entries, resolution: null };
+  }
+
+  return { version: 1, entries };
 }
 
 /** Targets this run wrote for, plus any target outside the run that the entry already served. */
