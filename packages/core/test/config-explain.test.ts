@@ -50,6 +50,36 @@ describe("explainAgentyxResolution", () => {
     });
   });
 
+  it("explains the UI/UX pack and shared Playwright provenance", () => {
+    const ui = explain({ packs: ["ui-ux"] });
+    expect(ui.resolved.skills).toEqual([
+      "ui-visual-design",
+      "ux-usability",
+      "interaction-design",
+      "design-system-practice",
+      "ux-writing",
+      "visual-verification",
+    ]);
+    expect(find(ui.entries, "mcp", "playwright")).toMatchObject({
+      active: false,
+      reason: "optional-disabled",
+      origins: [{ kind: "pack", name: "ui-ux" }],
+    });
+
+    const combined = explain({ packs: ["ui-ux", "testing"], enable: ["playwright"] });
+    expect(
+      combined.entries.filter((entry) => entry.kind === "mcp" && entry.name === "playwright"),
+    ).toHaveLength(1);
+    expect(find(combined.entries, "mcp", "playwright")).toMatchObject({
+      active: true,
+      reason: "explicitly-enabled",
+      origins: [
+        { kind: "pack", name: "ui-ux" },
+        { kind: "pack", name: "testing" },
+      ],
+    });
+  });
+
   it("lists a shared capability once with every pack in resolution order", () => {
     const { entries } = explain({ packs: ["performance", "accessibility"] });
     const devtools = entries.filter((entry) => entry.name === "chrome-devtools");

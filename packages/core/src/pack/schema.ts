@@ -11,6 +11,7 @@ export const PACK_CATEGORIES = [
   "framework",
   "efficiency",
   "workflow",
+  "design",
 ] as const;
 
 export const packCategorySchema = z.enum(PACK_CATEGORIES);

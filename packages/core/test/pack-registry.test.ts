@@ -17,6 +17,7 @@ describe("built-in pack registry", () => {
       "efficiency",
       "agentic",
       "testing",
+      "ui-ux",
       "security",
       "performance",
       "accessibility",
@@ -41,6 +42,21 @@ describe("built-in pack registry", () => {
     for (const pack of builtInPacks) {
       expect(pack.description).toBeTruthy();
     }
+  });
+
+  it("defines the provider-neutral UI/UX pack", () => {
+    expect(builtInPackRegistry.get("ui-ux")).toMatchObject({
+      category: "design",
+      skills: [
+        "ui-visual-design",
+        "ux-usability",
+        "interaction-design",
+        "design-system-practice",
+        "ux-writing",
+        "visual-verification",
+      ],
+      mcpServers: [{ name: "playwright", activation: "optional" }],
+    });
   });
 
   /**
@@ -176,6 +192,18 @@ describe("createPackRegistry", () => {
     const registry = createPackRegistry([{ name: "solo", mcpServers: ["context7"] }]);
 
     expect(registry.get("solo")?.mcpServers).toEqual([{ name: "context7", activation: "default" }]);
+  });
+
+  it("accepts the design category for local packs", () => {
+    expect(
+      createPackRegistry([{ name: "product-design", category: "design" }]).get("product-design"),
+    ).toMatchObject({ name: "product-design", category: "design" });
+  });
+
+  it("rejects unknown categories", () => {
+    expect(() =>
+      createPackRegistry([{ name: "unknown", category: "not-a-category" } as never]),
+    ).toThrow();
   });
 
   it("keeps declared skills in order", () => {

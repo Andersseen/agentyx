@@ -60,7 +60,7 @@
           "category": {
             "default": "engineering",
             "type": "string",
-            "enum": ["engineering", "language", "framework", "efficiency", "workflow"],
+            "enum": ["engineering", "language", "framework", "efficiency", "workflow", "design"],
             "description": "Discoverability category; does not affect resolution."
           },
           "description": {

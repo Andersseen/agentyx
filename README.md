@@ -30,6 +30,7 @@ Packs contribute provider-neutral capabilities:
 | `efficiency`    | efficiency  | Context-efficient exploration, output, iteration, verification |
 | `agentic`       | workflow    | Brainstorming, planning, debugging, parallel and review flows  |
 | `testing`       | engineering | Test level choice, doubles, end-to-end scope, flaky tests      |
+| `ui-ux`         | design      | Product UI/UX, usability, interaction and visual verification  |
 | `security`      | engineering | Input validation, secrets, dependencies, authorization         |
 | `performance`   | engineering | Profiling, web vitals, database query performance              |
 | `accessibility` | engineering | Semantic markup, ARIA patterns, keyboard navigation            |
@@ -67,8 +68,8 @@ Current optional capabilities:
 
 - `rtk`: Rust Token Killer executable, detected as `rtk` on PATH.
 - `codebase-memory`: structural code-intelligence MCP backed by a persistent knowledge graph.
-- `playwright`: browser automation MCP, declared by `testing`. Runtime: may fetch a package on
-  first launch.
+- `playwright`: browser automation MCP, declared optionally by `testing` and `ui-ux`. Runtime: may
+  fetch a package on first launch.
 - `chrome-devtools`: performance tracing and page inspection MCP, declared by `performance` and
   `accessibility`. Runtime: may fetch a package on first launch.
 - `sentry`: production issue and stack trace MCP, declared by `observability`.
@@ -78,6 +79,21 @@ Current optional capabilities:
 
 Remote MCP servers are declared without credentials so the agent performs its own authorization
 flow. Agentyx never writes a token into a provider configuration file.
+
+For web-product work, compose the provider-neutral UI/UX guidance with the separate accessibility
+and performance packs when those concerns apply:
+
+```json
+{
+  "packs": ["technical", "typescript", "angular", "ui-ux", "accessibility", "performance"],
+  "enable": ["playwright"],
+  "targets": ["codex", "claude", "kimi"]
+}
+```
+
+The `ui-ux` pack is useful without browser automation. Playwright is optional and improves rendered
+verification when available; Agentyx does not claim that visual verification happened when browser
+inspection was unavailable.
 
 Agentyx never downloads binaries, runs installers, edits PATH, or installs third-party runtime
 Skills for these capabilities. Some capabilities do launch a command that can — an MCP server
