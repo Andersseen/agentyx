@@ -1,5 +1,19 @@
 # @agentyx/cli
 
+## 0.15.0
+
+### Minor Changes
+
+- 759c7df: Add the provider-neutral `ui-ux` pack with focused visual design, usability, interaction,
+  design-system, UX-writing and visual-verification Skills. The pack contributes optional Playwright
+  with shared resolution provenance.
+
+### Patch Changes
+
+- Updated dependencies [759c7df]
+  - @agentyx/adapters@0.15.0
+  - @agentyx/core@0.15.0
+
 ## 0.14.0
 
 ### Minor Changes
