@@ -58,6 +58,13 @@ function syncFailure(cause: AgentyxError): ConfigureCommandError {
     );
   }
 
+  if (cause.code === "legacy_lock_requires_migration") {
+    return new ConfigureCommandError(
+      cause.code,
+      `Configuration updated: .agentyx.json keeps the new desired state. Sync did not run and nothing was installed.\n${cause.message}\nThen run agentyx sync.`,
+    );
+  }
+
   return new ConfigureCommandError(
     "configure_sync_failed",
     `Configuration updated. Sync blocked: ${cause.message}\nResolve the conflict and run agentyx sync.`,

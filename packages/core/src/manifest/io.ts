@@ -59,6 +59,28 @@ export function parseInstallManifest(value: unknown, filePath?: string): Install
 export async function loadInstallManifest(
   projectPath: string = process.cwd(),
 ): Promise<InstallManifest> {
+  return (await loadInstallManifestState(projectPath)).manifest;
+}
+
+/** The manifest plus whether a lock file actually exists on disk. */
+export interface InstallManifestState {
+  /** `false` only when `.agentyx.lock.json` is absent; `manifest` is then the empty v1 manifest. */
+  readonly present: boolean;
+  readonly manifest: InstallManifest;
+}
+
+/**
+ * Like `loadInstallManifest`, but tells a missing lock apart from an existing one.
+ *
+ * Orchestration needs the difference: a missing lock may start a fresh version-2 record,
+ * while an existing version-1 lock requires an explicit migration.
+ *
+ * @throws {AgentyxManifestParseError} when the file is not valid JSON.
+ * @throws {AgentyxManifestValidationError} when the document violates the schema.
+ */
+export async function loadInstallManifestState(
+  projectPath: string = process.cwd(),
+): Promise<InstallManifestState> {
   const filePath = agentyxManifestPath(projectPath);
   let contents: string;
 
@@ -66,7 +88,7 @@ export async function loadInstallManifest(
     contents = await readFile(filePath, "utf8");
   } catch (cause) {
     if (cause instanceof Error && (cause as NodeJS.ErrnoException).code === "ENOENT") {
-      return emptyInstallManifest();
+      return { present: false, manifest: emptyInstallManifest() };
     }
 
     throw cause;
@@ -81,7 +103,7 @@ export async function loadInstallManifest(
     throw new AgentyxManifestParseError(filePath, reason, { cause });
   }
 
-  return parseInstallManifest(document, filePath);
+  return { present: true, manifest: parseInstallManifest(document, filePath) };
 }
 
 /**

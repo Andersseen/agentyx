@@ -399,6 +399,32 @@ That record decides what Agentyx may touch:
   remove it.
 - Everything else is Agentyx's to replace, so reinstalling an up-to-date project writes nothing.
 
+The lock (version 2) holds two independent things:
+
+- `entries` — **ownership**: the files and provider entries Agentyx wrote. Only these allow Agentyx
+  to update or remove anything.
+- `resolution` — the **reviewed harness snapshot**: the exact CLI version, a hash of the desired
+  configuration and the effective Skills, MCP servers, tools, hooks and agents with their hashes. It
+  never grants ownership. It is recorded by a complete config-driven `install`, `sync`,
+  `init --install` or `configure --sync`, and is `null` after any partial run (explicit packs,
+  `--target`, `--enable`, `--skill`, `--mcp`, `--select`, `--skills-only`, `--mcp-only`) or a partial
+  `uninstall`. A later full `sync` records it again. Re-running an unchanged install leaves the lock
+  file untouched.
+
+Locks written by earlier versions (version 1) record ownership only. `doctor` and `uninstall` still
+read them, but `install` and `sync` will not change a project until the lock is migrated through a
+real, reviewed install of the whole `.agentyx.json`:
+
+```sh
+pnpm dlx @agentyx/cli install --migrate-lock --dry-run   # review; writes nothing
+pnpm dlx @agentyx/cli install --migrate-lock
+```
+
+Migration is not a JSON conversion. It uses the existing ownership as evidence, so edited or
+unmanaged files still conflict and are never adopted, and the version-1 lock is replaced only after
+every change succeeded. It cannot be combined with pack arguments or other overrides. Agentyx does
+not coordinate concurrent installers: run one at a time.
+
 `.agentyx.json` is the project's desired state. `.agentyx.lock.json` records the provider files and
 entries Agentyx owns. Use `configure` to edit desired state, `sync` to converge installed state, and
 `doctor` to inspect health, drift and harness evidence:

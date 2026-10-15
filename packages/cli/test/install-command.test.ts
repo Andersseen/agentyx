@@ -289,6 +289,7 @@ describe("install command wiring", () => {
       "--json",
       "--mcp",
       "--mcp-only",
+      "--migrate-lock",
       "--prune",
       "--select",
       "--skill",
@@ -365,7 +366,7 @@ describe("agentyx install ownership", () => {
       entries: { path: string; targets: string[] }[];
     };
 
-    expect(manifest.version).toBe(1);
+    expect(manifest.version).toBe(2);
     expect(manifest.entries).toHaveLength(4);
     expect(manifest.entries[0]?.targets).toEqual(["codex"]);
   });

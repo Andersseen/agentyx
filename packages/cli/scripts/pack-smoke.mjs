@@ -1,6 +1,6 @@
 import { execFileSync, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { mkdir, mkdtemp, readdir, readFile, rm, stat, writeFile } from "node:fs/promises";
+import { cp, mkdir, mkdtemp, readdir, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
@@ -443,8 +443,18 @@ for (const [path, body] of Object.entries(userFiles)) {
 assertExit(runStatus(CLI, ["doctor", "--check"], lifeDir), 1, "doctor --check before sync");
 await run(CLI, ["sync"], lifeDir);
 const initialLock = JSON.parse(await readFile(join(lifeDir, ".agentyx.lock.json"), "utf8"));
-if (initialLock.version !== 1 || Object.hasOwn(initialLock, "resolution"))
-  throw new Error("Normal packed sync did not preserve the version-1 ownership lock in R090-01.");
+if (initialLock.version !== 2 || initialLock.resolution === null)
+  throw new Error("Normal packed sync did not write a version-2 lock with a complete resolution.");
+if (initialLock.resolution.agentyxVersion !== installedCliPackage.version)
+  throw new Error("The lock snapshot does not record the packed CLI version.");
+if ([...initialLock.resolution.targets].sort().join() !== "claude,codex,kimi")
+  throw new Error("The lock snapshot does not record the configured targets.");
+if (!initialLock.resolution.skills.some((skill) => skill.name === "planning"))
+  throw new Error("The lock snapshot does not record the selected Skills.");
+const initialLockBytes = await readFile(join(lifeDir, ".agentyx.lock.json"), "utf8");
+await run(CLI, ["sync"], lifeDir);
+if ((await readFile(join(lifeDir, ".agentyx.lock.json"), "utf8")) !== initialLockBytes)
+  throw new Error("A second sync rewrote an unchanged version-2 lock.");
 assertExit(runStatus(CLI, ["doctor", "--check"], lifeDir), 0, "doctor --check after sync");
 const lifeReadyDoctor = JSON.parse((await run(CLI, ["doctor", "--json"], lifeDir)).stdout);
 if (
@@ -525,6 +535,24 @@ if (await pathExists(join(lifeDir, ".agentyx.lock.json")))
 if (await pathExists(join(lifeDir, ".claude/skills/planning")))
   throw new Error("Uninstall left a managed Skill behind.");
 await rm(lifeDir, { recursive: true, force: true });
+
+// --- Explicit migration of a historical version-1 lock. ---
+const migrateDir = await mkdtemp(join(tmpdir(), "agentyx-migrate-"));
+await cp(join(repoRoot, "packages/cli/test/fixtures/lock-v1"), migrateDir, { recursive: true });
+await run("git", ["init", "--quiet"], migrateDir);
+const v1Before = await snapshot(migrateDir);
+assertExit(runStatus(CLI, ["sync"], migrateDir), 1, "sync against a version-1 lock");
+await run(CLI, ["install", "--migrate-lock", "--dry-run"], migrateDir);
+if (!sameSnapshot(v1Before, await snapshot(migrateDir)))
+  throw new Error("Migration dry run or the refused sync changed files.");
+await run(CLI, ["install", "--migrate-lock"], migrateDir);
+const migrated = JSON.parse(await readFile(join(migrateDir, ".agentyx.lock.json"), "utf8"));
+if (migrated.version !== 2 || migrated.resolution === null)
+  throw new Error("Packaged migration did not produce a complete version-2 lock.");
+if (migrated.resolution.agentyxVersion !== installedCliPackage.version)
+  throw new Error("The migrated snapshot does not record the packed CLI version.");
+await run(CLI, ["sync"], migrateDir);
+await rm(migrateDir, { recursive: true, force: true });
 
 if ((await readdir(fakeHome)).length > 0)
   throw new Error(`The packaged CLI wrote under $HOME: ${(await readdir(fakeHome)).join(", ")}`);

@@ -1,0 +1,365 @@
+{
+  "version": 1,
+  "entries": [
+    {
+      "kind": "skill",
+      "path": ".agents/skills/brainstorming/SKILL.md",
+      "skill": "brainstorming",
+      "targets": [
+        "codex"
+      ],
+      "hash": "9e18ebcd4c0a60ee0945283b181a76210d06936da2bb4852a2aea6188130b754"
+    },
+    {
+      "kind": "skill",
+      "path": ".agents/skills/concise-output/SKILL.md",
+      "skill": "concise-output",
+      "targets": [
+        "codex"
+      ],
+      "hash": "9393b8594a3fc63a288fb6b4a82312c9cc57d539b7bf49cd709a913937e9e2af"
+    },
+    {
+      "kind": "skill",
+      "path": ".agents/skills/context-efficient-development/SKILL.md",
+      "skill": "context-efficient-development",
+      "targets": [
+        "codex"
+      ],
+      "hash": "3b0279048858e62857f7bab721554690d6601f8dd1d7c208dec2d952ea01370f"
+    },
+    {
+      "kind": "skill",
+      "path": ".agents/skills/e2e-testing/SKILL.md",
+      "skill": "e2e-testing",
+      "targets": [
+        "codex"
+      ],
+      "hash": "f07c9ae381e916d93c6ee67c32be8eac76482f19fcfbbe9ca6116af9c3036113"
+    },
+    {
+      "kind": "skill",
+      "path": ".agents/skills/flaky-tests/SKILL.md",
+      "skill": "flaky-tests",
+      "targets": [
+        "codex"
+      ],
+      "hash": "d567f98325047a258658b44bf8993060256ae1ccf5e8570d183805e533e47481"
+    },
+    {
+      "kind": "skill",
+      "path": ".agents/skills/focused-verification/SKILL.md",
+      "skill": "focused-verification",
+      "targets": [
+        "codex"
+      ],
+      "hash": "af0d9709dc7ad838bf82507785473657fd1620466d4178da351022dee83d39f5"
+    },
+    {
+      "kind": "skill",
+      "path": ".agents/skills/parallel-work/SKILL.md",
+      "skill": "parallel-work",
+      "targets": [
+        "codex"
+      ],
+      "hash": "ddf2862b7320095eead3f954ab4dafbcf8324ea644135461362aaf503c28899d"
+    },
+    {
+      "kind": "skill",
+      "path": ".agents/skills/planning/SKILL.md",
+      "skill": "planning",
+      "targets": [
+        "codex"
+      ],
+      "hash": "b1611eaa6a1f454c4c3a698a93afbd6a5f09445e61345ad14496a143ca169790"
+    },
+    {
+      "kind": "skill",
+      "path": ".agents/skills/requesting-code-review/SKILL.md",
+      "skill": "requesting-code-review",
+      "targets": [
+        "codex"
+      ],
+      "hash": "87a63cba4f1b30db4fe28815d7fc0e94ee260b97ba10c60aef5de84da8b55b1a"
+    },
+    {
+      "kind": "skill",
+      "path": ".agents/skills/subagent-driven-development/SKILL.md",
+      "skill": "subagent-driven-development",
+      "targets": [
+        "codex"
+      ],
+      "hash": "86695f6c1f346d9399e31bfec0054da47f8d4284110b9f277f28ea5e9e741bda"
+    },
+    {
+      "kind": "skill",
+      "path": ".agents/skills/systematic-debugging/SKILL.md",
+      "skill": "systematic-debugging",
+      "targets": [
+        "codex"
+      ],
+      "hash": "9cfc2371df6cd1d999352131198a44cc2a6456b88a30ad760e2f747dbbeb7a5a"
+    },
+    {
+      "kind": "skill",
+      "path": ".agents/skills/targeted-exploration/SKILL.md",
+      "skill": "targeted-exploration",
+      "targets": [
+        "codex"
+      ],
+      "hash": "f953693a6ac3b874ad0d036e38d1d8a1886d70785db40b8f1a77e24019786116"
+    },
+    {
+      "kind": "skill",
+      "path": ".agents/skills/test-doubles/SKILL.md",
+      "skill": "test-doubles",
+      "targets": [
+        "codex"
+      ],
+      "hash": "928a7ef4e9f8f76ccaaf0b7b577386c974077985fe7fa066dae4276bfc744037"
+    },
+    {
+      "kind": "skill",
+      "path": ".agents/skills/test-strategy/SKILL.md",
+      "skill": "test-strategy",
+      "targets": [
+        "codex"
+      ],
+      "hash": "e68899774dfa833b19e29d6224e8f375b5263b242bf5be1548c342ce2f4e93d3"
+    },
+    {
+      "kind": "skill",
+      "path": ".agents/skills/verification/SKILL.md",
+      "skill": "verification",
+      "targets": [
+        "codex"
+      ],
+      "hash": "9e44d108ee0c611ceab8acce49e7ffcbfa9ce8f4fcb3075965d99633f3f9789e"
+    },
+    {
+      "kind": "skill",
+      "path": ".agents/skills/worktree-workflow/SKILL.md",
+      "skill": "worktree-workflow",
+      "targets": [
+        "codex"
+      ],
+      "hash": "7cc1d9d3a92dcaab15e3fc6c59980628c75b094cff280d698c2c0c9b701b4ba2"
+    },
+    {
+      "kind": "agent",
+      "path": ".claude/agents/agentyx-reviewer.md",
+      "agent": "agentyx-reviewer",
+      "targets": [
+        "claude"
+      ],
+      "hash": "f0b0ec82138c14b9e550a868278472b50c895dfa1c135e52da521919147d16fa"
+    },
+    {
+      "kind": "hook",
+      "path": ".claude/settings.json",
+      "hooks": [
+        "observe-session-end",
+        "observe-session-start",
+        "observe-tool-use",
+        "session-doctor-bootstrap"
+      ],
+      "targets": [
+        "claude"
+      ],
+      "hash": "b27a67aa219cafb226d42d09973efbf21239669a96abc32f58d2ac73203b6de3",
+      "created": true
+    },
+    {
+      "kind": "skill",
+      "path": ".claude/skills/brainstorming/SKILL.md",
+      "skill": "brainstorming",
+      "targets": [
+        "claude"
+      ],
+      "hash": "9e18ebcd4c0a60ee0945283b181a76210d06936da2bb4852a2aea6188130b754"
+    },
+    {
+      "kind": "skill",
+      "path": ".claude/skills/concise-output/SKILL.md",
+      "skill": "concise-output",
+      "targets": [
+        "claude"
+      ],
+      "hash": "9393b8594a3fc63a288fb6b4a82312c9cc57d539b7bf49cd709a913937e9e2af"
+    },
+    {
+      "kind": "skill",
+      "path": ".claude/skills/context-efficient-development/SKILL.md",
+      "skill": "context-efficient-development",
+      "targets": [
+        "claude"
+      ],
+      "hash": "3b0279048858e62857f7bab721554690d6601f8dd1d7c208dec2d952ea01370f"
+    },
+    {
+      "kind": "skill",
+      "path": ".claude/skills/e2e-testing/SKILL.md",
+      "skill": "e2e-testing",
+      "targets": [
+        "claude"
+      ],
+      "hash": "f07c9ae381e916d93c6ee67c32be8eac76482f19fcfbbe9ca6116af9c3036113"
+    },
+    {
+      "kind": "skill",
+      "path": ".claude/skills/flaky-tests/SKILL.md",
+      "skill": "flaky-tests",
+      "targets": [
+        "claude"
+      ],
+      "hash": "d567f98325047a258658b44bf8993060256ae1ccf5e8570d183805e533e47481"
+    },
+    {
+      "kind": "skill",
+      "path": ".claude/skills/focused-verification/SKILL.md",
+      "skill": "focused-verification",
+      "targets": [
+        "claude"
+      ],
+      "hash": "af0d9709dc7ad838bf82507785473657fd1620466d4178da351022dee83d39f5"
+    },
+    {
+      "kind": "skill",
+      "path": ".claude/skills/parallel-work/SKILL.md",
+      "skill": "parallel-work",
+      "targets": [
+        "claude"
+      ],
+      "hash": "ddf2862b7320095eead3f954ab4dafbcf8324ea644135461362aaf503c28899d"
+    },
+    {
+      "kind": "skill",
+      "path": ".claude/skills/planning/SKILL.md",
+      "skill": "planning",
+      "targets": [
+        "claude"
+      ],
+      "hash": "b1611eaa6a1f454c4c3a698a93afbd6a5f09445e61345ad14496a143ca169790"
+    },
+    {
+      "kind": "skill",
+      "path": ".claude/skills/requesting-code-review/SKILL.md",
+      "skill": "requesting-code-review",
+      "targets": [
+        "claude"
+      ],
+      "hash": "87a63cba4f1b30db4fe28815d7fc0e94ee260b97ba10c60aef5de84da8b55b1a"
+    },
+    {
+      "kind": "skill",
+      "path": ".claude/skills/subagent-driven-development/SKILL.md",
+      "skill": "subagent-driven-development",
+      "targets": [
+        "claude"
+      ],
+      "hash": "86695f6c1f346d9399e31bfec0054da47f8d4284110b9f277f28ea5e9e741bda"
+    },
+    {
+      "kind": "skill",
+      "path": ".claude/skills/systematic-debugging/SKILL.md",
+      "skill": "systematic-debugging",
+      "targets": [
+        "claude"
+      ],
+      "hash": "9cfc2371df6cd1d999352131198a44cc2a6456b88a30ad760e2f747dbbeb7a5a"
+    },
+    {
+      "kind": "skill",
+      "path": ".claude/skills/targeted-exploration/SKILL.md",
+      "skill": "targeted-exploration",
+      "targets": [
+        "claude"
+      ],
+      "hash": "f953693a6ac3b874ad0d036e38d1d8a1886d70785db40b8f1a77e24019786116"
+    },
+    {
+      "kind": "skill",
+      "path": ".claude/skills/test-doubles/SKILL.md",
+      "skill": "test-doubles",
+      "targets": [
+        "claude"
+      ],
+      "hash": "928a7ef4e9f8f76ccaaf0b7b577386c974077985fe7fa066dae4276bfc744037"
+    },
+    {
+      "kind": "skill",
+      "path": ".claude/skills/test-strategy/SKILL.md",
+      "skill": "test-strategy",
+      "targets": [
+        "claude"
+      ],
+      "hash": "e68899774dfa833b19e29d6224e8f375b5263b242bf5be1548c342ce2f4e93d3"
+    },
+    {
+      "kind": "skill",
+      "path": ".claude/skills/verification/SKILL.md",
+      "skill": "verification",
+      "targets": [
+        "claude"
+      ],
+      "hash": "9e44d108ee0c611ceab8acce49e7ffcbfa9ce8f4fcb3075965d99633f3f9789e"
+    },
+    {
+      "kind": "skill",
+      "path": ".claude/skills/worktree-workflow/SKILL.md",
+      "skill": "worktree-workflow",
+      "targets": [
+        "claude"
+      ],
+      "hash": "7cc1d9d3a92dcaab15e3fc6c59980628c75b094cff280d698c2c0c9b701b4ba2"
+    },
+    {
+      "kind": "agent",
+      "path": ".codex/agents/agentyx-reviewer.toml",
+      "agent": "agentyx-reviewer",
+      "targets": [
+        "codex"
+      ],
+      "hash": "419350453086bbae95bbcddee9b1a7e0ba0695f6894bf488e2d887e865786e23"
+    },
+    {
+      "kind": "mcp",
+      "path": ".codex/config.toml",
+      "servers": [
+        "playwright"
+      ],
+      "targets": [
+        "codex"
+      ],
+      "hash": "d38c91eb6534891dc9aab870a4551afeb8fd67cf7ce1a59009a09a3a5503ad30",
+      "created": true
+    },
+    {
+      "kind": "hook",
+      "path": ".codex/hooks.json",
+      "hooks": [
+        "observe-session-end",
+        "observe-session-start",
+        "observe-tool-use",
+        "session-doctor-bootstrap"
+      ],
+      "targets": [
+        "codex"
+      ],
+      "hash": "9083e649de19b47a0aef140d83b8fb11209fdaf9b6ce634618c380f69babf5fe",
+      "created": true
+    },
+    {
+      "kind": "mcp",
+      "path": ".mcp.json",
+      "servers": [
+        "playwright"
+      ],
+      "targets": [
+        "claude"
+      ],
+      "hash": "0d93b2d2c71900e39fb10b82b2235a2561040b1922557516b9537b2576be1dec",
+      "created": true
+    }
+  ]
+}

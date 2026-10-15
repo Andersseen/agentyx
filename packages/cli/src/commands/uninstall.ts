@@ -63,7 +63,13 @@ export async function runUninstallCommand(input: UninstallCommandInput): Promise
   const plans = await planUninstall({ targets, projectDir: input.cwd, manifest });
 
   if (!input.dryRun) {
-    await applyInstallPlans(plans, { manifest });
+    // Legacy v1 locks stay v1; a v2 lock loses its resolution because a removal no longer
+    // matches the reviewed harness. Nothing left to own removes the lock.
+    await applyInstallPlans(plans, {
+      manifest,
+      projectDir: input.cwd,
+      commit: { kind: "preserve-version" },
+    });
   }
 
   return input.json ? renderJson(input, plans) : renderText(input, plans);

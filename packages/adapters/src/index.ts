@@ -33,7 +33,7 @@ export {
   UnsupportedMcpEnvReferenceError,
   UnsupportedMcpTransportError,
 } from "./errors.js";
-export type { ApplyInstallOptions, InstallResult } from "./executor.js";
+export type { ApplyInstallOptions, InstallResult, ManifestCommitIntent } from "./executor.js";
 export { applyInstallPlan, applyInstallPlans } from "./executor.js";
 export type {
   HookPayloadNormalizer,

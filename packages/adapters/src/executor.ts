@@ -9,6 +9,8 @@ import {
   type InstallManifest,
   type InstallManifestEntry,
   manifestEntriesByPath,
+  parseInstallManifest,
+  type ResolutionSnapshot,
 } from "@agentyx/core";
 import { IncompleteInstallError, InstallPathError, StaleInstallPlanError } from "./errors.js";
 import { assertInside, assertInsideRealPath } from "./path.js";
@@ -32,7 +34,34 @@ export interface InstallResult {
   readonly conflicts: readonly string[];
 }
 
+/**
+ * What kind of lock the caller wants committed once every provider change has succeeded.
+ *
+ * Orchestration decides the semantics; the executor only applies them, and is still the only
+ * writer of `.agentyx.lock.json`. Ownership entries come from the applied plans in every case —
+ * a resolution snapshot never grants or removes ownership.
+ *
+ * - `v2-complete`: version 2 with the given reviewed resolution snapshot. The lock is kept even
+ *   when no entries remain, because the snapshot is a claim in its own right.
+ * - `v2-incomplete`: version 2 with `resolution: null` (manual, partial or override operation).
+ *   A lock that owns nothing is removed.
+ * - `preserve-version`: keep the format already on disk — a version-1 lock stays version 1, a
+ *   version-2 lock loses its resolution because the run no longer matches what was reviewed.
+ *   An empty lock is removed. This is the uninstall behaviour, and the default.
+ */
+export type ManifestCommitIntent =
+  | { readonly kind: "v2-complete"; readonly resolution: ResolutionSnapshot }
+  | { readonly kind: "v2-incomplete" }
+  | { readonly kind: "preserve-version" };
+
 export interface ApplyInstallOptions {
+  /**
+   * The project root that owns `.agentyx.lock.json`. Needed when a run has no provider plans
+   * but still commits a lock; otherwise taken from the first plan.
+   */
+  readonly projectDir?: string;
+  /** What to commit as the lock. Defaults to `preserve-version`. */
+  readonly commit?: ManifestCommitIntent;
   /**
    * The manifest as it stood before this run.
    *
@@ -118,17 +147,12 @@ export async function runInstallPlans(
       results.push(await runPlan(plan, state));
     }
 
-    const projectDir = plans[0]?.projectDir;
+    const projectDir = options.projectDir ?? plans[0]?.projectDir;
 
     if (projectDir !== undefined) {
-      const manifest = nextManifest(options.manifest ?? emptyInstallManifest(), plans);
-      const path = agentyxManifestPath(projectDir);
-
-      if (manifest.entries.length > 0) {
-        await writeFileAtomic(path, formatInstallManifest(manifest));
-      } else {
-        await rm(path, { force: true });
-      }
+      const intent = options.commit ?? { kind: "preserve-version" };
+      const manifest = nextManifest(options.manifest ?? emptyInstallManifest(), plans, intent);
+      await commitManifest(agentyxManifestPath(projectDir), manifest, intent);
     }
 
     return results;
@@ -375,6 +399,44 @@ async function writeFileAtomic(path: string, content: string): Promise<void> {
 }
 
 /**
+ * Writes the final lock, or removes it, last of all.
+ *
+ * A lock whose parsed content already equals the intended one is left alone, so a repeated
+ * identical run changes neither bytes nor mtime. A snapshot-only change still writes.
+ */
+async function commitManifest(
+  path: string,
+  manifest: InstallManifest,
+  intent: ManifestCommitIntent,
+): Promise<void> {
+  if (manifest.entries.length === 0 && intent.kind !== "v2-complete") {
+    await rm(path, { force: true });
+    return;
+  }
+
+  const content = formatInstallManifest(manifest);
+
+  if (await sameAsOnDisk(path, content)) {
+    return;
+  }
+
+  await writeFileAtomic(path, content);
+}
+
+async function sameAsOnDisk(path: string, content: string): Promise<boolean> {
+  try {
+    const existing = await readFile(path, "utf8");
+
+    return (
+      existing === content ||
+      formatInstallManifest(parseInstallManifest(JSON.parse(existing))) === content
+    );
+  } catch {
+    return false;
+  }
+}
+
+/**
  * The manifest as it stands after a run.
  *
  * Three groups make it up: entries this run rewrote, entries it removed (which
@@ -385,7 +447,11 @@ async function writeFileAtomic(path: string, content: string): Promise<void> {
  * nothing. A removal that turned out to be a conflict drops its entry instead:
  * the file is now the user's, and Agentyx stops speaking for it.
  */
-function nextManifest(previous: InstallManifest, plans: readonly InstallPlan[]): InstallManifest {
+function nextManifest(
+  previous: InstallManifest,
+  plans: readonly InstallPlan[],
+  intent: ManifestCommitIntent,
+): InstallManifest {
   const plannedTargets = new Set(plans.map((plan) => plan.target));
   const previousByPath = manifestEntriesByPath(previous);
   const removed = new Set<string>();
@@ -481,7 +547,11 @@ function nextManifest(previous: InstallManifest, plans: readonly InstallPlan[]):
     ...rewritten.values(),
   ];
 
-  if (previous.version === 2) {
+  if (intent.kind === "v2-complete") {
+    return { version: 2, entries, resolution: intent.resolution };
+  }
+
+  if (intent.kind === "v2-incomplete" || previous.version === 2) {
     return { version: 2, entries, resolution: null };
   }
 

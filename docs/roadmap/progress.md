@@ -437,3 +437,53 @@ was not reproduced locally; the escalated packaged smoke used the current macOS/
 No packages were published. R090-02 remains deliberately out of scope.
 
 Next task: R090-02 — persist complete snapshots and implement explicit v1 migration.
+
+## R090-02 — Persist complete snapshots and explicit v1 migration
+
+Status: implemented and locally validated; PR CI result is recorded in the PR.
+Starting commit: `200f776` (`main`; `@agentyx/core`, `@agentyx/adapters`, `@agentyx/cli` at `0.18.0`).
+
+Delivered:
+- Version 2 is the default writer. A run is **complete** only with no pack arguments, `--target`,
+  `--enable`, `--skill`, `--mcp`, `--select`, `--skills-only` or `--mcp-only`; `--force`/`--prune`
+  are application policy and do not make it partial. `install`, `sync`, `init --install` and
+  `configure --sync` (all through `executeInstall`) write a complete `ResolutionSnapshot` built by
+  `createResolutionSnapshot` from the same `ResolvedAgentyxConfig` that drove planning, stamped with
+  `cliVersion`. Every other mode writes v2 `resolution: null`, invalidating any earlier snapshot.
+  Retained stale ownership stays in `entries` only; the snapshot holds the desired harness.
+- Executor remains the only lock writer. `applyInstallPlans` takes `commit: ManifestCommitIntent`
+  (`v2-complete`, `v2-incomplete`, `preserve-version`) and an explicit `projectDir`, so zero-plan runs
+  can commit. The lock is committed last through the unchanged atomic temp-file + rename; an
+  existing lock whose content equals the intended one is not rewritten (bytes and mtime preserved),
+  while snapshot-only changes do write. An empty-ownership lock is kept only for a complete snapshot
+  (a reviewed empty harness); otherwise it is removed. Stale-plan and incomplete-install semantics
+  are unchanged; a failed final write leaves the previous lock.
+- `loadInstallManifestState` (core) reports `present` next to the manifest; `loadInstallManifest`
+  is unchanged for other callers.
+- Legacy v1: `install`/`sync` (including partial installs) refuse before planning or writing with
+  `legacy_lock_requires_migration`; `--dry-run` still previews and reports migration `required`.
+  `configure --sync` keeps the new desired config and prints migration guidance.
+- `install --migrate-lock` (no `sync` flag): rejected with `lock_migration_requires_full_project`
+  when combined with any override (before prompts), `legacy_lock_missing` without a lock,
+  `lock_migration_not_needed` for v2. It is a real full-project convergence with v1 entries as the
+  only ownership evidence; edited or unmanaged destinations conflict and nothing is committed.
+  `--dry-run` writes nothing. `--force` keeps its existing bounded meaning.
+- Uninstall: full uninstall removes the lock; partial v2 uninstall keeps v2 and nulls `resolution`;
+  v1 uninstall works without migration and stays v1. Doctor reads v1, complete v2 and null v2 and is
+  unchanged.
+- Reporting: install JSON gains an additive `lock` object (`present`, `currentVersion`,
+  `nextVersion`, `migration`, `resolution`, `invalidated`); text ends with a one-line `Lock:` status.
+  No snapshot content is printed.
+- Fixture: `packages/cli/test/fixtures/lock-v1` is a real v1 project (Skill, Agent, MCP and Hook
+  entries) generated with the v1 writer; it is excluded from Biome so recorded hashes stay exact.
+- Smoke: `pnpm smoke:pack` now asserts a v2 complete lock stamped with the packed version, byte-identical
+  lock after a second sync, refusal of `sync` on v1, dry-run immutability and packaged migration.
+
+Changeset: `.changeset/persist-v2-lock-migration.md` (minor fixed group).
+Verification (local): `pnpm check` passed — 64 test files, 773 tests; `pnpm eval:skills` passed — 11
+scenarios; `pnpm smoke:pack` passed; scratch lifecycle outside the checkout (fresh v2 + no-op sync,
+v1 dry-run + migration, edited-file migration refusal with the v1 lock byte-identical) passed.
+Known limitations: concurrent installers are still unsupported (no file locking); `--frozen` and
+`doctor --locked` are not implemented. The GitHub Actions matrix was not reproduced locally.
+
+Next task: R090-03 — locked comparison and frozen installation.
