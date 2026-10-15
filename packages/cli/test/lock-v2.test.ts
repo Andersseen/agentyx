@@ -479,13 +479,11 @@ describe("install --migrate-lock", () => {
     expect(await tree()).toEqual(before);
   });
 
-  it("does not add sync --migrate-lock, --frozen or doctor --locked", async () => {
+  it("does not add sync --migrate-lock or sync --frozen", async () => {
     const { createSyncCommand } = await import("../src/commands/sync.js");
-    const { createDoctorCommand } = await import("../src/commands/doctor.js");
-    const { createInstallCommand } = await import("../src/commands/install.js");
+    const flags = createSyncCommand().options.map((o) => o.long);
 
-    expect(createSyncCommand().options.map((o) => o.long)).not.toContain("--migrate-lock");
-    expect(createDoctorCommand().options.map((o) => o.long)).not.toContain("--locked");
-    expect(createInstallCommand().options.map((o) => o.long)).not.toContain("--frozen");
+    expect(flags).not.toContain("--migrate-lock");
+    expect(flags).not.toContain("--frozen");
   });
 });

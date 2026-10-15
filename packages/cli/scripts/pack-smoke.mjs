@@ -468,6 +468,72 @@ const missingLocalDoctor = JSON.parse((await run(CLI, ["doctor", "--json"], life
 if (missingLocalDoctor.readiness?.localPrerequisites?.state !== "not-ready")
   throw new Error("Packaged Doctor did not report a missing local hook prerequisite.");
 await writeFile(join(lifeDir, "node_modules", ".bin", "agentyx"), "#!/bin/sh\n");
+
+// --- Locked comparison and frozen restoration with the packed CLI. ---
+const lockedMatching = JSON.parse(
+  (await run(CLI, ["doctor", "--locked", "--json"], lifeDir)).stdout,
+);
+if (
+  lockedMatching.reproducibility?.state !== "matching" ||
+  lockedMatching.reproducibility.differences.length !== 0
+)
+  throw new Error("Packaged doctor --locked did not report a matching converged project.");
+assertExit(
+  runStatus(CLI, ["doctor", "--locked", "--check"], lifeDir),
+  0,
+  "doctor --locked --check",
+);
+
+const frozenSkill = ".agents/skills/planning/SKILL.md";
+const frozenCanonical = await readFile(join(lifeDir, frozenSkill), "utf8");
+const frozenLockBytes = await readFile(join(lifeDir, ".agentyx.lock.json"), "utf8");
+await rm(join(lifeDir, frozenSkill));
+const lockedPending = JSON.parse(
+  (await run(CLI, ["doctor", "--locked", "--json"], lifeDir)).stdout,
+);
+if (
+  lockedPending.reproducibility?.state !== "matching" ||
+  lockedPending.readiness?.installation?.state !== "not-ready"
+)
+  throw new Error(
+    "A matching lock with a missing Skill must be matching but not installation-ready.",
+  );
+const frozenDry = await snapshot(lifeDir);
+await run(CLI, ["install", "--frozen", "--dry-run"], lifeDir);
+if (!sameSnapshot(frozenDry, await snapshot(lifeDir)))
+  throw new Error("install --frozen --dry-run wrote files.");
+await run(CLI, ["install", "--frozen"], lifeDir);
+if ((await readFile(join(lifeDir, frozenSkill), "utf8")) !== frozenCanonical)
+  throw new Error("install --frozen did not restore the exact canonical Skill.");
+if ((await readFile(join(lifeDir, ".agentyx.lock.json"), "utf8")) !== frozenLockBytes)
+  throw new Error("install --frozen rewrote the lock.");
+assertExit(
+  runStatus(CLI, ["doctor", "--locked", "--check"], lifeDir),
+  0,
+  "doctor --locked --check after frozen",
+);
+
+// A changed input must be rejected before anything is written.
+const frozenConfigBytes = await readFile(join(lifeDir, ".agentyx.json"), "utf8");
+await run(CLI, ["configure", "--enable", "agentyx-reviewer", "--yes"], lifeDir);
+assertExit(
+  runStatus(CLI, ["doctor", "--locked"], lifeDir),
+  1,
+  "doctor --locked after a config change",
+);
+await rm(join(lifeDir, frozenSkill));
+const frozenMismatchBefore = await snapshot(lifeDir);
+assertExit(
+  runStatus(CLI, ["install", "--frozen"], lifeDir),
+  1,
+  "install --frozen after a config change",
+);
+if (!sameSnapshot(frozenMismatchBefore, await snapshot(lifeDir)))
+  throw new Error("A refused frozen install changed files.");
+if ((await readFile(join(lifeDir, ".agentyx.lock.json"), "utf8")) !== frozenLockBytes)
+  throw new Error("A refused frozen install changed the lock.");
+await writeFile(join(lifeDir, ".agentyx.json"), frozenConfigBytes);
+await run(CLI, ["install", "--frozen"], lifeDir);
 for (const path of [".agents/skills/planning/SKILL.md", ".claude/skills/planning/SKILL.md"])
   await readFile(join(lifeDir, path), "utf8");
 if (

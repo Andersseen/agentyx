@@ -3,12 +3,14 @@ import {
   builtInAdapterRegistry,
   collectInstallConflicts,
   detectConfiguredTargets,
+  FrozenInstallError,
   InstallConflictError,
   type InstallPlan,
   type InstallPlanSummary,
   planInstall,
   planTargetInstall,
   summarizeInstallPlans,
+  validateFrozenPlans,
 } from "@agentyx/adapters";
 import {
   type AgentyxConfig,
@@ -17,8 +19,7 @@ import {
   builtInHookRegistry,
   builtInMcpServerRegistry,
   builtInSkillRegistry,
-  builtInToolRegistry,
-  createResolutionSnapshot,
+  compareResolutionSnapshots,
   type InstallManifest,
   loadAgentyxProject,
   loadInstallManifestState,
@@ -38,7 +39,7 @@ import {
   skillOptions,
   targetOptions,
 } from "../prompts.js";
-import { cliVersion } from "../version.js";
+import { createCurrentProjectResolutionSnapshot, describeDifference } from "../snapshot.js";
 
 export interface InstallCommandInput {
   /**
@@ -68,6 +69,11 @@ export interface InstallCommandInput {
    * without any resolution override; it is a real convergence, not a JSON rewrite.
    */
   readonly migrateLock?: boolean;
+  /**
+   * Reproduce only reviewed state: requires a complete v2 lock whose snapshot equals the current
+   * inputs, and may only restore missing Skill files the lock already owns. Never writes the lock.
+   */
+  readonly frozen?: boolean;
   readonly cwd: string;
 }
 
@@ -136,6 +142,10 @@ export interface InstallOutcome {
  * same output as `agentyx install` because it is the same code path.
  */
 export async function executeInstall(input: InstallCommandInput): Promise<InstallOutcome> {
+  if (input.frozen === true) {
+    assertFrozenFlags(input);
+  }
+
   if (input.skillsOnly === true && input.mcpOnly === true) {
     throw new InstallCommandError(
       "install_scope_conflict",
@@ -152,6 +162,11 @@ export async function executeInstall(input: InstallCommandInput): Promise<Instal
 
   const lock = await loadInstallManifestState(input.cwd);
   const manifest = lock.manifest;
+
+  if (input.frozen === true) {
+    return executeFrozenInstall(input, lock.present, manifest);
+  }
+
   const legacy = lock.present && manifest.version === 1;
 
   if (input.migrateLock === true) {
@@ -256,6 +271,151 @@ export async function executeInstall(input: InstallCommandInput): Promise<Instal
   };
 }
 
+/** Frozen is a full-project, non-interactive reproduction; every override and mutation flag is out. */
+function assertFrozenFlags(input: InstallCommandInput): void {
+  const conflicting = [
+    input.packs.length > 0 ? "pack arguments" : undefined,
+    input.targets.length > 0 ? "--target" : undefined,
+    (input.enable ?? []).length > 0 ? "--enable" : undefined,
+    input.skills.length > 0 ? "--skill" : undefined,
+    input.mcpServers.length > 0 ? "--mcp" : undefined,
+    input.select ? "--select" : undefined,
+    input.skillsOnly === true ? "--skills-only" : undefined,
+    input.mcpOnly === true ? "--mcp-only" : undefined,
+    input.force === true ? "--force" : undefined,
+    input.prune === true ? "--prune" : undefined,
+    input.pruneRemovedTargets === true ? "removing targets" : undefined,
+    input.migrateLock === true ? "--migrate-lock" : undefined,
+  ].filter((flag) => flag !== undefined);
+
+  if (conflicting.length > 0) {
+    throw new FrozenInstallError(
+      "frozen_mode_conflict",
+      `--frozen reproduces the whole reviewed project and cannot be combined with ${conflicting.join(", ")}. Only --dry-run and --json are allowed.`,
+    );
+  }
+}
+
+/** The `frozen` section of the install report. No content, hashes or secrets. */
+export interface FrozenReport {
+  readonly requested: true;
+  readonly snapshot: "matching";
+  /** Missing managed Skill files that are (dry run) or were restored. */
+  readonly restorableSkills: readonly string[];
+  readonly lockChanged: false;
+}
+
+async function executeFrozenInstall(
+  input: InstallCommandInput,
+  lockPresent: boolean,
+  manifest: InstallManifest,
+): Promise<InstallOutcome> {
+  if (!lockPresent) {
+    throw new FrozenInstallError(
+      "frozen_lock_missing",
+      ".agentyx.lock.json is missing. Perform a reviewed full config-based agentyx install or agentyx sync first.",
+    );
+  }
+
+  if (manifest.version === 1) {
+    throw new FrozenInstallError(
+      "frozen_lock_legacy",
+      "This project uses a version-1 lock, which has no reviewed resolution snapshot. Review and migrate it with: agentyx install --migrate-lock",
+    );
+  }
+
+  if (manifest.resolution === null) {
+    throw new FrozenInstallError(
+      "frozen_resolution_missing",
+      "The lock records no complete resolution snapshot. Run a normal full config-based agentyx sync or agentyx install to recreate it.",
+    );
+  }
+
+  // Inputs are compared before anything is planned, let alone written.
+  const environment = await resolveEnvironment(input);
+  const project = environment.project;
+
+  if (project === undefined) {
+    throw new InstallCommandError(
+      "frozen_project_unavailable",
+      "The project could not be resolved.",
+    );
+  }
+
+  const differences = compareResolutionSnapshots(manifest.resolution, snapshotOf(project));
+
+  if (differences.length > 0) {
+    throw new FrozenInstallError(
+      "frozen_resolution_mismatch",
+      [
+        "Current inputs no longer match the locked resolution:",
+        ...differences.slice(0, 10).map((difference) => `  - ${describeDifference(difference)}`),
+        ...(differences.length > 10 ? [`  - … and ${differences.length - 10} more`] : []),
+        "Review the change and run a normal agentyx sync or agentyx install to refresh the lock.",
+      ].join("\n"),
+      { differences },
+    );
+  }
+
+  const plans = await planInstall({
+    targets: environment.targets,
+    projectDir: input.cwd,
+    skills: environment.skills.map((name) => environment.skillRegistry.get(name)),
+    mcpServers: environment.mcpServers.map((name) => builtInMcpServerRegistry.get(name)),
+    hooks: environment.hooks.map((name) => builtInHookRegistry.get(name)),
+    agents: environment.agents.map((name) => builtInAgentRegistry.get(name)),
+    manifest,
+    prune: false,
+    force: false,
+  });
+  const restorable = validateFrozenPlans(plans, manifest);
+
+  if (!input.dryRun) {
+    await applyInstallPlans(plans, {
+      manifest,
+      projectDir: input.cwd,
+      commit: { kind: "read-only" },
+    });
+  }
+
+  const frozen: FrozenReport = {
+    requested: true,
+    snapshot: "matching",
+    restorableSkills: restorable,
+    lockChanged: false,
+  };
+  const lockReport: LockReport = {
+    present: true,
+    currentVersion: 2,
+    nextVersion: 2,
+    migration: "none",
+    resolution: "complete",
+    invalidated: false,
+  };
+
+  return {
+    text: renderFrozenText(input, restorable),
+    report: buildInstallReport(input, environment, plans, [], lockReport, frozen),
+    summary: summarizeInstallPlans(plans),
+  };
+}
+
+function renderFrozenText(input: InstallCommandInput, restorable: readonly string[]): string {
+  const count = `${restorable.length} missing managed Skill${restorable.length === 1 ? "" : "s"}`;
+
+  if (restorable.length === 0) {
+    return `Frozen: locked resolution matches; installation already satisfied.${
+      input.dryRun ? " Nothing was written." : ""
+    }`;
+  }
+
+  const lines = restorable.map((path) => `  ${path}`).join("\n");
+
+  return input.dryRun
+    ? `Frozen dry run: ${count} can be restored. Nothing was written.\n${lines}`
+    : `Frozen: restored ${count}. The lock was not changed.\n${lines}`;
+}
+
 /** What happens to `.agentyx.lock.json`, without any snapshot content. */
 export interface LockReport {
   readonly present: boolean;
@@ -296,17 +456,7 @@ function describeLock(
 }
 
 function snapshotOf(project: ProjectResolution): ResolutionSnapshot {
-  return createResolutionSnapshot({
-    agentyxVersion: cliVersion,
-    config: project.config,
-    resolved: project.resolved,
-    packRegistry: project.packRegistry,
-    skillRegistry: project.skillRegistry,
-    mcpRegistry: builtInMcpServerRegistry,
-    toolRegistry: builtInToolRegistry,
-    hookRegistry: builtInHookRegistry,
-    agentRegistry: builtInAgentRegistry,
-  });
+  return createCurrentProjectResolutionSnapshot(project);
 }
 
 /** The loaded project and the one resolution that drives both planning and the lock snapshot. */
@@ -650,10 +800,12 @@ function buildInstallReport(
   plans: readonly InstallPlan[],
   conflicts: readonly string[],
   lock: LockReport,
+  frozen?: FrozenReport,
 ) {
   return {
     dryRun: input.dryRun,
     lock,
+    ...(frozen === undefined ? {} : { frozen }),
     conflicts,
     packs: environment.packs,
     skills: environment.skills,
@@ -758,6 +910,11 @@ export function createInstallCommand(): Command {
     .option("--prune", "remove managed files the current selection no longer resolves", false)
     .option("--force", "overwrite files Agentyx does not manage", false)
     .option(
+      "--frozen",
+      "require the complete locked resolution and only restore permitted missing managed Skills; never changes the lock",
+      false,
+    )
+    .option(
       "--migrate-lock",
       "migrate an existing version-1 lock through a reviewed full-project install",
       false,
@@ -778,6 +935,7 @@ export function createInstallCommand(): Command {
           prune: boolean;
           force: boolean;
           migrateLock: boolean;
+          frozen: boolean;
         },
       ) => {
         await emit(() =>
@@ -795,6 +953,7 @@ export function createInstallCommand(): Command {
             prune: options.prune,
             force: options.force,
             migrateLock: options.migrateLock,
+            frozen: options.frozen,
             cwd: process.cwd(),
           }),
         );

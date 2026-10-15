@@ -1,4 +1,4 @@
-import { AgentyxError } from "@agentyx/core";
+import { AgentyxError, type ResolutionDifference } from "@agentyx/core";
 
 /**
  * Raised when a target has no adapter.
@@ -245,4 +245,40 @@ function describeFailure(cause: unknown): string {
   return code === undefined
     ? "a filesystem operation failed."
     : `a filesystem operation failed (${code}).`;
+}
+
+/** Stable codes `install --frozen` fails with. */
+export type FrozenInstallErrorCode =
+  | "frozen_mode_conflict"
+  | "frozen_lock_missing"
+  | "frozen_lock_legacy"
+  | "frozen_resolution_missing"
+  | "frozen_resolution_mismatch"
+  | "frozen_stale_ownership"
+  | "frozen_installation_change_required"
+  | "frozen_restore_not_owned";
+
+/**
+ * Raised when a frozen installation cannot reproduce the reviewed lock without changing it.
+ *
+ * Frozen mode fails before any write. `paths` are project-relative, and `differences` are the
+ * safe structured snapshot differences — neither carries hashes, bodies or configuration.
+ */
+export class FrozenInstallError extends AgentyxError {
+  readonly paths: readonly string[];
+  readonly differences: readonly ResolutionDifference[];
+
+  constructor(
+    code: FrozenInstallErrorCode,
+    message: string,
+    detail: {
+      readonly paths?: readonly string[];
+      readonly differences?: readonly ResolutionDifference[];
+    } = {},
+  ) {
+    super(code, message);
+    this.name = "FrozenInstallError";
+    this.paths = detail.paths ?? [];
+    this.differences = detail.differences ?? [];
+  }
 }

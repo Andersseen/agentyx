@@ -487,3 +487,46 @@ Known limitations: concurrent installers are still unsupported (no file locking)
 `doctor --locked` are not implemented. The GitHub Actions matrix was not reproduced locally.
 
 Next task: R090-03 — locked comparison and frozen installation.
+
+## R090-03 — Locked comparison and frozen installation
+
+Starting point: `main` at `3d186f0de6ae255c0fe50966b6d8c452e218266a`, packages at 0.19.0 (R090-01/02
+merged). Branch `feat/locked-doctor-frozen-install`.
+
+- `doctor --locked` (opt-in, read-only, no network or processes): builds the current snapshot through
+  the shared `createCurrentProjectResolutionSnapshot` (`packages/cli/src/snapshot.ts`, also used by
+  install) and compares with core's `compareResolutionSnapshots`. Doctor JSON gains an always-present
+  `reproducibility` `{ checked, state, differences }`; states: `not-checked`, `matching`, `mismatch`,
+  `missing-lock`, `legacy-lock`, `snapshot-unavailable`, `unavailable` (invalid or missing current
+  config). Differences are the safe categories only (no hashes or bodies). Diagnostics:
+  `locked_manifest_missing`, `locked_manifest_legacy`, `locked_resolution_missing`,
+  `locked_resolution_mismatch` (all errors, so exit 1 without `--check`), plus
+  `locked_inputs_unavailable` when nothing else already reports an error. A matching snapshot does not
+  imply installation readiness. The exact CLI version is part of the contract. `--hook --locked` is
+  rejected (`doctor_hook_locked_conflict`); ordinary Doctor is unchanged.
+- `install --frozen` (no `sync --frozen`): full-project only; rejects packs, `--target`, `--enable`,
+  `--skill`, `--mcp`, `--select`, `--skills-only`, `--mcp-only`, `--force`, `--prune`,
+  `--migrate-lock` and target removal (`frozen_mode_conflict`) before prompting or writing;
+  `--dry-run`/`--json` allowed. Requires a v2 lock with a complete snapshot (`frozen_lock_missing`,
+  `frozen_lock_legacy`, `frozen_resolution_missing`), compares the snapshot before planning
+  (`frozen_resolution_mismatch`, with structured differences), then uses the real planner and
+  `validateFrozenPlans` (adapters): any ownership outside the desired selection or recorded targets
+  fails (`frozen_stale_ownership`); unowned or hash-mismatching resources fail
+  (`frozen_restore_not_owned`); updates, conflicts, deletions and any Agent/MCP/Hook creation or change
+  fail (`frozen_installation_change_required`). The only write is creating an absent, lock-owned Skill
+  whose recorded hash equals the canonical content.
+- Lock invariance: new `ManifestCommitIntent` `{ kind: "read-only" }` makes the executor skip the lock
+  entirely (bytes and mtime unchanged on no-op, restore and failure). Executor preflight, containment
+  and just-in-time validation still apply (`stale_install_plan` wins a race).
+- JSON: install reports gain `frozen { requested, snapshot, restorableSkills, lockChanged }` for frozen
+  runs only. README documents both commands; help text added.
+- Tests: 66 files, 829 tests (`locked-frozen.test.ts`, `adapters/test/frozen.test.ts`, updated wiring
+  tests); `pnpm check`, `pnpm eval:skills` (11 scenarios) and `pnpm smoke:pack` (locked success, frozen
+  restore with lock byte equality, mismatch rejection) passed locally. Scratch lifecycle outside the
+  checkout (match, missing-Skill restore with lock bytes+mtime unchanged, config change refused, edited
+  shared MCP config refused with the edit kept) passed.
+- Changeset: `.changeset/locked-doctor-frozen-install.md` (minor, fixed group).
+- Limitations: only missing Skills are restored; no concurrent-installer locking; the GitHub Actions
+  matrix (Linux 22/24, macOS and Windows smoke) is not reproducible locally.
+
+Next task: R090-04 — publish/document the complete reproducibility workflow and final artifact checks.

@@ -24,21 +24,26 @@ import {
   builtInMcpServerRegistry,
   builtInSkillRegistry,
   builtInToolRegistry,
+  compareResolutionSnapshots,
   detectProject,
   emptyInstallManifest,
   type InstallManifest,
   isExecutableOnPath,
   loadAgentyxProject,
   loadInstallManifest,
+  loadInstallManifestState,
   type McpServerDefinition,
   manifestEntriesByPath,
   type Recommendation,
+  type ResolutionDifference,
+  type ResolutionSnapshot,
   recommendCapabilities,
   resolveAgentyxConfig,
   type UtilizationReport,
 } from "@agentyx/core";
 import { Command } from "commander";
-import { section, toJson } from "../output.js";
+import { emit, section, toJson } from "../output.js";
+import { createCurrentProjectResolutionSnapshot, describeDifference } from "../snapshot.js";
 import {
   buildHarnessReports,
   type HarnessSection,
@@ -67,8 +72,26 @@ export interface DoctorDiagnostic {
   };
 }
 
+export type ReproducibilityState =
+  | "not-checked"
+  | "matching"
+  | "mismatch"
+  | "missing-lock"
+  | "legacy-lock"
+  | "snapshot-unavailable"
+  | "unavailable";
+
+/** The `--locked` comparison of current inputs with the lock's resolution snapshot. */
+export interface DoctorReproducibility {
+  readonly checked: boolean;
+  readonly state: ReproducibilityState;
+  /** Safe categories only: no hashes, bodies or configuration. */
+  readonly differences: readonly ResolutionDifference[];
+}
+
 export interface DoctorReport {
   readonly status: DoctorStatus;
+  readonly reproducibility: DoctorReproducibility;
   readonly readiness: DoctorReadiness;
   readonly project: {
     readonly packageManager: string | undefined;
@@ -174,6 +197,8 @@ export interface DoctorReport {
 export interface DoctorCommandInput {
   readonly json: boolean;
   readonly cwd: string;
+  /** Compare current harness inputs with the complete lock snapshot. Read-only. */
+  readonly locked?: boolean;
 }
 
 export async function runDoctorCommand(input: DoctorCommandInput): Promise<DoctorReport> {
@@ -565,6 +590,16 @@ export async function runDoctorCommand(input: DoctorCommandInput): Promise<Docto
         ? "not-ready"
         : "ready";
 
+  const reproducibility: DoctorReproducibility =
+    input.locked === true
+      ? await checkLockedResolution({
+          cwd: input.cwd,
+          configProject: configState.project,
+          resolved,
+          diagnostics,
+        })
+      : { checked: false, state: "not-checked", differences: [] };
+
   const harnessReports = await buildHarnessReports({
     cwd: input.cwd,
     resolved,
@@ -581,6 +616,7 @@ export async function runDoctorCommand(input: DoctorCommandInput): Promise<Docto
 
   return {
     status: statusOf(diagnostics),
+    reproducibility,
     readiness: {
       configuration: { state: configurationReady ? "ready" : "not-ready" },
       installation: { state: installationState },
@@ -652,6 +688,130 @@ export async function runDoctorCommand(input: DoctorCommandInput): Promise<Docto
   };
 }
 
+/**
+ * Compares the project as it resolves now with the complete snapshot the lock recorded.
+ *
+ * Read-only and local: it loads the lock, builds the same snapshot install records, and reuses
+ * core's comparison. Every locked contract failure is an error diagnostic, so `--locked` exits 1
+ * without `--check`. A matching snapshot says nothing about installed files; readiness does.
+ */
+async function checkLockedResolution(input: {
+  readonly cwd: string;
+  readonly configProject: AgentyxProject | undefined;
+  readonly resolved: ReturnType<typeof resolveAgentyxConfig> | undefined;
+  readonly diagnostics: DoctorDiagnostic[];
+}): Promise<DoctorReproducibility> {
+  const fail = (
+    state: ReproducibilityState,
+    code: string,
+    message: string,
+    differences: readonly ResolutionDifference[] = [],
+  ): DoctorReproducibility => {
+    input.diagnostics.push({ level: "error", code, message });
+
+    return { checked: true, state, differences };
+  };
+  let lock: Awaited<ReturnType<typeof loadInstallManifestState>>;
+
+  try {
+    lock = await loadInstallManifestState(input.cwd);
+  } catch (cause) {
+    if (
+      cause instanceof AgentyxManifestParseError ||
+      cause instanceof AgentyxManifestValidationError
+    ) {
+      // The unreadable lock is already an error diagnostic of the ordinary report.
+      return { checked: true, state: "unavailable", differences: [] };
+    }
+
+    throw cause;
+  }
+
+  if (!lock.present) {
+    return fail(
+      "missing-lock",
+      "locked_manifest_missing",
+      "--locked needs .agentyx.lock.json. Run a reviewed full config-based agentyx install or agentyx sync first.",
+    );
+  }
+
+  if (lock.manifest.version === 1) {
+    return fail(
+      "legacy-lock",
+      "locked_manifest_legacy",
+      "The lock is version 1 and records no resolution snapshot. Migrate it with: agentyx install --migrate-lock",
+    );
+  }
+
+  if (lock.manifest.resolution === null) {
+    return fail(
+      "snapshot-unavailable",
+      "locked_resolution_missing",
+      "The lock records no complete resolution snapshot. Run a full config-based agentyx sync or agentyx install to recreate it.",
+    );
+  }
+
+  if (input.configProject === undefined || input.resolved === undefined) {
+    if (!input.diagnostics.some((diagnostic) => diagnostic.level === "error")) {
+      input.diagnostics.push({
+        level: "error",
+        code: "locked_inputs_unavailable",
+        message: "The current project inputs could not be resolved, so they cannot be compared.",
+      });
+    }
+
+    return { checked: true, state: "unavailable", differences: [] };
+  }
+
+  let current: ResolutionSnapshot;
+
+  try {
+    current = createCurrentProjectResolutionSnapshot({
+      config: input.configProject.config,
+      resolved: input.resolved,
+      packRegistry: input.configProject.packRegistry,
+      skillRegistry: input.configProject.skillRegistry,
+    });
+  } catch (cause) {
+    if (!(cause instanceof AgentyxError)) {
+      throw cause;
+    }
+
+    input.diagnostics.push({ level: "error", code: cause.code, message: cause.message });
+
+    return { checked: true, state: "unavailable", differences: [] };
+  }
+
+  const differences = compareResolutionSnapshots(lock.manifest.resolution, current);
+
+  if (differences.length === 0) {
+    return { checked: true, state: "matching", differences };
+  }
+
+  return fail(
+    "mismatch",
+    "locked_resolution_mismatch",
+    `Current inputs differ from the locked resolution (${differences.length} difference${
+      differences.length === 1 ? "" : "s"
+    }). Review them, then run agentyx sync or agentyx install to accept a new lock.`,
+    differences,
+  );
+}
+
+function renderReproducibility(report: DoctorReproducibility): string[] {
+  const lines = report.differences.slice(0, 10).map((difference) => describeDifference(difference));
+  const omitted = report.differences.length - lines.length;
+
+  return [
+    section("Locked resolution", [
+      report.state,
+      ...lines,
+      ...(omitted > 0 ? [`… and ${omitted} more`] : []),
+    ]),
+    "",
+  ];
+}
+
 export function renderDoctorReport(report: DoctorReport, json: boolean): string {
   if (json) {
     return toJson(report);
@@ -660,6 +820,7 @@ export function renderDoctorReport(report: DoctorReport, json: boolean): string 
   return [
     `Agentyx doctor: ${report.status}`,
     "",
+    ...(report.reproducibility.checked ? renderReproducibility(report.reproducibility) : []),
     section("Readiness", [
       `configuration: ${report.readiness.configuration.state}`,
       `installation: ${report.readiness.installation.state}`,
@@ -1096,12 +1257,32 @@ export function createDoctorCommand(): Command {
     .option("--json", "print machine-readable JSON only", false)
     .option("--check", "exit with code 1 on warnings as well as errors", false)
     .option(
+      "--locked",
+      "compare current harness inputs with the complete lock snapshot; exits 1 on any mismatch",
+      false,
+    )
+    .option(
       "--hook",
       "print a one-line SessionStart hook summary instead of the full report; nothing when healthy",
       false,
     )
-    .action(async (options: { json: boolean; check: boolean; hook: boolean }) => {
-      const report = await runDoctorCommand({ json: options.json, cwd: process.cwd() });
+    .action(async (options: { json: boolean; check: boolean; hook: boolean; locked: boolean }) => {
+      if (options.hook && options.locked) {
+        await emit(() => {
+          throw new AgentyxError(
+            "doctor_hook_locked_conflict",
+            "--hook prints a one-line summary and cannot be combined with --locked.",
+          );
+        });
+
+        return;
+      }
+
+      const report = await runDoctorCommand({
+        json: options.json,
+        cwd: process.cwd(),
+        locked: options.locked,
+      });
 
       if (options.hook) {
         const output = renderDoctorHookOutput(report);

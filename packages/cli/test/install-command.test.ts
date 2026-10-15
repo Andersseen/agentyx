@@ -286,6 +286,7 @@ describe("install command wiring", () => {
       "--dry-run",
       "--enable",
       "--force",
+      "--frozen",
       "--json",
       "--mcp",
       "--mcp-only",

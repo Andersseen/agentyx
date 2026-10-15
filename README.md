@@ -425,6 +425,28 @@ unmanaged files still conflict and are never adopted, and the version-1 lock is 
 every change succeeded. It cannot be combined with pack arguments or other overrides. Agentyx does
 not coordinate concurrent installers: run one at a time.
 
+### Locked comparison and frozen installation
+
+Two opt-in commands use the lock's `resolution` snapshot. Neither is a package manager.
+
+```sh
+pnpm dlx @agentyx/cli doctor --locked            # compare current inputs with the lock; read-only
+pnpm dlx @agentyx/cli install --frozen --dry-run # preview what frozen mode would restore
+pnpm dlx @agentyx/cli install --frozen
+```
+
+- `doctor --locked` compares `.agentyx.json`, the selected Skill sources and the **exact** CLI
+  version with the locked snapshot. The JSON report gains `reproducibility` (`state`: `matching`,
+  `mismatch`, `missing-lock`, `legacy-lock`, `snapshot-unavailable`, `unavailable`, plus safe
+  `differences`). Any locked failure exits 1, with or without `--check`. A matching snapshot does not
+  mean the installed files are complete: read `readiness.installation` for that. After upgrading the
+  CLI, run a normal reviewed `sync` to record a new lock.
+- `install --frozen` needs a complete version-2 lock whose snapshot equals the current inputs. It is
+  full-project only (`--dry-run` and `--json` are the only companions). It may restore one thing: a
+  missing Skill file the lock already owns, with the exact reviewed content. Edited, unowned, Agent,
+  MCP and Hook state, stale ownership and deletions all fail; those need a normal reviewed `sync`.
+  It never rewrites `.agentyx.lock.json`, uses no network and runs no commands.
+
 `.agentyx.json` is the project's desired state. `.agentyx.lock.json` records the provider files and
 entries Agentyx owns. Use `configure` to edit desired state, `sync` to converge installed state, and
 `doctor` to inspect health, drift and harness evidence:
