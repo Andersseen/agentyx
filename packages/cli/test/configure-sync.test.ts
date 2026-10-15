@@ -271,7 +271,11 @@ describe("agentyx sync", () => {
     await runSyncCommand({ cwd: projectDir, dryRun: false, json: false, force: false });
 
     await expect(readdir(join(projectDir, ".agents"))).rejects.toThrow();
-    await expect(readFile(join(projectDir, ".agentyx.lock.json"), "utf8")).rejects.toThrow();
+    // A reviewed empty harness is still a complete v2 claim: no ownership, but a snapshot.
+    const lock = JSON.parse(await readFile(join(projectDir, ".agentyx.lock.json"), "utf8"));
+    expect(lock.version).toBe(2);
+    expect(lock.entries).toEqual([]);
+    expect(lock.resolution).toMatchObject({ targets: [], skills: [] });
   });
 
   it("keeps Doctor evidence paused after configure until sync converges the installed baseline", async () => {

@@ -1,0 +1,2 @@
+# Recorded content hashes in the v1 lock fixture require byte-exact files on every OS.
+packages/cli/test/fixtures/lock-v1/** -text

@@ -169,7 +169,9 @@ export {
   emptyInstallManifest,
   formatInstallManifest,
   hashContent,
+  type InstallManifestState,
   loadInstallManifest,
+  loadInstallManifestState,
   manifestEntriesByPath,
   parseInstallManifest,
 } from "./manifest/io.js";

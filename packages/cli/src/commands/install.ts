@@ -11,13 +11,20 @@ import {
   summarizeInstallPlans,
 } from "@agentyx/adapters";
 import {
+  type AgentyxConfig,
   AgentyxError,
   builtInAgentRegistry,
   builtInHookRegistry,
   builtInMcpServerRegistry,
   builtInSkillRegistry,
+  builtInToolRegistry,
+  createResolutionSnapshot,
+  type InstallManifest,
   loadAgentyxProject,
-  loadInstallManifest,
+  loadInstallManifestState,
+  type PackRegistry,
+  type ResolutionSnapshot,
+  type ResolvedAgentyxConfig,
   resolveAgentyxConfig,
   type SkillRegistry,
 } from "@agentyx/core";
@@ -31,6 +38,7 @@ import {
   skillOptions,
   targetOptions,
 } from "../prompts.js";
+import { cliVersion } from "../version.js";
 
 export interface InstallCommandInput {
   /**
@@ -55,7 +63,30 @@ export interface InstallCommandInput {
   readonly pruneRemovedTargets?: boolean;
   /** Overwrite files Agentyx does not manage instead of refusing to touch them. */
   readonly force?: boolean;
+  /**
+   * Migrate an existing version-1 lock through a reviewed, full-project install. Only valid
+   * without any resolution override; it is a real convergence, not a JSON rewrite.
+   */
+  readonly migrateLock?: boolean;
   readonly cwd: string;
+}
+
+/**
+ * A complete project install converges to exactly what `.agentyx.json` desires, so only it may
+ * record a reviewed resolution snapshot. Any command-time override makes the run partial,
+ * even when the override happens to equal the configuration.
+ */
+function isCompleteProjectInstall(input: InstallCommandInput): boolean {
+  return (
+    input.packs.length === 0 &&
+    input.targets.length === 0 &&
+    (input.enable ?? []).length === 0 &&
+    input.skills.length === 0 &&
+    input.mcpServers.length === 0 &&
+    !input.select &&
+    input.skillsOnly !== true &&
+    input.mcpOnly !== true
+  );
 }
 
 export class InstallCommandError extends AgentyxError {
@@ -112,6 +143,42 @@ export async function executeInstall(input: InstallCommandInput): Promise<Instal
     );
   }
 
+  if (input.migrateLock === true && !isCompleteProjectInstall(input)) {
+    throw new InstallCommandError(
+      "lock_migration_requires_full_project",
+      "--migrate-lock reviews the whole project: it cannot be combined with pack arguments, --target, --enable, --skill, --mcp, --select, --skills-only or --mcp-only.",
+    );
+  }
+
+  const lock = await loadInstallManifestState(input.cwd);
+  const manifest = lock.manifest;
+  const legacy = lock.present && manifest.version === 1;
+
+  if (input.migrateLock === true) {
+    if (!lock.present) {
+      throw new InstallCommandError(
+        "legacy_lock_missing",
+        "--migrate-lock needs an existing version-1 .agentyx.lock.json, but this project has none. Run agentyx install to create a version-2 lock.",
+      );
+    }
+
+    if (!legacy) {
+      throw new InstallCommandError(
+        "lock_migration_not_needed",
+        ".agentyx.lock.json is already version 2; there is nothing to migrate.",
+      );
+    }
+  } else if (legacy && !input.dryRun) {
+    throw new InstallCommandError(
+      "legacy_lock_requires_migration",
+      [
+        "This project uses a version-1 lock.",
+        "Review and migrate it with:",
+        "agentyx install --migrate-lock",
+      ].join("\n"),
+    );
+  }
+
   const environment = await resolveEnvironment(input);
   const skills = input.mcpOnly
     ? []
@@ -126,7 +193,6 @@ export async function executeInstall(input: InstallCommandInput): Promise<Instal
     input.skillsOnly || input.mcpOnly
       ? []
       : environment.agents.map((name) => builtInAgentRegistry.get(name));
-  const manifest = await loadInstallManifest(input.cwd);
   const activePlans =
     environment.targets.length === 0 && input.pruneRemovedTargets === true
       ? []
@@ -169,15 +235,86 @@ export async function executeInstall(input: InstallCommandInput): Promise<Instal
     throw new InstallConflictError(conflicts);
   }
 
+  const snapshot = environment.project === undefined ? null : snapshotOf(environment.project);
+  const lockReport = describeLock(input, lock.present, manifest, snapshot !== null, legacy);
+
   if (!input.dryRun) {
-    await applyInstallPlans(plans, { manifest });
+    await applyInstallPlans(plans, {
+      manifest,
+      projectDir: input.cwd,
+      commit:
+        snapshot === null
+          ? { kind: "v2-incomplete" }
+          : { kind: "v2-complete", resolution: snapshot },
+    });
   }
 
   return {
-    text: renderText(input, plans, conflicts),
-    report: buildInstallReport(input, environment, plans, conflicts),
+    text: renderText(input, plans, conflicts, lockReport),
+    report: buildInstallReport(input, environment, plans, conflicts, lockReport),
     summary: summarizeInstallPlans(plans),
   };
+}
+
+/** What happens to `.agentyx.lock.json`, without any snapshot content. */
+export interface LockReport {
+  readonly present: boolean;
+  readonly currentVersion: 1 | 2 | null;
+  /** The version this run commits; `null` when it only previews and cannot commit. */
+  readonly nextVersion: 2 | null;
+  readonly migration: "none" | "required" | "planned" | "performed";
+  /** `complete` records a reviewed snapshot; `unavailable` records `resolution: null`. */
+  readonly resolution: "complete" | "unavailable";
+  /** A previously recorded complete snapshot is replaced by `null`. */
+  readonly invalidated: boolean;
+}
+
+function describeLock(
+  input: InstallCommandInput,
+  present: boolean,
+  manifest: InstallManifest,
+  complete: boolean,
+  legacy: boolean,
+): LockReport {
+  const migrating = input.migrateLock === true;
+  const requiresMigration = legacy && !migrating;
+
+  return {
+    present,
+    currentVersion: present ? manifest.version : null,
+    nextVersion: requiresMigration ? null : 2,
+    migration: migrating
+      ? input.dryRun
+        ? "planned"
+        : "performed"
+      : requiresMigration
+        ? "required"
+        : "none",
+    resolution: complete && !requiresMigration ? "complete" : "unavailable",
+    invalidated: !complete && manifest.version === 2 && manifest.resolution !== null,
+  };
+}
+
+function snapshotOf(project: ProjectResolution): ResolutionSnapshot {
+  return createResolutionSnapshot({
+    agentyxVersion: cliVersion,
+    config: project.config,
+    resolved: project.resolved,
+    packRegistry: project.packRegistry,
+    skillRegistry: project.skillRegistry,
+    mcpRegistry: builtInMcpServerRegistry,
+    toolRegistry: builtInToolRegistry,
+    hookRegistry: builtInHookRegistry,
+    agentRegistry: builtInAgentRegistry,
+  });
+}
+
+/** The loaded project and the one resolution that drives both planning and the lock snapshot. */
+interface ProjectResolution {
+  readonly config: AgentyxConfig;
+  readonly resolved: ResolvedAgentyxConfig;
+  readonly packRegistry: PackRegistry;
+  readonly skillRegistry: SkillRegistry;
 }
 
 interface ResolvedEnvironment {
@@ -194,6 +331,8 @@ interface ResolvedEnvironment {
   readonly enabled: readonly string[];
   readonly targets: readonly string[];
   readonly skillRegistry: SkillRegistry;
+  /** Present only for a complete, config-driven install; absent for any override. */
+  readonly project?: ProjectResolution;
 }
 
 async function resolveEnvironment(input: InstallCommandInput): Promise<ResolvedEnvironment> {
@@ -286,6 +425,16 @@ async function resolveEnvironment(input: InstallCommandInput): Promise<ResolvedE
     enabled: resolved.enabled,
     targets: input.targets.length > 0 ? input.targets : resolved.targets,
     skillRegistry: project.skillRegistry,
+    ...(isCompleteProjectInstall(input)
+      ? {
+          project: {
+            config,
+            resolved,
+            packRegistry: project.packRegistry,
+            skillRegistry: project.skillRegistry,
+          },
+        }
+      : {}),
   };
 }
 
@@ -382,6 +531,7 @@ function renderText(
   input: InstallCommandInput,
   plans: readonly InstallPlan[],
   conflicts: readonly string[],
+  lock: LockReport,
 ): string {
   const summary = summarizeInstallPlans(plans);
   const blocks = plans.map((plan) =>
@@ -455,7 +605,32 @@ function renderText(
     ...blocks,
     ...conflictBlock,
     footer,
+    renderLockLine(input, lock, conflicts.length),
   ].join("\n\n");
+}
+
+function renderLockLine(input: InstallCommandInput, lock: LockReport, conflicts: number): string {
+  if (lock.migration === "required") {
+    return "Lock: version 1 requires reviewed migration (agentyx install --migrate-lock) before changes can be applied.";
+  }
+
+  if (lock.migration === "planned") {
+    return "Lock: version 1 -> version 2 migration planned.";
+  }
+
+  if (lock.migration === "performed") {
+    return "Lock: migrated to version 2 with a complete resolution snapshot.";
+  }
+
+  if (lock.resolution === "unavailable") {
+    return `Lock: ${
+      lock.invalidated ? "the previous resolution snapshot was invalidated; " : ""
+    }reproducible resolution snapshot is unavailable; run a full config-based sync to recreate it.`;
+  }
+
+  return input.dryRun || conflicts > 0
+    ? "Lock: a complete resolution snapshot will be recorded."
+    : "Lock: complete resolution snapshot recorded.";
 }
 
 function renderOperationLine(status: string, detail: string, usedBy: readonly string[]): string {
@@ -474,9 +649,11 @@ function buildInstallReport(
   environment: ResolvedEnvironment,
   plans: readonly InstallPlan[],
   conflicts: readonly string[],
+  lock: LockReport,
 ) {
   return {
     dryRun: input.dryRun,
+    lock,
     conflicts,
     packs: environment.packs,
     skills: environment.skills,
@@ -580,6 +757,11 @@ export function createInstallCommand(): Command {
     .option("--mcp-only", "install MCP configuration without skills", false)
     .option("--prune", "remove managed files the current selection no longer resolves", false)
     .option("--force", "overwrite files Agentyx does not manage", false)
+    .option(
+      "--migrate-lock",
+      "migrate an existing version-1 lock through a reviewed full-project install",
+      false,
+    )
     .action(
       async (
         packs: string[],
@@ -595,6 +777,7 @@ export function createInstallCommand(): Command {
           mcpOnly: boolean;
           prune: boolean;
           force: boolean;
+          migrateLock: boolean;
         },
       ) => {
         await emit(() =>
@@ -611,6 +794,7 @@ export function createInstallCommand(): Command {
             mcpOnly: options.mcpOnly,
             prune: options.prune,
             force: options.force,
+            migrateLock: options.migrateLock,
             cwd: process.cwd(),
           }),
         );

@@ -9,11 +9,11 @@ import { resolutionSnapshotSchema } from "./resolution.js";
  * reinterpreted, because acting on a half-understood record of managed files is
  * how an installer deletes something it should not.
  */
-/** The ownership-only manifest version currently written by normal installs. */
+/** The historical ownership-only manifest version; still readable, no longer written by installs. */
 export const INSTALL_MANIFEST_V1_VERSION = 1;
-/** The newest manifest version understood by core; R090-02 will make it the normal writer. */
+/** The newest manifest version: ownership entries plus an optional reviewed resolution snapshot. */
 export const INSTALL_MANIFEST_V2_VERSION = 2;
-/** @deprecated Use `INSTALL_MANIFEST_V1_VERSION` for the current writer explicitly. */
+/** @deprecated Alias of the V1 version, kept for compatibility. Not "latest": use the explicit V1/V2 constants. */
 export const INSTALL_MANIFEST_VERSION = INSTALL_MANIFEST_V1_VERSION;
 
 /**

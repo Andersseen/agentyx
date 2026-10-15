@@ -1,0 +1,5 @@
+[mcp_servers.playwright]
+args = [ "@playwright/mcp@0.0.81" ]
+command = "npx"
+enabled = true
+env = { }
