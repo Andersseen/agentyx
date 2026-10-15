@@ -549,6 +549,7 @@ describe("doctor command wiring", () => {
     expect(createDoctorCommand().options.map((option) => option.long)).toEqual([
       "--json",
       "--check",
+      "--locked",
       "--hook",
     ]);
   });

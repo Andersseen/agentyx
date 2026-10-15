@@ -48,11 +48,15 @@ export interface InstallResult {
  * - `preserve-version`: keep the format already on disk — a version-1 lock stays version 1, a
  *   version-2 lock loses its resolution because the run no longer matches what was reviewed.
  *   An empty lock is removed. This is the uninstall behaviour, and the default.
+ * - `read-only`: never write, rewrite or remove the lock — bytes and mtime stay untouched. Its
+ *   contract is frozen restoration (`install --frozen`), which reproduces already-reviewed
+ *   state and must not alter the reviewed lock. Normal installs must not use it.
  */
 export type ManifestCommitIntent =
   | { readonly kind: "v2-complete"; readonly resolution: ResolutionSnapshot }
   | { readonly kind: "v2-incomplete" }
-  | { readonly kind: "preserve-version" };
+  | { readonly kind: "preserve-version" }
+  | { readonly kind: "read-only" };
 
 export interface ApplyInstallOptions {
   /**
@@ -149,8 +153,9 @@ export async function runInstallPlans(
 
     const projectDir = options.projectDir ?? plans[0]?.projectDir;
 
-    if (projectDir !== undefined) {
-      const intent = options.commit ?? { kind: "preserve-version" };
+    const intent = options.commit ?? { kind: "preserve-version" };
+
+    if (projectDir !== undefined && intent.kind !== "read-only") {
       const manifest = nextManifest(options.manifest ?? emptyInstallManifest(), plans, intent);
       await commitManifest(agentyxManifestPath(projectDir), manifest, intent);
     }

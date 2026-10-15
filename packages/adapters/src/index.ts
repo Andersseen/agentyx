@@ -21,6 +21,7 @@ export {
 export { detectConfiguredTargets } from "./detect.js";
 export {
   DuplicateAdapterError,
+  FrozenInstallError,
   IncompleteInstallError,
   InstallConflictError,
   InstallPathError,
@@ -35,6 +36,7 @@ export {
 } from "./errors.js";
 export type { ApplyInstallOptions, InstallResult, ManifestCommitIntent } from "./executor.js";
 export { applyInstallPlan, applyInstallPlans } from "./executor.js";
+export { validateFrozenPlans } from "./frozen.js";
 export type {
   HookPayloadNormalizer,
   KnownCapabilities,
