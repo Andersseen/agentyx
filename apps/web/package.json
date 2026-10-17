@@ -43,7 +43,7 @@
     "@tailwindcss/vite": "4.3.3",
     "@types/node": "^26.6.5",
     "marked-highlight": "^2.2.3",
-    "shiki": "^1.29.2",
+    "shiki": "^4.5.0",
     "tailwindcss": "4.3.3",
     "typescript": "5.9.2",
     "vite": "8.3.4"
