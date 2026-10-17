@@ -5,7 +5,7 @@ template and verification requirements this log follows.
 
 ## R090-04 — Reproducibility workflow and artifact closeout
 
-Status: implementation and local verification complete; pull-request CI pending.
+Status: complete on `docs/reproducibility-workflow-090`; PR [#132](https://github.com/Andersseen/agentyx/pull/132).
 Starting main SHA: `cb0345348731d1bd92ba93c9f117a6411c1eba20`.
 Starting package versions: `@agentyx/core`, `@agentyx/adapters`, and `@agentyx/cli` were `0.20.0`.
 R090-01, R090-02, and R090-03 were already complete on the starting main.
@@ -35,11 +35,16 @@ Local verification on Node `22.23.1`:
   checkout's package-manager installs run offline against the warmed package cache and local packed
   artifacts. The existing artifact setup install retains its prior package dependency resolution.
 - Command flags were checked against the built CLI `init`, `install`, `sync`, and `doctor` help.
+- GitHub Actions PR run `39062373707` — passed: Linux Node 22, Linux Node 24, macOS Node 22
+  packaged smoke, and Windows Node 22 packaged smoke. The first run exposed an offline cache
+  bootstrap mistake; the artifact setup now warms the smoke cache before the new checkout uses it
+  offline.
 - GitHub Actions and merged-PR lookup could not yet be inspected: `gh` could not connect to
-  `api.github.com`. Linux Node 24, macOS Node 22, and Windows Node 22 were not reproducible locally.
+  `api.github.com` at initial inspection. Linux Node 24, macOS Node 22, and Windows Node 22 were
+  not reproducible locally; all were subsequently verified by PR Actions.
 
-R090 completion and the transition to `R100-03 — measured behavior evidence` remain pending until
-the actual PR Actions jobs are inspected and green. No packages were published.
+R090 is complete. Next implementation task: `R100-03 — measured behavior evidence`.
+No packages were published.
 
 ## R070-02 — Add typed capability exclusions
 
