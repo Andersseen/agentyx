@@ -416,8 +416,8 @@ read them, but `install` and `sync` will not change a project until the lock is 
 real, reviewed install of the whole `.agentyx.json`:
 
 ```sh
-pnpm dlx @agentyx/cli install --migrate-lock --dry-run   # review; writes nothing
-pnpm dlx @agentyx/cli install --migrate-lock
+pnpm exec agentyx install --migrate-lock --dry-run   # review; writes nothing
+pnpm exec agentyx install --migrate-lock
 ```
 
 Migration is not a JSON conversion. It uses the existing ownership as evidence, so edited or
@@ -427,12 +427,14 @@ not coordinate concurrent installers: run one at a time.
 
 ### Locked comparison and frozen installation
 
-Two opt-in commands use the lock's `resolution` snapshot. Neither is a package manager.
+Two opt-in commands use the lock's `resolution` snapshot. Neither is a package manager. For these
+workflows, pin Agentyx as an exact project dependency and use its local executable; see the
+[reproducibility guide](docs/reproducibility.md) for the complete commit contract and checkout flow.
 
 ```sh
-pnpm dlx @agentyx/cli doctor --locked            # compare current inputs with the lock; read-only
-pnpm dlx @agentyx/cli install --frozen --dry-run # preview what frozen mode would restore
-pnpm dlx @agentyx/cli install --frozen
+pnpm exec agentyx doctor --locked            # compare current inputs with the lock; read-only
+pnpm exec agentyx install --frozen --dry-run # preview what frozen mode would restore
+pnpm exec agentyx install --frozen
 ```
 
 - `doctor --locked` compares `.agentyx.json`, the selected Skill sources and the **exact** CLI

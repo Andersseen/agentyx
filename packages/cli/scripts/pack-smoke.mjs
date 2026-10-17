@@ -61,7 +61,7 @@ await writeFile(
 );
 await writeFile(join(projectDir, "tsconfig.json"), '{"compilerOptions":{"strict":true}}\n');
 
-await run("pnpm", ["install", "--ignore-scripts", "--store-dir", packageCacheDir], projectDir);
+await run("pnpm", ["install", "--ignore-scripts", "--offline"], projectDir);
 
 cliEntry = join(projectDir, "node_modules", "@agentyx", "cli", "dist", "index.mjs");
 const installedCliPackage = JSON.parse(
@@ -620,6 +620,67 @@ if (migrated.resolution.agentyxVersion !== installedCliPackage.version)
 await run(CLI, ["sync"], migrateDir);
 await rm(migrateDir, { recursive: true, force: true });
 
+// --- Package-manager-pinned fresh checkout using only the packed artifacts. ---
+const checkoutDir = await mkdtemp(join(tmpdir(), "agentyx-checkout-"));
+await writeFile(
+  join(checkoutDir, "package.json"),
+  `${JSON.stringify(
+    {
+      name: "agentyx-reproducibility-checkout",
+      private: true,
+      devDependencies: { "@agentyx/cli": fileSpec(cliTarball) },
+      pnpm: {
+        overrides: {
+          "@agentyx/core": fileSpec(coreTarball),
+          "@agentyx/adapters": fileSpec(adaptersTarball),
+        },
+      },
+    },
+    null,
+    2,
+  )}\n`,
+);
+await run("pnpm", ["install", "--offline"], checkoutDir);
+const checkoutPackage = JSON.parse(
+  await readFile(join(checkoutDir, "node_modules/@agentyx/cli/package.json"), "utf8"),
+);
+if (checkoutPackage.version !== installedCliPackage.version)
+  throw new Error("The fresh checkout did not install the exact packed CLI version.");
+const checkoutCli = await run("pnpm", ["exec", "agentyx", "--version"], checkoutDir);
+if (checkoutCli.stdout.trim() !== checkoutPackage.version)
+  throw new Error("pnpm exec did not run the fresh checkout's pinned CLI package.");
+await run(
+  "pnpm",
+  ["exec", "agentyx", "init", "--pack", "technical", "--target", "codex", "--yes"],
+  checkoutDir,
+);
+await run("pnpm", ["exec", "agentyx", "sync", "--dry-run"], checkoutDir);
+await run("pnpm", ["exec", "agentyx", "sync"], checkoutDir);
+await run("pnpm", ["exec", "agentyx", "doctor", "--locked", "--check"], checkoutDir);
+
+const checkoutSkillPath = join(checkoutDir, ".agents/skills/api-design/SKILL.md");
+const checkoutSkillBytes = await readFile(checkoutSkillPath, "utf8");
+const checkoutLockBytes = await readFile(join(checkoutDir, ".agentyx.lock.json"), "utf8");
+const packageManagerLockPath = join(checkoutDir, "pnpm-lock.yaml");
+const packageManagerLockBytes = await readFile(packageManagerLockPath, "utf8");
+await rm(join(checkoutDir, "node_modules"), { recursive: true, force: true });
+await rm(checkoutSkillPath);
+await run("pnpm", ["install", "--frozen-lockfile", "--offline"], checkoutDir);
+if ((await readFile(packageManagerLockPath, "utf8")) !== packageManagerLockBytes)
+  throw new Error("pnpm install --frozen-lockfile changed pnpm-lock.yaml.");
+const reinstalledVersion = await run("pnpm", ["exec", "agentyx", "--version"], checkoutDir);
+if (reinstalledVersion.stdout.trim() !== checkoutPackage.version)
+  throw new Error("Frozen package install did not restore the pinned local CLI.");
+await run("pnpm", ["exec", "agentyx", "install", "--frozen"], checkoutDir);
+if ((await readFile(checkoutSkillPath, "utf8")) !== checkoutSkillBytes)
+  throw new Error("The fresh checkout did not restore the exact owned Skill bytes.");
+if ((await readFile(join(checkoutDir, ".agentyx.lock.json"), "utf8")) !== checkoutLockBytes)
+  throw new Error("Fresh-checkout frozen install rewrote .agentyx.lock.json.");
+await run("pnpm", ["exec", "agentyx", "doctor", "--locked", "--check"], checkoutDir);
+if ((await readFile(join(checkoutDir, ".agentyx.lock.json"), "utf8")) !== checkoutLockBytes)
+  throw new Error("Fresh-checkout locked Doctor rewrote .agentyx.lock.json.");
+await rm(checkoutDir, { recursive: true, force: true });
+
 if ((await readdir(fakeHome)).length > 0)
   throw new Error(`The packaged CLI wrote under $HOME: ${(await readdir(fakeHome)).join(", ")}`);
 
@@ -645,7 +706,9 @@ await readFile(join(cliPackageRoot, "dist", "index.mjs"), "utf8");
 await readFile(join(adaptersPackageRoot, "dist", "index.mjs"), "utf8");
 
 await rm(fakeHome, { recursive: true, force: true });
-console.log("Pack smoke passed: packaged configure/sync lifecycle across Codex, Claude and Kimi.");
+console.log(
+  "Pack smoke passed: packaged lifecycle across providers and package-manager-pinned fresh checkout.",
+);
 await rm(projectDir, { recursive: true, force: true });
 await rm(packDir, { recursive: true, force: true });
 await rm(packageCacheDir, { recursive: true, force: true });
