@@ -3,6 +3,49 @@
 One record per task, in completion order. See [session-playbook.md](session-playbook.md) for the
 template and verification requirements this log follows.
 
+## R090-04 — Reproducibility workflow and artifact closeout
+
+Status: complete on `docs/reproducibility-workflow-090`; PR [#132](https://github.com/Andersseen/agentyx/pull/132).
+Starting main SHA: `cb0345348731d1bd92ba93c9f117a6411c1eba20`.
+Starting package versions: `@agentyx/core`, `@agentyx/adapters`, and `@agentyx/cli` were `0.20.0`.
+R090-01, R090-02, and R090-03 were already complete on the starting main.
+
+Delivered:
+- Added [the user reproducibility guide](../reproducibility.md), covering exact CLI pinning,
+  package-manager vs Agentyx lock responsibilities, project-local source commits, fresh checkout,
+  initial lock creation, intentional changes/upgrades, v1 migration, and conservative recovery.
+- Distinguished ownership entries from the resolution snapshot and locked matching from installed
+  readiness. Documented external MCP/runtime limits without claiming a hermetic build.
+- Updated README migration/locked/frozen examples to run the exact project-local CLI and linked the
+  canonical guide. Added a short package README link.
+- Reused the existing R090-03 packed checks for locked comparison, frozen restore/refusal, exact
+  Skill bytes, Agentyx lock invariance, mismatch handling, and historical v1 migration.
+- Added a packed external consumer lifecycle using exact local artifact specs and offline pnpm
+  installs. It verifies the installed package version and `pnpm exec` CLI, frozen package-lock
+  byte invariance, missing owned Skill restoration, Agentyx lock byte invariance, and final locked
+  Doctor verification.
+- No Changeset: this task documents and verifies behavior released in `0.20.0`; no published
+  package behavior or machine-readable contract changed.
+
+Local verification on Node `22.23.1`:
+- `pnpm check` — passed; 66 test files and 829 tests, typecheck and workspace build passed. Biome
+  reported its existing schema-version notice and two warnings in `packages/adapters/test`.
+- `pnpm eval:skills` — passed; 11 scenarios.
+- `pnpm smoke:pack` — passed locally, including the fresh-checkout artifact lifecycle. Its new
+  checkout's package-manager installs run offline against the warmed package cache and local packed
+  artifacts. The existing artifact setup install retains its prior package dependency resolution.
+- Command flags were checked against the built CLI `init`, `install`, `sync`, and `doctor` help.
+- GitHub Actions PR run `39062373707` — passed: Linux Node 22, Linux Node 24, macOS Node 22
+  packaged smoke, and Windows Node 22 packaged smoke. The first run exposed an offline cache
+  bootstrap mistake; the artifact setup now warms the smoke cache before the new checkout uses it
+  offline.
+- GitHub Actions and merged-PR lookup could not yet be inspected: `gh` could not connect to
+  `api.github.com` at initial inspection. Linux Node 24, macOS Node 22, and Windows Node 22 were
+  not reproducible locally; all were subsequently verified by PR Actions.
+
+R090 is complete. Next implementation task: `R100-03 — measured behavior evidence`.
+No packages were published.
+
 ## R070-02 — Add typed capability exclusions
 
 Status: complete on `feat/typed-capability-exclusions`.

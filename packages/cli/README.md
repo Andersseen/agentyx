@@ -57,6 +57,9 @@ Project-owned packs can reference standard `SKILL.md` directories declared throu
 `skillDirectories` and `localPacks` in `.agentyx.json`. Paths are project-relative and Agentyx
 rejects symlinks that resolve outside the project.
 
+For exact CLI pinning, committed lockfiles, fresh-checkout verification, and lock recovery, see the
+[reproducibility guide](../../docs/reproducibility.md).
+
 Trusted external sources can be declared through `trustedSources` and inspected locally. The initial
 Superpowers integration validates the local `.codex-plugin/plugin.json` and Skill inventory, but
 keeps installation disabled until Agentyx can preserve resource-bearing Skill directories.
