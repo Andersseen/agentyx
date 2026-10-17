@@ -38,11 +38,11 @@
   "devDependencies": {
     "@biomejs/biome": "^2.5.15",
     "@changesets/cli": "^3.0.3",
-    "@types/node": "^26.6.4",
-    "tsdown": "^0.23.0",
+    "@types/node": "^26.6.5",
+    "tsdown": "^0.23.1",
     "typescript": "^5.9.2",
-    "vitest": "^5.0.3",
-    "wrangler": "4.148.0"
+    "vitest": "^5.0.4",
+    "wrangler": "4.151.0"
   },
   "pnpm": {
     "overrides": {
