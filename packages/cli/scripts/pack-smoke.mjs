@@ -61,7 +61,7 @@ await writeFile(
 );
 await writeFile(join(projectDir, "tsconfig.json"), '{"compilerOptions":{"strict":true}}\n');
 
-await run("pnpm", ["install", "--ignore-scripts", "--offline"], projectDir);
+await run("pnpm", ["install", "--ignore-scripts", "--store-dir", packageCacheDir], projectDir);
 
 cliEntry = join(projectDir, "node_modules", "@agentyx", "cli", "dist", "index.mjs");
 const installedCliPackage = JSON.parse(
@@ -640,7 +640,7 @@ await writeFile(
     2,
   )}\n`,
 );
-await run("pnpm", ["install", "--offline"], checkoutDir);
+await run("pnpm", ["install", "--offline", "--store-dir", packageCacheDir], checkoutDir);
 const checkoutPackage = JSON.parse(
   await readFile(join(checkoutDir, "node_modules/@agentyx/cli/package.json"), "utf8"),
 );
@@ -665,7 +665,11 @@ const packageManagerLockPath = join(checkoutDir, "pnpm-lock.yaml");
 const packageManagerLockBytes = await readFile(packageManagerLockPath, "utf8");
 await rm(join(checkoutDir, "node_modules"), { recursive: true, force: true });
 await rm(checkoutSkillPath);
-await run("pnpm", ["install", "--frozen-lockfile", "--offline"], checkoutDir);
+await run(
+  "pnpm",
+  ["install", "--frozen-lockfile", "--offline", "--store-dir", packageCacheDir],
+  checkoutDir,
+);
 if ((await readFile(packageManagerLockPath, "utf8")) !== packageManagerLockBytes)
   throw new Error("pnpm install --frozen-lockfile changed pnpm-lock.yaml.");
 const reinstalledVersion = await run("pnpm", ["exec", "agentyx", "--version"], checkoutDir);

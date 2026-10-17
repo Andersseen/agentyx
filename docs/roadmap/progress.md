@@ -31,8 +31,9 @@ Local verification on Node `22.23.1`:
 - `pnpm check` — passed; 66 test files and 829 tests, typecheck and workspace build passed. Biome
   reported its existing schema-version notice and two warnings in `packages/adapters/test`.
 - `pnpm eval:skills` — passed; 11 scenarios.
-- `pnpm smoke:pack` — passed, including the fresh-checkout artifact lifecycle. The run used
-  `--offline` and local packed artifacts; no registry dependency was used by the verification.
+- `pnpm smoke:pack` — passed locally, including the fresh-checkout artifact lifecycle. Its new
+  checkout's package-manager installs run offline against the warmed package cache and local packed
+  artifacts. The existing artifact setup install retains its prior package dependency resolution.
 - Command flags were checked against the built CLI `init`, `install`, `sync`, and `doctor` help.
 - GitHub Actions and merged-PR lookup could not yet be inspected: `gh` could not connect to
   `api.github.com`. Linux Node 24, macOS Node 22, and Windows Node 22 were not reproducible locally.
