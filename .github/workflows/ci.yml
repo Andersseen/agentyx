@@ -46,6 +46,9 @@ jobs:
       - name: Build
         run: pnpm build
 
+      - name: Validate behavior benchmark
+        run: pnpm eval:behavior
+
       - name: CLI smoke test
         run: |
           node packages/cli/dist/index.mjs init --help
@@ -82,6 +85,9 @@ jobs:
 
       - name: Install
         run: pnpm install --frozen-lockfile
+
+      - name: Validate behavior benchmark
+        run: pnpm eval:behavior
 
       - name: Package smoke test
         run: pnpm smoke:pack

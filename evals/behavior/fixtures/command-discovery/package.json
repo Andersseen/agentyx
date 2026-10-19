@@ -1,0 +1,7 @@
+{
+  "name": "command-discovery-fixture",
+  "private": true,
+  "scripts": {
+    "check": "node check.mjs"
+  }
+}
