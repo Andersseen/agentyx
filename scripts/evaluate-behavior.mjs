@@ -303,8 +303,8 @@ async function prepareRun(options) {
         `Agentyx treatment install failed: ${install.error?.message ?? install.stderr ?? install.stdout}`,
       );
     }
-    const providerDirectory = options.provider === "codex" ? ".agents/skills" : ".claude/skills";
-    const otherProviderDirectory = options.provider === "codex" ? ".claude" : ".agents";
+    const { skillsDirectory: providerDirectory, otherDirectory: otherProviderDirectory } =
+      providerDirectories(options.provider);
     if (
       !(await exists(join(target, providerDirectory))) ||
       !(await exists(join(target, ".agentyx.lock.json"))) ||
@@ -413,8 +413,7 @@ async function checkRun(options) {
 }
 
 async function validatePreparedCondition(fixture, scenario, provider, condition) {
-  const expectedDirectory = provider === "codex" ? ".agents/skills" : ".claude/skills";
-  const otherDirectory = provider === "codex" ? ".claude" : ".agents";
+  const { skillsDirectory: expectedDirectory, otherDirectory } = providerDirectories(provider);
   if (!(await benchmark.providers.includes(provider)))
     throw new Error(`Unsupported run provider: ${provider}`);
   if (condition === "baseline") {
@@ -449,6 +448,14 @@ async function validatePreparedCondition(fixture, scenario, provider, condition)
     )
   )
     throw new Error("Treatment lock contains unexpected target or managed paths.");
+}
+
+function providerDirectories(provider) {
+  if (provider === "codex" || provider === "kimi")
+    return { skillsDirectory: ".agents/skills", otherDirectory: ".claude" };
+  if (provider === "claude")
+    return { skillsDirectory: ".claude/skills", otherDirectory: ".agents" };
+  throw new Error(`Unsupported evaluation provider: ${provider}`);
 }
 
 function validateRecord(record) {
@@ -710,6 +717,9 @@ function evaluateGate(records, providers, repetitions) {
 }
 
 async function validateDeterministicSelfChecks() {
+  const kimiDirectories = providerDirectories("kimi");
+  if (kimiDirectories.skillsDirectory !== ".agents/skills")
+    throw new Error("Kimi treatment path self-check failed.");
   const invalidDefinitions = [
     ["duplicate scenario id", (copy) => (copy.scenarios[1].id = copy.scenarios[0].id)],
     ["missing prompt", (copy) => delete copy.scenarios[0].prompt],
