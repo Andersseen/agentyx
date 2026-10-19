@@ -46,6 +46,37 @@ Local verification on Node `22.23.1`:
 R090 is complete. Next implementation task: `R100-03 — measured behavior evidence`.
 No packages were published.
 
+## R100-03 — Benchmark infrastructure ready; provider trials pending
+
+Status: pending; deterministic infrastructure is implemented on `eval/measured-agent-behavior`.
+Starting main SHA: `f7232b3f49891f00d96af7dbe099012e73ca86ba`.
+Starting package versions: `@agentyx/core`, `@agentyx/adapters`, and `@agentyx/cli` are `0.20.0`.
+
+Delivered locally:
+- Preserved the 11-scenario provider-neutral semantic suite and clarified that it checks pack/Skill
+  membership only; it does not execute agents or measure quality.
+- Added six deterministic Node fixtures for bug regression, API change, safe refactor, command
+  discovery, irrelevant-Skill restraint, and coexistence with existing repository instructions.
+- Added a fixed benchmark definition, baseline/treatment contract, objective checkers, bounded human
+  rubrics, pre-trial critical-failure definitions, deterministic alternating run plan, and result
+  validation/aggregation with fail-closed gate states.
+- Treatment preparation uses the real project-local `agentyx install --json` lifecycle and validates
+  provider-targeted managed paths. Every run uses a fresh copy outside this checkout; canonical
+  fixture hashes are checked for immutability.
+- The deterministic two-provider / three-repetition matrix contains 72 runs. No real provider runs
+  were started and no behavioral conclusion is available.
+- No Changeset: evaluation infrastructure, fixtures, scripts, and docs do not change published
+  package behavior or bundled Skills.
+
+Provider discovery: Codex CLI `0.162.0-alpha.17.2` is installed and reports an authenticated ChatGPT
+login. Claude Code and Kimi CLIs are unavailable. The required second provider is therefore missing;
+no evidence was fabricated. Draft PR [#133](https://github.com/Andersseen/agentyx/pull/133) is open.
+GitHub Actions run `39216362339` was in progress when this entry was written; its final result is
+reported in the PR after completion. GitHub CLI's configured token is invalid, so the connected
+GitHub integration was used for the PR and Actions inspection.
+
+Next step: complete the real two-provider trials. R100-03 remains pending; R100-04 has not started.
+
 ## R070-02 — Add typed capability exclusions
 
 Status: complete on `feat/typed-capability-exclusions`.

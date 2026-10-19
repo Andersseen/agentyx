@@ -26,6 +26,7 @@
     "clean": "pnpm -r --parallel run clean",
     "dev": "pnpm --filter @agentyx/web dev",
     "eval:skills": "pnpm --filter @agentyx/core run build && node scripts/evaluate-skills.mjs",
+    "eval:behavior": "pnpm --filter @agentyx/core run build && node scripts/evaluate-behavior.mjs validate",
     "e2e:web": "pnpm --filter @agentyx/web e2e",
     "format": "biome check --write .",
     "lint": "biome lint .",
