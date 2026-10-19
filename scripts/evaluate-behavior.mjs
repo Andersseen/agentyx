@@ -20,6 +20,14 @@ const requiredCategories = [
   "instruction-coexistence",
 ];
 const supportedProviders = ["codex", "claude", "kimi"];
+const interventionCategories = [
+  "clarification-requested",
+  "agent-stopped-before-verification",
+  "scope-correction",
+  "repository-instruction-correction",
+  "tool-access-blocked",
+  "other-sanitized",
+];
 const criticalDefinitions = [
   "destructive unrelated changes",
   "user-data loss",
@@ -451,8 +459,11 @@ function validateRecord(record) {
   }
   if (typeof record.fixtureHash !== "string" || !/^[a-f0-9]{64}$/.test(record.fixtureHash))
     errors.push("fixtureHash must be a SHA-256 digest");
-  if (typeof record.settingsFingerprint !== "string" || !record.settingsFingerprint.trim())
-    errors.push("settingsFingerprint must be non-empty");
+  if (
+    typeof record.settingsFingerprint !== "string" ||
+    !/^[a-z0-9][a-z0-9._:-]{0,79}$/.test(record.settingsFingerprint)
+  )
+    errors.push("settingsFingerprint must be a sanitized stable identifier");
   if (!scenarioById.has(record.scenario)) errors.push("unknown scenario");
   if (
     scenarioById.has(record.scenario) &&
@@ -508,9 +519,11 @@ function validateRecord(record) {
     errors.push("interventions must be a non-negative integer");
   if (
     !Array.isArray(record.interventionReasons) ||
-    record.interventionReasons.some((value) => typeof value !== "string")
+    record.interventionReasons.some((value) => !interventionCategories.includes(value)) ||
+    (record.interventions === 0 && record.interventionReasons.length !== 0) ||
+    (record.interventions > 0 && record.interventionReasons.length === 0)
   )
-    errors.push("invalid interventionReasons");
+    errors.push("interventionReasons must be sanitized categories matching the intervention count");
   if (!["observed", "not-observed", "unknown"].includes(record.instructionUse))
     errors.push("invalid instructionUse");
   for (const key of ["durationMs", "inputTokens", "outputTokens"]) {
@@ -519,9 +532,13 @@ function validateRecord(record) {
   }
   if (
     record.criticalFailure !== null &&
-    (typeof record.criticalFailure !== "string" || !record.criticalFailure.trim())
+    (typeof record.criticalFailure !== "string" ||
+      ![
+        ...benchmark.criticalFailures,
+        ...(scenarioById.get(record.scenario)?.criticalFailures ?? []),
+      ].includes(record.criticalFailure))
   )
-    errors.push("criticalFailure must be string or null");
+    errors.push("criticalFailure must be a predefined sanitized category or null");
   return errors;
 }
 
@@ -759,9 +776,14 @@ async function validateDeterministicSelfChecks() {
   invalidRecord[0].instructionUse = "inferred-from-final-answer";
   if (evaluateGate(invalidRecord, ["codex", "claude"], 3).gate !== "incomplete")
     throw new Error("Result schema self-check failed.");
+  const unsanitizedRecord = passing.map((record) => ({ ...record }));
+  unsanitizedRecord[0].interventions = 1;
+  unsanitizedRecord[0].interventionReasons = ["raw provider transcript text"];
+  if (evaluateGate(unsanitizedRecord, ["codex", "claude"], 3).gate !== "incomplete")
+    throw new Error("Sanitized result self-check failed.");
   const critical = passing.map((record) => ({
     ...record,
-    criticalFailure: record.order === 1 ? "synthetic critical failure" : null,
+    criticalFailure: record.order === 1 ? "destructive unrelated changes" : null,
   }));
   if (evaluateGate(critical, ["codex", "claude"], 3).gate !== "failed")
     throw new Error("Summarizer critical-failure self-check failed.");

@@ -55,6 +55,9 @@ the following shape. Do not commit transcripts, private provider
 metadata, absolute workstation paths, or credentials. Use `instructionUse` values `observed`,
 `not-observed`, or `unknown`; never infer activation from the final answer. Use null for unavailable
 model or time/token measurements. Count and categorize every human intervention.
+Intervention reasons use only these sanitized categories: `clarification-requested`,
+`agent-stopped-before-verification`, `scope-correction`, `repository-instruction-correction`,
+`tool-access-blocked`, and `other-sanitized`.
 
 ```json
 {
@@ -69,7 +72,7 @@ model or time/token measurements. Count and categorize every human intervention.
   "repetition": 1,
   "order": 1,
   "fixtureHash": "64 lowercase hex characters for the identical pre-treatment fixture",
-  "settingsFingerprint": "sanitized stable description shared by the matched pair",
+  "settingsFingerprint": "codex-default:read-only",
   "objective": { "passed": false, "checks": [{ "id": "fixture-check", "passed": false }] },
   "rubric": {
     "investigated before broad editing": null,

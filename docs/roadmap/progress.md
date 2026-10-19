@@ -70,11 +70,12 @@ Delivered locally:
 
 Provider discovery: Codex CLI `0.162.0-alpha.17.2` is installed and reports an authenticated ChatGPT
 login. Claude Code and Kimi CLIs are unavailable. The required second provider is therefore missing;
-no evidence was fabricated. GitHub CLI is present, but its configured GitHub token is invalid, so
-push/PR and hosted Actions status still need an authenticated GitHub path.
+no evidence was fabricated. Draft PR [#133](https://github.com/Andersseen/agentyx/pull/133) is open.
+GitHub Actions run `39216362339` was in progress when this entry was written; its final result is
+reported in the PR after completion. GitHub CLI's configured token is invalid, so the connected
+GitHub integration was used for the PR and Actions inspection.
 
-Next step: complete the real two-provider trials and submit a draft PR. R100-03 remains pending;
-R100-04 has not started.
+Next step: complete the real two-provider trials. R100-03 remains pending; R100-04 has not started.
 
 ## R070-02 — Add typed capability exclusions
 
