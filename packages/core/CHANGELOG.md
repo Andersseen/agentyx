@@ -1,5 +1,11 @@
 # @agentyx/core
 
+## 0.22.0
+
+### Minor Changes
+
+- 1be6dcb: Make the common project setup, provider observation requirements, and verified evaluation path clearer. Use shell-form Claude hooks for Windows compatibility.
+
 ## 0.21.0
 
 ### Minor Changes
