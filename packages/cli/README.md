@@ -37,6 +37,7 @@ agentyx target list
 agentyx source show superpowers
 agentyx source inspect superpowers
 agentyx graph
+agentyx report
 agentyx graph --format mermaid
 agentyx graph owner authentication
 ```

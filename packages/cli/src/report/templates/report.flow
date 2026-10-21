@@ -1,0 +1,387 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src data:; connect-src 'none'; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta name="color-scheme" content="light dark">
+<meta name="generator" content="agentyx report">
+<title>{{ context.documentTitle }}</title>
+<style>
+:root{--bg:#f9fafd;--fg:#151822;--surface:#fff;--muted:#5b6272;--line:#d0d3dc;--soft:#eef0f6;--primary:#4c5bc9;--on-primary:#fff;--ok:#006b2e;--ok-bg:#e3f4ea;--warn:#7a5600;--warn-bg:#fbf0d4;--bad:#a81f1f;--bad-bg:#fbe4e4;--unknown:#4a5163;--unknown-bg:#e9ebf1;--mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;--sans:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0c0e14;--fg:#f9fafd;--surface:#141821;--muted:#a7aebf;--line:#2c3140;--soft:#1b2030;--primary:#8d9bff;--on-primary:#0c0e14;--ok:#6fdc9a;--ok-bg:#12301f;--warn:#f0c866;--warn-bg:#33270b;--bad:#ff9a9a;--bad-bg:#3a1515;--unknown:#b6bdcf;--unknown-bg:#232838}}
+:root[data-theme="dark"]{--bg:#0c0e14;--fg:#f9fafd;--surface:#141821;--muted:#a7aebf;--line:#2c3140;--soft:#1b2030;--primary:#8d9bff;--on-primary:#0c0e14;--ok:#6fdc9a;--ok-bg:#12301f;--warn:#f0c866;--warn-bg:#33270b;--bad:#ff9a9a;--bad-bg:#3a1515;--unknown:#b6bdcf;--unknown-bg:#232838}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:4.5rem}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.55 var(--sans)}
+a{color:var(--primary)}
+:focus-visible{outline:3px solid var(--primary);outline-offset:2px;border-radius:4px}
+.skip{position:absolute;left:-999px;top:0;background:var(--primary);color:var(--on-primary);padding:.5rem 1rem;z-index:20}
+.skip:focus{left:0}
+.wrap{max-width:72rem;margin:0 auto;padding:0 1rem}
+header.top{border-bottom:1px solid var(--line);background:var(--surface);padding:1.5rem 0 1rem}
+header.top h1{margin:0;font-size:1.75rem;line-height:1.2;overflow-wrap:anywhere}
+.meta{color:var(--muted);margin:.25rem 0 0;overflow-wrap:anywhere}
+.top-row{display:flex;gap:1rem;justify-content:space-between;align-items:flex-start;flex-wrap:wrap}
+nav.sections{position:sticky;top:0;z-index:10;background:var(--surface);border-bottom:1px solid var(--line)}
+nav.sections ul{display:flex;gap:.25rem;flex-wrap:wrap;list-style:none;margin:0;padding:.5rem 0}
+nav.sections a{display:block;padding:.35rem .75rem;border-radius:999px;text-decoration:none;color:var(--fg)}
+nav.sections a:hover{background:var(--soft)}
+main{padding:1.5rem 0 4rem}
+section.block{margin:0 0 2.5rem}
+section.block>h2{font-size:1.35rem;margin:0 0 .25rem}
+.lede{color:var(--muted);margin:0 0 1rem;max-width:60rem}
+h3{font-size:1.05rem;margin:1.5rem 0 .5rem}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(11.5rem,1fr));gap:.75rem;list-style:none;margin:0 0 1rem;padding:0}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:.85rem 1rem}
+.card .k{color:var(--muted);font-size:.85rem}
+.card .n{color:var(--muted);font-size:.8rem;margin-top:.35rem}
+.card .v{font-size:1.6rem;font-weight:650}
+.badge{display:inline-flex;gap:.35rem;align-items:center;border-radius:999px;padding:.1rem .65rem;font-size:.85rem;font-weight:600;white-space:nowrap}
+.badge[data-tone="ok"]{background:var(--ok-bg);color:var(--ok)}
+.badge[data-tone="warn"]{background:var(--warn-bg);color:var(--warn)}
+.badge[data-tone="bad"]{background:var(--bad-bg);color:var(--bad)}
+.badge[data-tone="unknown"],.badge[data-tone="muted"]{background:var(--unknown-bg);color:var(--unknown)}
+.chips{display:flex;gap:.5rem;flex-wrap:wrap;list-style:none;margin:0 0 1rem;padding:0}
+.chip{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:.15rem .6rem;font-size:.9rem}
+table{width:100%;border-collapse:collapse;background:var(--surface);border:1px solid var(--line);border-radius:10px;overflow:hidden;font-size:.92rem}
+caption{text-align:left;color:var(--muted);padding:.25rem 0 .5rem;caption-side:top}
+th,td{text-align:left;vertical-align:top;padding:.55rem .75rem;border-top:1px solid var(--line)}
+thead th{border-top:0;background:var(--soft);font-size:.8rem;text-transform:uppercase;letter-spacing:.03em;color:var(--muted)}
+tbody th{font-weight:600}
+code,.mono{font-family:var(--mono);font-size:.9em;overflow-wrap:anywhere}
+.scroll{overflow-x:auto}
+.controls{display:flex;gap:.75rem;flex-wrap:wrap;align-items:end;margin:0 0 1rem}
+.controls label{display:flex;flex-direction:column;font-size:.85rem;color:var(--muted);gap:.2rem}
+input,select,button{font:inherit;color:var(--fg);background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:.4rem .6rem}
+button{cursor:pointer}
+button:hover{background:var(--soft)}
+.empty{color:var(--muted);border:1px dashed var(--line);border-radius:10px;padding:1rem;background:var(--surface)}
+.note{border-left:4px solid var(--primary);background:var(--surface);padding:.6rem 1rem;margin:0 0 1rem;border-radius:0 8px 8px 0}
+.graph-frame{background:#fff;border:1px solid var(--line);border-radius:10px;padding:1rem;overflow-x:auto}
+.graph-frame svg{display:block;max-width:100%;height:auto;margin:0 auto}
+details{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:.5rem 1rem;margin:0 0 .5rem}
+summary{cursor:pointer;font-weight:600}
+dl.kv{display:grid;grid-template-columns:max-content 1fr;gap:.35rem 1rem;margin:0}
+dl.kv dt{color:var(--muted)}
+dl.kv dd{margin:0;overflow-wrap:anywhere}
+footer{border-top:1px solid var(--line);color:var(--muted);padding:1rem 0 2rem;font-size:.9rem}
+@media (max-width:40rem){th,td{padding:.45rem .5rem}dl.kv{grid-template-columns:1fr}}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{transition:none!important;animation:none!important}}
+@media print{nav.sections,.controls,#theme-toggle{display:none}}
+</style>
+</head>
+<body>
+<a class="skip" href="#main">Skip to report</a>
+<header class="top">
+  <div class="wrap top-row">
+    <div>
+      <h1>{{ context.projectName }}</h1>
+      <p class="meta">Agentyx harness report · Agentyx {{ context.version }}</p>
+      @if (context.projectId) {
+        <p class="meta">Project id: <code>{{ context.projectId }}</code></p>
+      }
+      @if (context.description) {
+        <p class="meta">{{ context.description }}</p>
+      }
+    </div>
+    <button type="button" id="theme-toggle" hidden aria-pressed="false">Toggle dark mode</button>
+  </div>
+</header>
+<nav class="sections" aria-label="Report sections">
+  <div class="wrap">
+    <ul>
+      <li><a href="#overview">Overview</a></li>
+      <li><a href="#harness">Harness</a></li>
+      <li><a href="#providers">Providers</a></li>
+      <li><a href="#readiness">Readiness</a></li>
+      <li><a href="#reproducibility">Reproducibility</a></li>
+      <li><a href="#installation">Installation</a></li>
+      <li><a href="#graph">Project graph</a></li>
+    </ul>
+  </div>
+</nav>
+<main id="main" class="wrap">
+
+<section class="block" id="overview" aria-labelledby="h-overview">
+  <h2 id="h-overview">Overview</h2>
+  <p class="lede">A read-only snapshot of this project's Agentyx harness. It describes configuration and local files, not model behavior.</p>
+  <ul class="cards">
+    @for (card of context.cards) {
+      <li class="card">
+        <div class="k">{{ card.label }}</div>
+        <div class="v"><span class="badge" data-tone="{{ card.badge.tone }}"><span aria-hidden="true">{{ card.badge.symbol }}</span> {{ card.badge.label }}</span></div>
+        <div class="n">{{ card.note }}</div>
+      </li>
+    }
+  </ul>
+  <h3>Targeted providers</h3>
+  @if (context.targets.length > 0) {
+    <ul class="chips">
+      @for (target of context.targets) {
+        <li class="chip">{{ target.name }}</li>
+      }
+    </ul>
+  } @else {
+    <p class="empty">No providers are targeted.</p>
+  }
+  <h3>Active capabilities</h3>
+  <ul class="cards">
+    @for (count of context.counts) {
+      <li class="card"><div class="k">{{ count.label }}</div><div class="v">{{ count.value }}</div></li>
+    }
+  </ul>
+  <h3>Desired state</h3>
+  <p class="lede">What <code>.agentyx.json</code> asks for, summarized. The resolved harness below is derived from it.</p>
+  <dl class="kv">
+    @for (row of context.desired.rows) {
+      <dt>{{ row.label }}</dt>
+      <dd>
+        @if (row.values.length > 0) {
+          @for (value of row.values) {
+            <span class="chip">{{ value }}</span>
+          }
+        } @else {
+          <span class="meta">none</span>
+        }
+      </dd>
+    }
+    <dt>Project context</dt>
+    <dd>{{ context.desired.projectContext }}</dd>
+    <dt>Relations</dt>
+    <dd>{{ context.desired.relations }}</dd>
+  </dl>
+</section>
+
+<section class="block" id="harness" aria-labelledby="h-harness">
+  <h2 id="h-harness">Harness</h2>
+  <p class="lede">Why each capability is, or is not, part of the effective harness. Instruction bodies are never included.</p>
+  <div class="controls" id="harness-controls" hidden>
+    <label>Search<input type="search" id="harness-search" autocomplete="off"></label>
+    <label>Kind
+      <select id="harness-kind">
+        <option value="">All kinds</option>
+        <option value="skill">Skills</option>
+        <option value="mcp">MCP servers</option>
+        <option value="tool">Tools</option>
+        <option value="hook">Hooks</option>
+        <option value="agent">Agents</option>
+      </select>
+    </label>
+    <label>State
+      <select id="harness-state">
+        <option value="">All states</option>
+        <option value="selected">Selected</option>
+        <option value="available">Available, disabled</option>
+        <option value="excluded">Excluded</option>
+      </select>
+    </label>
+    <p id="harness-count" role="status" class="meta"></p>
+  </div>
+  @for (group of context.harness.groups) {
+    <h3>{{ group.title }} <span class="meta">({{ group.active }} active of {{ group.entries.length }})</span></h3>
+    @if (group.entries.length > 0) {
+      <div class="scroll">
+        <table>
+          <caption>{{ group.title }}: selection state, reason and origin</caption>
+          <thead><tr><th scope="col">Name</th><th scope="col">State</th><th scope="col">Why</th><th scope="col">Origin</th><th scope="col">Provider support</th></tr></thead>
+          <tbody>
+            @for (entry of group.entries) {
+              <tr data-capability data-kind="{{ entry.kind }}" data-state="{{ entry.stateKey }}" data-search="{{ entry.search }}">
+                <th scope="row"><code>{{ entry.name }}</code></th>
+                <td><span class="badge" data-tone="{{ entry.badge.tone }}"><span aria-hidden="true">{{ entry.badge.symbol }}</span> {{ entry.badge.label }}</span></td>
+                <td>{{ entry.why }}</td>
+                <td>{{ entry.origins }}</td>
+                <td>
+                  @for (item of entry.coverage) {
+                    <div>{{ item.target }}: {{ item.label }}</div>
+                  } @empty {
+                    <span class="meta">no targets</span>
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    } @else {
+      <p class="empty">No {{ group.title }} are declared by the selected packs.</p>
+    }
+  }
+  <p class="meta" id="harness-empty" hidden>No capability matches the current filter.</p>
+  <p class="note">Provider support means Agentyx can render the capability for that provider. It does not show that the provider loaded or used it.</p>
+</section>
+
+<section class="block" id="providers" aria-labelledby="h-providers">
+  <h2 id="h-providers">Providers</h2>
+  <p class="lede">What Agentyx knows about each targeted provider. Nothing here is read from the provider or verified at runtime.</p>
+  @if (context.providers.length > 0) {
+    <div class="scroll">
+      <table>
+        <caption>Targeted providers and what Agentyx can render for them</caption>
+        <thead><tr><th scope="col">Provider</th><th scope="col">Skills location</th><th scope="col">MCP</th><th scope="col">Hooks</th><th scope="col">Agents</th><th scope="col">Observed sessions</th></tr></thead>
+        <tbody>
+          @for (provider of context.providers) {
+            <tr>
+              <th scope="row">{{ provider.name }}</th>
+              <td><code>{{ provider.skills }}</code></td>
+              <td>{{ provider.mcp }}</td>
+              <td>{{ provider.hooks }}</td>
+              <td>{{ provider.agents }}</td>
+              <td><span class="badge" data-tone="{{ provider.observation.tone }}"><span aria-hidden="true">{{ provider.observation.symbol }}</span> {{ provider.observation.label }}</span><div class="meta">{{ provider.observationNote }}</div></td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  } @else {
+    <p class="empty">No providers are targeted.</p>
+  }
+</section>
+
+<section class="block" id="readiness" aria-labelledby="h-readiness">
+  <h2 id="h-readiness">Readiness</h2>
+  <p class="lede">Doctor's readiness states and diagnostics, unchanged. Generating this report does not require them to pass.</p>
+  <ul class="cards">
+    @for (row of context.readiness.rows) {
+      <li class="card"><div class="k">{{ row.label }}</div><div class="v"><span class="badge" data-tone="{{ row.badge.tone }}"><span aria-hidden="true">{{ row.badge.symbol }}</span> {{ row.badge.label }}</span></div></li>
+    }
+    <li class="card"><div class="k">Doctor status</div><div class="v"><span class="badge" data-tone="{{ context.readiness.doctor.tone }}"><span aria-hidden="true">{{ context.readiness.doctor.symbol }}</span> {{ context.readiness.doctor.label }}</span></div></li>
+  </ul>
+  <h3>Diagnostics</h3>
+  @if (context.readiness.diagnostics.length > 0) {
+    <div class="scroll">
+      <table>
+        <caption>Diagnostics reported by Doctor</caption>
+        <thead><tr><th scope="col">Level</th><th scope="col">Code</th><th scope="col">Message</th></tr></thead>
+        <tbody>
+          @for (item of context.readiness.diagnostics) {
+            <tr>
+              <td><span class="badge" data-tone="{{ item.badge.tone }}"><span aria-hidden="true">{{ item.badge.symbol }}</span> {{ item.badge.label }}</span></td>
+              <td><code>{{ item.code }}</code></td>
+              <td>{{ item.message }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  } @else {
+    <p class="empty">Doctor reported no diagnostics.</p>
+  }
+</section>
+
+<section class="block" id="reproducibility" aria-labelledby="h-reproducibility">
+  <h2 id="h-reproducibility">Reproducibility</h2>
+  <p class="lede">Reviewed inputs and installed state are separate facts. A matching lock does not mean files are installed, and the reverse.</p>
+  <ul class="cards">
+    <li class="card"><div class="k">Locked resolution</div><div class="v"><span class="badge" data-tone="{{ context.reproducibility.badge.tone }}"><span aria-hidden="true">{{ context.reproducibility.badge.symbol }}</span> {{ context.reproducibility.badge.label }}</span></div><div class="n">Reviewed inputs</div></li>
+    <li class="card"><div class="k">Installation</div><div class="v"><span class="badge" data-tone="{{ context.reproducibility.installation.tone }}"><span aria-hidden="true">{{ context.reproducibility.installation.symbol }}</span> {{ context.reproducibility.installation.label }}</span></div><div class="n">Installed state</div></li>
+  </ul>
+  <p>{{ context.reproducibility.explanation }}</p>
+  <dl class="kv">
+    <dt>Lock file</dt><dd>{{ context.reproducibility.lock }}</dd>
+    <dt>Resolution snapshot</dt><dd>{{ context.reproducibility.snapshot }}</dd>
+  </dl>
+  @if (context.reproducibility.differences.length > 0) {
+    <h3>Differences from the lock</h3>
+    <ul>
+      @for (difference of context.reproducibility.differences) {
+        <li>{{ difference }}</li>
+      }
+    </ul>
+  }
+</section>
+
+<section class="block" id="installation" aria-labelledby="h-installation">
+  <h2 id="h-installation">Installation</h2>
+  <p class="lede">Ownership comes only from entries recorded in <code>.agentyx.lock.json</code>. A capability that is merely resolved is not owned, and nothing else is touched.</p>
+  <dl class="kv">
+    <dt>Lock file</dt><dd>{{ context.installation.lock }}</dd>
+    <dt>Pending changes</dt><dd>{{ context.installation.summary }}</dd>
+    <dt>Recorded entries</dt><dd>{{ context.installation.total }}</dd>
+  </dl>
+  @if (context.installation.total > 0) {
+    @for (group of context.installation.groups) {
+      @if (group.entries.length > 0) {
+        <h3>{{ group.title }}</h3>
+        <div class="scroll">
+          <table>
+            <caption>{{ group.title }} recorded in the lock</caption>
+            <thead><tr><th scope="col">Path</th><th scope="col">Names</th><th scope="col">Targets</th><th scope="col">State</th></tr></thead>
+            <tbody>
+              @for (entry of group.entries) {
+                <tr>
+                  <th scope="row"><code>{{ entry.path }}</code></th>
+                  <td>{{ entry.names }}</td>
+                  <td>{{ entry.targets }}</td>
+                  <td><span class="badge" data-tone="{{ entry.badge.tone }}"><span aria-hidden="true">{{ entry.badge.symbol }}</span> {{ entry.badge.label }}</span></td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    }
+  } @else {
+    <p class="empty">The lock records no Agentyx-owned files.</p>
+  }
+</section>
+
+<section class="block" id="graph" aria-labelledby="h-graph">
+  <h2 id="h-graph">Project graph</h2>
+  @if (context.graph.configured) {
+    <p class="lede">Direct architectural relationships declared in the project configuration ({{ context.graph.relations }}).</p>
+    <div class="graph-frame">{{{ context.graph.svg }}}</div>
+  } @else {
+    <p class="empty">Project graph not configured.</p>
+  }
+</section>
+
+</main>
+<footer>
+  <div class="wrap">Generated by <code>agentyx report</code>. A static, offline view of project-local state; it contains no instruction bodies, secrets or file contents.</div>
+</footer>
+<script>
+(function () {
+  var root = document.documentElement;
+  var toggle = document.getElementById("theme-toggle");
+  if (toggle) {
+    toggle.hidden = false;
+    toggle.addEventListener("click", function () {
+      var current = root.getAttribute("data-theme");
+      var dark = current ? current === "dark" : window.matchMedia("(prefers-color-scheme: dark)").matches;
+      root.setAttribute("data-theme", dark ? "light" : "dark");
+      toggle.setAttribute("aria-pressed", dark ? "false" : "true");
+    });
+  }
+  var controls = document.getElementById("harness-controls");
+  if (!controls) return;
+  controls.hidden = false;
+  var search = document.getElementById("harness-search");
+  var kind = document.getElementById("harness-kind");
+  var state = document.getElementById("harness-state");
+  var count = document.getElementById("harness-count");
+  var none = document.getElementById("harness-empty");
+  var rows = Array.prototype.slice.call(document.querySelectorAll("tr[data-capability]"));
+  function apply() {
+    var query = search.value.trim().toLowerCase();
+    var shown = 0;
+    rows.forEach(function (row) {
+      var match =
+        (!query || row.getAttribute("data-search").indexOf(query) !== -1) &&
+        (!kind.value || row.getAttribute("data-kind") === kind.value) &&
+        (!state.value || row.getAttribute("data-state") === state.value);
+      row.hidden = !match;
+      if (match) shown += 1;
+    });
+    count.textContent = shown + " of " + rows.length + " capabilities shown";
+    none.hidden = shown !== 0;
+  }
+  search.addEventListener("input", apply);
+  kind.addEventListener("change", apply);
+  state.addEventListener("change", apply);
+  apply();
+})();
+</script>
+</body>
+</html>
