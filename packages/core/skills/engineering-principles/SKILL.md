@@ -1,6 +1,6 @@
 ---
 name: engineering-principles
-description: Apply maintainable software-engineering judgment to non-trivial code changes.
+description: Use for implementation and review when correctness, boundaries, or long-term maintenance are at stake.
 ---
 
 # Engineering principles

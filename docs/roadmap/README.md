@@ -11,11 +11,15 @@ normal installs still write v1; R090-02 is next. Historical milestone text below
 written; read it against current behavior. R100-03 and R100-04 are not started.
 
 **Current-state note (2026-10-21):** the historical milestone numbers in this directory (0.6–0.10)
-diverged from the actual package versions, which are now at 0.20.0; those files are preserved as
+diverged from the actual package versions, which are now at 0.21.0; those files are preserved as
 written. R100 remains an external gate for 1.0: R100-03 is pending second-provider evidence and
 R100-04 waits behind it. While provider access is blocked, development was pulled forward onto the
 static project report ([0.21-report](0.21-report.md)). Completing the report does not satisfy
 R100-03 or R100-04.
+
+The [0.22 workflow and usefulness milestone](0.22-workflow-and-usefulness.md) improves everyday
+selection and prepares the next context-aware evaluation. Its automated checks do not replace
+provider trials or real-project pilots.
 
 ## Product outcome
 

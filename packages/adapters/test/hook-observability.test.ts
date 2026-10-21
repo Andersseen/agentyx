@@ -36,8 +36,7 @@ describe("hook rendering for observation", () => {
       hooks: [
         {
           type: "command",
-          command: "npx",
-          args: ["--no-install", "agentyx", "hook", "observe", "--provider", "claude"],
+          command: "npx --no-install agentyx hook observe --provider claude",
           statusMessage: "agentyx:observe-tool-use",
           async: true,
         },

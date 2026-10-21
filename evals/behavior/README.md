@@ -1,6 +1,6 @@
 # Measured behavior benchmark
 
-This six-task benchmark is separate from [`../skill-behavior.json`](../skill-behavior.json), which
+This seven-task benchmark is separate from [`../skill-behavior.json`](../skill-behavior.json), which
 only checks semantic pack-to-Skill membership. Passing `pnpm eval:behavior` validates benchmark
 assets and the deterministic plan. It runs no provider, model, network call, or paid evaluation and
 does not demonstrate agent improvement.
@@ -14,8 +14,9 @@ real `agentyx install` command. The provider target (`codex` or `claude`) is the
 treatment input. Do not paste Skills into prompts. Every run needs a fresh fixture and fresh provider
 session. Keep provider transcripts outside Git.
 
-The fixed plan contains six scenarios × two providers × two conditions × three repetitions = 72
-runs. Within each scenario/provider pair, condition order alternates baseline/treatment,
+Benchmark version 2 adds a project-context and verification scenario; it preserves version 1's
+fixtures and results in `evals/preflight/`. The current plan contains seven scenarios × two
+providers × two conditions × three repetitions = 84 runs. Within each scenario/provider pair, condition order alternates baseline/treatment,
 treatment/baseline, baseline/treatment. Prompts never vary by condition.
 
 The committed provider pair is Codex and Claude Code. If Claude Code is unavailable and Kimi is
@@ -43,10 +44,12 @@ source from this repository against the run copy, so editing a copied checker ca
 objective result. Validation checks the expected initial pass/fail state and confirms that checks do
 not mutate canonical fixtures. The canonical fixtures are never used as run directories.
 
-The bug fixture's check is expected to fail before a fix; API, command-discovery, and coexistence
-checks also fail initially. The safe-refactor fixture passes initially and guards behavior. The
-negative control intentionally has no unrelated technical work. Existing instructions in the
-command-discovery and coexistence fixtures are copied unchanged into both conditions.
+The bug fixture's check is expected to fail before a fix; API, command-discovery, coexistence and
+project-context checks also fail initially. The safe-refactor fixture passes initially and guards
+behavior. The negative control intentionally has no unrelated technical work. Existing instructions
+in the command-discovery, coexistence and project-context fixtures are copied unchanged into both
+conditions. Only the project-context treatment adds configured project facts; its baseline retains
+the same fixture, scripts and repository instructions.
 
 ## Results and release gate
 
@@ -94,9 +97,9 @@ The `category` must match the benchmark. Each run pair must have the same fixtur
 version, model identity/status, and settings fingerprint. Keep fingerprints sanitized and do not
 include provider-private configuration values.
 
-`summarize` validates JSONL records against the fixed run plan and fails closed. It reports baseline
+`summarize` validates JSONL records against the versioned fixed run plan and fails closed. It reports baseline
 and Agentyx pass counts per provider and scenario, intervention counts, instruction-use counts,
-critical failures, and a gate status of `incomplete`, `failed`, or `passed`. Passing requires all 72
+critical failures, and a gate status of `incomplete`, `failed`, or `passed`. Passing requires all 84
 valid runs, two providers, no unknown objective result or critical failure, treatment correctness at
 least baseline for each provider, and at least two categories with correctness or intervention
 benefit without category-level correctness regression. This is an internal scoped acceptance gate,

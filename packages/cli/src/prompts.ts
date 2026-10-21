@@ -41,14 +41,21 @@ export function packOptions(
 
   return ordered.map((pack) => {
     const reason = recommended.get(pack.name);
-    const hint = reason ?? pack.description;
+    const description = pack.description;
+    const hint = [
+      pack.name === "technical" ? "Common engineering base." : undefined,
+      reason,
+      description,
+    ]
+      .filter((part): part is string => part !== undefined)
+      .join(" ");
 
     return {
       value: pack.name,
       label: `${formatPackName(pack.name)} (${pack.category ?? "engineering"})${
         reason === undefined ? "" : " — recommended"
-      }`,
-      ...(hint === undefined ? {} : { hint }),
+      }${pack.name === "technical" ? " — common base" : ""}`,
+      ...(hint.length === 0 ? {} : { hint }),
     };
   });
 }

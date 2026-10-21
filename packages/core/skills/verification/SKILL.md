@@ -1,6 +1,6 @@
 ---
 name: verification
-description: Back completion claims with evidence, and report failures plainly.
+description: When finishing code or configuration work, run the relevant checks and report their actual results.
 ---
 
 # Verification

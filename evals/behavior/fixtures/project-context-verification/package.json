@@ -1,0 +1,9 @@
+{
+  "name": "project-context-verification-fixture",
+  "private": true,
+  "packageManager": "pnpm@10.0.0",
+  "scripts": {
+    "test": "node check.mjs",
+    "verify": "node check.mjs"
+  }
+}

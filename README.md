@@ -23,7 +23,7 @@ Packs contribute provider-neutral capabilities:
 
 | Pack            | Category    | Purpose                                                        |
 | --------------- | ----------- | -------------------------------------------------------------- |
-| `technical`     | engineering | General engineering quality, API design, code review           |
+| `technical`     | engineering | Common engineering base, API design, code review                |
 | `typescript`    | language    | Strict, modeled, modern TypeScript                             |
 | `rust`          | language    | Idiomatic Rust, filesystem safety, portable tests, Cargo checks |
 | `angular`       | framework   | Modern Angular APIs, signals, architecture, testing            |
@@ -215,8 +215,9 @@ pnpm dlx @agentyx/cli recommend --json
 
 This is deterministic detection, not an AI feature: no network request, no telemetry, and no LLM
 call decides a recommendation. `recommend` never writes anything — no `.agentyx.json`, no installed
-files, no enabled MCP server or hook. `init` uses the same engine to pick sensible defaults, but you
-choose what's actually selected either way:
+files, no enabled MCP server or hook. Interactive `init` identifies `technical` as the common
+engineering base and preselects stack packs based on project signals. You can adjust every choice.
+Workflow packs and optional MCP servers are not selected automatically:
 
 ```sh
 pnpm dlx @agentyx/cli recommend
@@ -234,6 +235,14 @@ pnpm dlx @agentyx/cli init
 That is the whole first run. `init` detects the project's stack and the agents already used in the
 checkout, offers them as defaults, and finishes by installing the skills into each one — so a first
 run goes from nothing to installed without a second command.
+
+For the interactive selection, `technical` is presented as the common engineering base; detected
+stack packs such as `typescript` and `angular` add focused guidance. Commit `.agentyx.json` and
+`.agentyx.lock.json` to reuse and reproduce the reviewed setup in another checkout. See the
+[reproducibility guide](docs/reproducibility.md) for exact CLI pinning and fresh-checkout steps.
+Runtime observation remains opt-in: choose `efficiency` when its project hooks are useful, then use
+`agentyx doctor` to check provider support, installed hooks, and local prerequisites. Activity rates
+show observed use only; they do not measure usefulness or agent quality.
 
 The same flow, scripted:
 

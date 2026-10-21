@@ -142,8 +142,7 @@ describe("agentyx install hooks", () => {
       hooks: [
         {
           type: "command",
-          command: "npx",
-          args: ["--no-install", "agentyx", "doctor", "--hook"],
+          command: "npx --no-install agentyx doctor --hook",
           statusMessage: "agentyx:session-doctor-bootstrap",
         },
       ],

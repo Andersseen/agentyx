@@ -1,6 +1,6 @@
 ---
 name: planning
-description: Plan non-trivial work before editing, and keep small changes small.
+description: Plan cross-file or consequential work before editing; keep obvious, small changes direct.
 ---
 
 # Planning
