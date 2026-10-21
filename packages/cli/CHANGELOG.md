@@ -1,5 +1,21 @@
 # @agentyx/cli
 
+## 0.21.0
+
+### Minor Changes
+
+- afd6424: Add `agentyx report`, a deterministic, self-contained HTML report of the project's Agentyx harness:
+  desired state, why each capability is selected, providers, Doctor readiness, locked-resolution
+  comparison, lock-recorded ownership and the project graph. It is read-only apart from the requested
+  project-relative `.html` file (`--output`, `--overwrite`), works offline from `file://`, and omits
+  Skill bodies, secrets, hashes and absolute paths.
+
+### Patch Changes
+
+- Updated dependencies [afd6424]
+  - @agentyx/core@0.21.0
+  - @agentyx/adapters@0.21.0
+
 ## 0.20.0
 
 ### Minor Changes
