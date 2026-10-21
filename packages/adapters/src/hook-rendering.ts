@@ -110,7 +110,7 @@ export function renderJsonHooksConfig(
       const groups = events[event] ?? [];
 
       events[event] = groups;
-      addHookEntry(groups, event, hook, flavor, providerId);
+      addHookEntry(groups, event, hook, providerId);
     }
   }
 
@@ -142,15 +142,15 @@ function addHookEntry(
   groups: JsonRecord[],
   event: string,
   hook: HookDefinition,
-  flavor: HookConfigFlavor,
   providerId: string,
 ): void {
   const args = hook.args.map((arg) => arg.replaceAll("{provider}", providerId));
+  // Shell form is required for Claude hooks on Windows, where npm's npx.cmd shim
+  // cannot be spawned through the exec form. Keep each fixed argument quoted.
+  const command = [hook.command, ...args].map(shellQuote).join(" ");
   const entry: JsonRecord = {
     type: "command",
-    ...(flavor === "claude"
-      ? { command: hook.command, args }
-      : { command: [hook.command, ...args].map(shellQuote).join(" ") }),
+    command,
     statusMessage: `${AGENTYX_HOOK_MARKER}${hook.name}`,
     ...(hook.timeout === undefined ? {} : { timeout: hook.timeout }),
     ...(hook.async === true ? { async: true } : {}),

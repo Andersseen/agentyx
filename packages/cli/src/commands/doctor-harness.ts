@@ -322,6 +322,59 @@ function addRecommendations(
       });
     }
 
+    if (
+      provider.runtimeObservation === "available" &&
+      provider.hooks?.configured !== true &&
+      footprint.hooks.active === 0
+    ) {
+      diagnostics.push({
+        level: "info",
+        code: "observation_not_enabled",
+        message:
+          `Runtime activity observation is not enabled for ${provider.name}. Select the efficiency ` +
+          "pack and sync if you want project hooks; observed activity does not measure usefulness.",
+      });
+    } else if (
+      provider.runtimeObservation === "available" &&
+      provider.hooks?.configured !== true &&
+      installationPending
+    ) {
+      diagnostics.push({
+        level: "info",
+        code: "observation_installation_pending",
+        message:
+          `${provider.name}: selected observer hooks are not installed yet. Run agentyx sync, then ` +
+          "start a new provider session before reviewing activity.",
+      });
+    }
+
+    if (
+      provider.runtimeObservation === "available" &&
+      provider.hooks?.configured === true &&
+      provider.hooks.trust === "review-may-be-required" &&
+      provider.currentBaselineSessions === 0
+    ) {
+      diagnostics.push({
+        level: "info",
+        code: "observer_hooks_review_required",
+        message:
+          `${provider.name}: review and trust the configured project hooks in /hooks, then start a ` +
+          "new session before checking activity. Activity is not a measure of usefulness.",
+      });
+    } else if (
+      provider.coverage === "active" &&
+      provider.currentBaselineSessions === 0 &&
+      !installationPending
+    ) {
+      diagnostics.push({
+        level: "info",
+        code: "observation_waiting_for_sessions",
+        message:
+          `${provider.name}: observer hooks are configured, but no sessions for the current ` +
+          "harness baseline have been observed. Start a new session; activity is not a measure of usefulness.",
+      });
+    }
+
     if (provider.hooks?.note !== undefined) {
       diagnostics.push({
         level: "info",

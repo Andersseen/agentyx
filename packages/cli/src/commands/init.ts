@@ -192,7 +192,16 @@ async function planInteractiveInit(input: InitCommandInput): Promise<InitPlan> {
       ? [...input.packs]
       : await promptValue(
           autocompleteMultiselect({
-            message: ["Agentyx", "", section("Detected", detected), "", "Packs"].join("\n"),
+            message: [
+              "Agentyx",
+              "",
+              section("Detected", detected),
+              "",
+              "Choose a shared engineering base and the packs for this project's stack and work.",
+              "The technical pack is a common base; stack and workflow packs add focused guidance.",
+              "",
+              "Packs",
+            ].join("\n"),
             initialValues: recommendedPackNames,
             required: true,
             maxItems: 10,
@@ -365,6 +374,15 @@ function renderInitText(plan: InitPlan, install: string | undefined): string {
     ...(plan.projectCommands.length === 0
       ? []
       : [section("Project commands", plan.projectCommands)]),
+    "",
+    "Reuse this setup by committing .agentyx.json and the reviewed .agentyx.lock.json after install.",
+    ...(plan.packs.includes("efficiency")
+      ? [
+          "Runtime activity is metadata only. The provider must run the project hooks; doctor explains coverage and prerequisites.",
+        ]
+      : [
+          "Runtime activity observation is opt-in through the efficiency pack; doctor explains which providers support it.",
+        ]),
     ...(install === undefined
       ? [
           `Next: agentyx install — writes Skills, MCP and hooks into ${formatTargetNames(plan.targets)}.`,

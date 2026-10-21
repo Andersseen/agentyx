@@ -189,6 +189,37 @@ describe("agentyx doctor", () => {
     ).toBe(false);
   });
 
+  it("explains when a provider could observe activity but no observer hooks are selected", async () => {
+    await writeConfig({ packs: ["technical"], targets: ["codex"] });
+
+    const report = await runDoctorCommand({ json: false, cwd: projectDir });
+
+    expect(report.diagnostics).toContainEqual(
+      expect.objectContaining({
+        level: "info",
+        code: "observation_not_enabled",
+        message: expect.stringContaining("Select the efficiency pack and sync"),
+      }),
+    );
+  });
+
+  it("asks Codex users to review project hooks before expecting activity", async () => {
+    await writeConfig({ packs: ["efficiency"], targets: ["codex"] });
+    await runInstallCommand({ ...installInput, cwd: projectDir });
+    await mkdir(join(projectDir, "node_modules", ".bin"), { recursive: true });
+    await writeFile(join(projectDir, "node_modules", ".bin", "agentyx"), "", "utf8");
+
+    const report = await runDoctorCommand({ json: false, cwd: projectDir });
+
+    expect(report.diagnostics).toContainEqual(
+      expect.objectContaining({
+        level: "info",
+        code: "observer_hooks_review_required",
+        message: expect.stringContaining("review and trust the configured project hooks in /hooks"),
+      }),
+    );
+  });
+
   it("checks active stdio MCP commands without executing them", async () => {
     await writeConfig({ packs: ["efficiency"], enable: ["codebase-memory"], targets: ["codex"] });
     const originalPath = process.env.PATH;

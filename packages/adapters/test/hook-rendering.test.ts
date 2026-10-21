@@ -12,6 +12,24 @@ const renderClaudeHooksConfig = (
 const bootstrap = builtInHookRegistry.get("session-doctor-bootstrap");
 
 describe("Claude Code hook rendering", () => {
+  it("uses shell form and preserves a project path containing spaces as one argument", () => {
+    const { content } = renderClaudeHooksConfig(
+      [
+        {
+          ...bootstrap,
+          args: [...bootstrap.args, "C:\\Program Files\\Agentyx"],
+        },
+      ],
+      { content: undefined, remove: [] },
+    );
+    const entry = JSON.parse(content).hooks.SessionStart[0].hooks[0];
+
+    expect(entry.command).toBe(
+      "npx --no-install agentyx doctor --hook 'C:\\Program Files\\Agentyx'",
+    );
+    expect(entry.args).toBeUndefined();
+  });
+
   it("preserves unrelated settings while adding a SessionStart hook", () => {
     const existing = JSON.stringify({
       permissions: { allow: ["Bash(git status:*)"] },
@@ -37,8 +55,7 @@ describe("Claude Code hook rendering", () => {
         hooks: [
           {
             type: "command",
-            command: "npx",
-            args: ["--no-install", "agentyx", "doctor", "--hook"],
+            command: "npx --no-install agentyx doctor --hook",
             statusMessage: "agentyx:session-doctor-bootstrap",
           },
         ],
@@ -63,8 +80,7 @@ describe("Claude Code hook rendering", () => {
               { type: "command", command: "echo", args: ["hi"] },
               {
                 type: "command",
-                command: "npx",
-                args: ["--no-install", "agentyx", "doctor", "--hook"],
+                command: "npx --no-install agentyx doctor --hook",
                 statusMessage: "agentyx:session-doctor-bootstrap",
               },
             ],

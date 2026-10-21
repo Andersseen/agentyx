@@ -668,3 +668,38 @@ Starting point: `main` at `2e9c4b53dc198673e4a864e10eebdd30667a3970`, packages a
 R100-03 remains pending on second-provider evidence. R100-04 remains pending behind R100-03. 1.0
 remains blocked on R100 completion. Next product work after this minor is 1.0 contract and release
 preparation, only once R100 is complete; if R100 is still externally blocked, do not advance to 1.0.
+
+## R220-01 / R220-02 — Everyday flow and evaluation readiness
+
+Status: implementation complete on `main` at `3f97398`; package versions `0.21.0`.
+
+Delivered:
+- Marked the existing `technical` pack as the common engineering base in interactive selection and
+  documented how reviewed config and lock files carry that choice between checkouts.
+- Added Doctor guidance for disabled observation, pending observer installation, Codex hook trust
+  review and providers waiting for fresh sessions. Activity rates remain explicitly separate from
+  usefulness.
+- Changed Claude hooks to shell-form commands for Windows `.cmd` shim compatibility, with adapter
+  regression coverage. The test verifies rendered output; it is not a live Windows provider trial.
+- Refined planning, verification and engineering-principle Skill descriptions to improve relevant
+  activation while keeping small changes direct.
+- Preserved the six version-1 benchmark scenarios and Codex preflight. Version 2 adds a project
+  context and verification fixture, configurable treatment context, and an 84-run deterministic plan.
+- Added a real-project pilot protocol; no pilot is claimed complete.
+
+Verification:
+- `pnpm check` — passed; 69 test files and 867 tests, typecheck and all package builds passed.
+  Biome reported two pre-existing warnings.
+- `pnpm eval:skills` — passed; 11 scenarios.
+- `pnpm eval:behavior` — passed; seven benchmark scenarios, 84-run plan, no provider calls.
+- `pnpm smoke:pack` — passed; packaged lifecycle and fresh-checkout consumer verified.
+- Built CLI acceptance — 17/17 checks passed, including JSON purity and error cases.
+- Scratch lifecycle — init, exclusion, dry-run, sync, Doctor and uninstall passed; an unmanaged Skill,
+  unrelated Codex config and the isolated HOME directory were preserved.
+- `git diff --check` — passed.
+
+Changeset: `.changeset/common-project-flow.md` (minor, fixed group).
+
+Remaining 1.0 work: the full two-provider behavior evaluation and all three real-project pilots in
+`docs/pilots/README.md` remain pending human/provider access. The partial Codex preflight is preserved
+as version-1 evidence and still shows no comparative benefit.

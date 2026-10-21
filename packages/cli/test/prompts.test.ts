@@ -48,7 +48,12 @@ describe("prompt options", () => {
     const options = packOptions();
 
     for (const pack of builtInPacks) {
-      expect(options.find((option) => option.value === pack.name)?.hint).toBe(pack.description);
+      const hint = options.find((option) => option.value === pack.name)?.hint;
+
+      expect(hint).toContain(pack.description);
+      if (pack.name === "technical") {
+        expect(hint).toContain("Common engineering base.");
+      }
     }
   });
 

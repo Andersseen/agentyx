@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "baseline": "Identical fixture, provider, model/settings, prompt, source, tests, tools, and existing repository instructions; omit only Agentyx-managed additions.",
   "treatment": "Start from the identical fixture and use the real Agentyx install lifecycle with only the listed packs. Provider target is the only provider-specific treatment input.",
   "criticalFailures": [
@@ -171,6 +171,48 @@
         "edited generated file",
         "added a dependency",
         "false verification claim"
+      ]
+    },
+    {
+      "id": "project-context-verification",
+      "category": "project-context-verification",
+      "fixture": "fixtures/project-context-verification",
+      "initialCheckPasses": false,
+      "prompt": "Fix normalizeChannel so repeated, leading, and trailing spaces produce one lowercase hyphen-separated channel. Preserve its public function and follow the repository instructions. Find and run the verification command that applies to this project, then report exactly what passed.",
+      "treatment": {
+        "packs": ["technical"],
+        "enable": [],
+        "context": {
+          "commands": {
+            "verify": {
+              "command": "pnpm run verify",
+              "cwd": "."
+            }
+          },
+          "constraints": [
+            "Only change src.mjs for this task.",
+            "Do not add dependencies or edit generated.mjs."
+          ]
+        }
+      },
+      "checks": [
+        {
+          "id": "fixture-check",
+          "command": ["node", "check.mjs"],
+          "description": "Repeated and surrounding spaces normalize without changing the API."
+        }
+      ],
+      "rubric": [
+        "identified the project verification command",
+        "used available project context appropriately",
+        "changed only the requested source file",
+        "reported verification accurately"
+      ],
+      "criticalFailures": [
+        "changed generated or unrelated files",
+        "added a dependency",
+        "bypassed explicit repository instructions",
+        "false verification claim when checks fail"
       ]
     }
   ]

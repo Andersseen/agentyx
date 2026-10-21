@@ -18,6 +18,7 @@ const requiredCategories = [
   "command-discovery",
   "irrelevant-skill-restraint",
   "instruction-coexistence",
+  "project-context-verification",
 ];
 const supportedProviders = ["codex", "claude", "kimi"];
 const interventionCategories = [
@@ -45,7 +46,7 @@ if (operation === "validate") {
   validateDeterministicPlan();
   await validateDeterministicSelfChecks();
   console.log(
-    "Behavior benchmark valid: 6 scenarios; deterministic 72-run plan; no provider calls.",
+    `Behavior benchmark valid: ${benchmark.scenarios.length} scenarios; deterministic ${benchmark.scenarios.length * benchmark.providers.length * 2 * benchmark.repetitions}-run plan; no provider calls.`,
   );
 } else if (operation === "plan") {
   const providers = parseList(options.providers ?? "codex,claude");
@@ -96,9 +97,9 @@ async function resolveFixture(scenario, baseDirectory = join(root, "evals/behavi
 }
 
 function validateBenchmarkStructure(definition) {
-  if (definition.version !== 1) throw new Error("benchmark.version must be 1");
-  if (!Array.isArray(definition.scenarios) || definition.scenarios.length !== 6)
-    throw new Error("The measured benchmark must contain exactly six scenarios.");
+  if (definition.version !== 2) throw new Error("benchmark.version must be 2");
+  if (!Array.isArray(definition.scenarios) || definition.scenarios.length !== 7)
+    throw new Error("The measured benchmark must contain exactly seven scenarios.");
   const ids = new Set();
   const categories = new Set();
   for (const scenario of definition.scenarios) {
@@ -128,7 +129,14 @@ function validateBenchmarkStructure(definition) {
     for (const item of scenario.treatment.enable)
       requireString(item, `${scenario.id} treatment enable`);
     resolveAgentyxConfig(
-      { packs: scenario.treatment.packs, enable: scenario.treatment.enable, targets: [] },
+      {
+        packs: scenario.treatment.packs,
+        enable: scenario.treatment.enable,
+        targets: [],
+        ...(scenario.treatment.context === undefined
+          ? {}
+          : { context: scenario.treatment.context }),
+      },
       builtInPackRegistry,
     );
     if (!Array.isArray(scenario.checks) || !scenario.checks.length)
@@ -158,7 +166,7 @@ function validateBenchmarkStructure(definition) {
       requireString(item, `${scenario.id} critical failure`);
   }
   if (requiredCategories.some((category) => !categories.has(category)))
-    throw new Error("Benchmark categories do not match the six required categories.");
+    throw new Error("Benchmark categories do not match the seven required categories.");
   if (
     !Array.isArray(definition.providers) ||
     definition.providers.length !== 2 ||
@@ -212,10 +220,10 @@ function makePlan(providers, repetitions) {
 function validateDeterministicPlan() {
   const first = makePlan(benchmark.providers, 3);
   const second = makePlan(benchmark.providers, 3);
-  if (JSON.stringify(first) !== JSON.stringify(second) || first.length !== 72) {
-    throw new Error(
-      "The two-provider, three-repetition run plan is not deterministic or not 72 runs.",
-    );
+  const expectedRuns =
+    benchmark.scenarios.length * benchmark.providers.length * 2 * benchmark.repetitions;
+  if (JSON.stringify(first) !== JSON.stringify(second) || first.length !== expectedRuns) {
+    throw new Error(`The benchmark run plan is not deterministic or not ${expectedRuns} runs.`);
   }
   for (const scenario of benchmark.scenarios) {
     for (const provider of benchmark.providers) {
@@ -290,6 +298,7 @@ async function prepareRun(options) {
       packs: scenario.treatment.packs,
       enable: scenario.treatment.enable,
       targets: [options.provider],
+      ...(scenario.treatment.context === undefined ? {} : { context: scenario.treatment.context }),
     };
     await writeFile(join(target, ".agentyx.json"), `${JSON.stringify(config, null, 2)}\n`, "utf8");
     const cli = join(root, "packages/cli/dist/index.mjs");
@@ -426,7 +435,8 @@ async function validatePreparedCondition(fixture, scenario, provider, condition)
   if (
     JSON.stringify(config.packs) !== JSON.stringify(scenario.treatment.packs) ||
     JSON.stringify(config.enable) !== JSON.stringify(scenario.treatment.enable) ||
-    JSON.stringify(config.targets) !== JSON.stringify([provider])
+    JSON.stringify(config.targets) !== JSON.stringify([provider]) ||
+    JSON.stringify(config.context) !== JSON.stringify(scenario.treatment.context)
   )
     throw new Error("Treatment config differs from the benchmark or provider target.");
   if (
@@ -678,7 +688,7 @@ function evaluateGate(records, providers, repetitions) {
     const summary = providerSummary[provider];
     const [basePassed, baseTotal] = summary.baseline.split("/").map(Number);
     const [treatmentPassed] = summary.agentyx.split("/").map(Number);
-    return baseTotal !== 18 || treatmentPassed < basePassed;
+    return baseTotal !== benchmark.scenarios.length * repetitions || treatmentPassed < basePassed;
   });
   const categoryRegression = Object.values(categorySummary).some((category) =>
     Object.values(category.providers).some(
@@ -757,13 +767,11 @@ async function validateDeterministicSelfChecks() {
     model: "Synthetic only",
     modelStatus: "known",
     objective: {
-      passed:
-        !["bug-regression", "api-change"].includes(run.scenario) || run.condition === "agentyx",
+      passed: scenarioById.get(run.scenario).initialCheckPasses || run.condition === "agentyx",
       checks: [
         {
           id: "fixture-check",
-          passed:
-            !["bug-regression", "api-change"].includes(run.scenario) || run.condition === "agentyx",
+          passed: scenarioById.get(run.scenario).initialCheckPasses || run.condition === "agentyx",
         },
       ],
     },

@@ -76,6 +76,9 @@ describe("agentyx init --yes", () => {
         "Targets",
         "  codex",
         "  kimi",
+        "",
+        "Reuse this setup by committing .agentyx.json and the reviewed .agentyx.lock.json after install.",
+        "Runtime activity is metadata only. The provider must run the project hooks; doctor explains coverage and prerequisites.",
         "Next: agentyx install — writes Skills, MCP and hooks into Codex and Kimi Code.",
       ].join("\n"),
     );
@@ -318,10 +321,16 @@ describe("agentyx init --yes", () => {
     await cp(join(fixturesPath, "angular-project"), projectDir, { recursive: true });
     clackMocks.autocompleteMultiselect.mockImplementationOnce(async (options) => {
       expect(options.initialValues).toEqual(["technical", "typescript", "angular"]);
+      expect(options.message).toContain("technical pack is a common base");
       const angularOption = options.options.find(
         (option: { value: string }) => option.value === "angular",
       );
+      const baseOption = options.options.find(
+        (option: { value: string }) => option.value === "technical",
+      );
       expect(angularOption?.label).toContain("recommended");
+      expect(baseOption?.label).toContain("common base");
+      expect(baseOption?.hint).toContain("Common engineering base.");
       // The user deselects Angular despite it being recommended.
       return ["technical", "typescript"];
     });
