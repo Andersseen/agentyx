@@ -75,6 +75,29 @@ unavailable, so the required second provider is missing. PR [#133](https://githu
 merged the deterministic benchmark infrastructure. The Codex preflight found no correctness or
 intervention benefit; it does not complete the acceptance gate.
 
+Revalidated on 2026-10-21 from `main` at `51e75707f5096d7fc996f4f1529cb6cf5b5a28c1`, with all
+packages at `0.20.0`: benchmark v1 remains SHA-256
+`74ee547cc73f57d5c4130b315b258a03944d539c7d9a121388ca97cc48cdc3fb`, and the Codex preflight
+uses the same benchmark and unchanged built-in Skill content. Codex remains installed and logged in;
+`claude` and `kimi` are absent. No second-provider trials were run, so R100-03 is still pending and
+R100-04 did not start.
+
+Verification on the validation branch:
+- `pnpm install --frozen-lockfile` — passed using a temporary pnpm store after the default store
+  path was denied by the sandbox.
+- `pnpm build` — passed.
+- `pnpm eval:skills` — passed; 11 scenarios.
+- `pnpm eval:behavior` — passed; six scenarios and deterministic 72-run plan.
+- `pnpm check` — passed; 66 test files and 829 tests, typecheck and build passed. Biome reported
+  its existing schema-version notice and two warnings in `packages/adapters/test/compatibility.test.ts`.
+- `pnpm smoke:pack` — passed; packaged consumer lifecycle verified.
+- GitHub Actions run [39570864410](https://github.com/Andersseen/agentyx/actions/runs/39570864410)
+  for PR #135 passed Linux Node 22/24 and macOS/Windows Node 22 packaged smoke. GitHub CLI could
+  not reach `api.github.com`; the connected GitHub integration supplied the workflow and job results.
+
+No product behavior changed and no Changeset is required. No R100 completion or measured-benefit
+claim is made.
+
 Next step: complete the real two-provider trials. R100-03 remains pending; R100-04 has not started.
 
 ## R070-02 — Add typed capability exclusions
