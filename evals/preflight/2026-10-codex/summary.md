@@ -42,3 +42,10 @@ observed in 2, not observed in 0, and unknown in 16. “Not observed” does not
 
 Run the same 36 matched Claude Code trials with the same benchmark and instruction set. Until then,
 R100-03 remains pending and R100-04 must not start.
+
+## Provider availability recheck
+
+On 2026-10-21, `codex --version` again reported `codex-cli 0.162.0-alpha.17.2`, and
+`codex login status` reported an existing ChatGPT login. The `claude` and `kimi` commands were not
+present on `PATH`. Neither missing provider was installed or authenticated, and no new provider runs
+were made. The second-provider blocker remains; R100-03 is pending and R100-04 has not started.
