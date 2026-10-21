@@ -627,3 +627,44 @@ merged). Branch `feat/locked-doctor-frozen-install`.
   matrix (Linux 22/24, macOS and Windows smoke) is not reproducible locally.
 
 Next task: R090-04 — publish/document the complete reproducibility workflow and final artifact checks.
+
+## Project report minor
+
+Starting point: `main` at `2e9c4b53dc198673e4a864e10eebdd30667a3970`, packages at 0.20.0. Branch
+`feat/static-project-report`. Pulled forward because R100 is blocked on provider availability (see
+[0.21-report](0.21-report.md)).
+
+- Command: `agentyx report [--output <path>] [--overwrite]`, default `agentyx-report.html`. Output must
+  be a project-relative `.html` path in an existing in-project directory; absolute paths, traversal,
+  symlink escapes and non-regular destinations are `report_output_path_invalid`, an existing file is
+  `report_output_exists`, I/O failures are `report_write_failed`. Overwrite uses a same-directory
+  temporary file and rename. The report is not lock-owned state.
+- Model: CLI-internal `ReportModel` (`packages/cli/src/report/model.ts`) composed from
+  `loadAgentyxProject`, `resolveAgentyxConfig`, `explainAgentyxResolution`, `runDoctorCommand` (called
+  in-process twice: plain for status/diagnostics, `--locked` only for reproducibility so locked
+  failures do not alter Doctor's status), `loadInstallManifestState` and `renderProjectGraphSvg`.
+  Ownership comes only from lock entries (regression test drops a lock entry while the capability
+  still resolves). A display view (`view.ts`) fixes wording and tones; Flowview only renders.
+- Flowview: `@flowview/compiler` 0.2.3 (dev dependency, exact) compiles
+  `templates/report.flow` through `pnpm report:generate` into committed `report-renderer.generated.js`
+  and `.d.ts`; `pnpm report:check` (part of `pnpm check`) detects a stale renderer. The CLI depends on
+  `@flowview/runtime` 0.2.0 (exact) only; the compiler and its WASM are never installed or loaded at
+  runtime.
+- Output: deterministic HTML (no timestamps, ids or paths), inline CSS and a small progressive-
+  enhancement script (filter, theme toggle), restrictive CSP meta, no external resources, readable
+  without JavaScript, light/dark, semantic landmarks and tables. Project strings are escaped; the graph
+  SVG is the only raw markup. The existing SVG escaping was audited and was already correct; a
+  hostile-label regression test was added in core.
+- Tests: 69 files, 864 tests (report model, renderer, command, core graph regression); `pnpm check`,
+  `pnpm eval:skills` (11 scenarios), `pnpm eval:behavior` and `pnpm smoke:pack` passed locally. The
+  packed smoke installs with `--ignore-scripts`, asserts no Flowview compiler or WASM is installed,
+  generates the report, checks content, no external URLs, no fake-home, project-path or secret leakage,
+  refusal without `--overwrite` and byte-identical overwrite.
+- Changeset: `.changeset/static-project-report.md` (minor, fixed group).
+- Limitations: the GitHub Actions matrix (Linux 22/24, macOS and Windows smoke) is not reproducible
+  locally; the report was inspected in Chrome over localhost, not `file://` (the browser tool refuses
+  `file://`).
+
+R100-03 remains pending on second-provider evidence. R100-04 remains pending behind R100-03. 1.0
+remains blocked on R100 completion. Next product work after this minor is 1.0 contract and release
+preparation, only once R100 is complete; if R100 is still externally blocked, do not advance to 1.0.

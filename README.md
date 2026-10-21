@@ -538,6 +538,26 @@ call declared MCP servers, or infer relationships from package dependencies. Int
 offer existing `check`, `test`, `build`, and `lint` scripts as project commands when one package
 manager is clear; none are selected by default, and non-interactive init does not synthesize context.
 
+## Project report
+
+`agentyx report` writes one self-contained HTML file describing this project's current harness:
+what the configuration asks for, why each capability is or is not selected, which providers are
+targeted, Doctor's readiness, whether the lock still matches, what Agentyx owns, and the project
+graph when configured.
+
+```sh
+pnpm exec agentyx report                              # writes agentyx-report.html
+pnpm exec agentyx report --output reports/harness.html
+pnpm exec agentyx report --overwrite                  # replace the requested file
+```
+
+The report is static and offline: one file, inline CSS and a little optional JavaScript, no server,
+account or network, and the same bytes for the same project state. It is a snapshot of project-local
+state, not a source of truth, and it contains no Skill or agent instructions, secrets, hashes or
+absolute paths. Project names, capability names and diagnostics are intentionally present, so review
+the file before sharing it. `--output` must be a project-relative `.html` path in an existing
+directory; an existing file is never replaced without `--overwrite`. See [docs/report.md](docs/report.md).
+
 ## Configuration
 
 `.agentyx.json` fields:

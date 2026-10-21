@@ -10,7 +10,8 @@
       "!**/test-results",
       "!pnpm-lock.yaml",
       "!apps/web/src/styles.css",
-      "!packages/cli/test/fixtures/lock-v1"
+      "!packages/cli/test/fixtures/lock-v1",
+      "!packages/cli/src/report/report-renderer.generated.*"
     ]
   },
   "formatter": {

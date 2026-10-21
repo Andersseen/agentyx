@@ -42,13 +42,19 @@
     "agentyx": "node dist/index.mjs",
     "build": "tsdown src/index.ts --dts --clean",
     "clean": "rm -rf dist",
-    "typecheck": "tsc --noEmit -p tsconfig.json"
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "report:generate": "node scripts/generate-report-renderer.mjs",
+    "report:check": "node scripts/generate-report-renderer.mjs --check"
   },
   "dependencies": {
     "@agentyx/adapters": "workspace:*",
     "@agentyx/core": "workspace:*",
     "@clack/prompts": "^1.7.0",
+    "@flowview/runtime": "0.2.0",
     "commander": "^14.0.0",
     "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@flowview/compiler": "0.2.3"
   }
 }

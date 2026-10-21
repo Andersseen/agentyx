@@ -14,6 +14,7 @@ import { createInstallCommand } from "./commands/install.js";
 import { createMcpCommand } from "./commands/mcp.js";
 import { createPackCommand } from "./commands/pack.js";
 import { createRecommendCommand } from "./commands/recommend.js";
+import { createReportCommand } from "./commands/report.js";
 import { createResolveCommand } from "./commands/resolve.js";
 import { createSkillCommand } from "./commands/skill.js";
 import { createSourceCommand } from "./commands/source.js";
@@ -42,6 +43,7 @@ export function createAgentyxProgram(): Command {
     .addCommand(createInitCommand())
     .addCommand(createGraphCommand())
     .addCommand(createDoctorCommand())
+    .addCommand(createReportCommand())
     .addCommand(createConfigureCommand())
     .addCommand(createSyncCommand())
     .addCommand(createRecommendCommand())
