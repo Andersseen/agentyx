@@ -1,0 +1,22 @@
+{
+  "status": "partial-preflight",
+  "evaluationDate": "2026-10-21",
+  "agentyxSha": "bf564600200d7083066f5b0301ea193664ed3f35",
+  "packageVersion": "0.20.0",
+  "benchmarkVersion": 1,
+  "benchmarkSha256": "74ee547cc73f57d5c4130b315b258a03944d539c7d9a121388ca97cc48cdc3fb",
+  "providersRun": ["codex"],
+  "providerVersions": {
+    "codex": "codex-cli 0.162.0-alpha.17.2"
+  },
+  "modelSettings": {
+    "codex": {
+      "model": null,
+      "modelStatus": "unknown",
+      "settingsFingerprint": "codex:model-unknown:workspace-write:approve-for-me:ephemeral:skip-git-check"
+    }
+  },
+  "runsCompleted": 36,
+  "runsPlanned": 72,
+  "repetitions": 3
+}

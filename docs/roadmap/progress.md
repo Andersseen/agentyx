@@ -63,17 +63,17 @@ Delivered locally:
 - Treatment preparation uses the real project-local `agentyx install --json` lifecycle and validates
   provider-targeted managed paths. Every run uses a fresh copy outside this checkout; canonical
   fixture hashes are checked for immutability.
-- The deterministic two-provider / three-repetition matrix contains 72 runs. No real provider runs
-  were started and no behavioral conclusion is available.
+- The deterministic two-provider / three-repetition matrix contains 72 runs. A partial Codex
+  preflight completed 36 runs; the full matrix and a behavioral conclusion remain pending. See
+  [the preflight record](../../evals/preflight/2026-10-codex/summary.md).
 - No Changeset: evaluation infrastructure, fixtures, scripts, and docs do not change published
   package behavior or bundled Skills.
 
 Provider discovery: Codex CLI `0.162.0-alpha.17.2` is installed and reports an authenticated ChatGPT
-login. Claude Code and Kimi CLIs are unavailable. The required second provider is therefore missing;
-no evidence was fabricated. Draft PR [#133](https://github.com/Andersseen/agentyx/pull/133) is open.
-GitHub Actions run `39216362339` was in progress when this entry was written; its final result is
-reported in the PR after completion. GitHub CLI's configured token is invalid, so the connected
-GitHub integration was used for the PR and Actions inspection.
+login. The 36 Codex runs are recorded as partial preflight evidence. Claude Code and Kimi CLIs are
+unavailable, so the required second provider is missing. PR [#133](https://github.com/Andersseen/agentyx/pull/133)
+merged the deterministic benchmark infrastructure. The Codex preflight found no correctness or
+intervention benefit; it does not complete the acceptance gate.
 
 Next step: complete the real two-provider trials. R100-03 remains pending; R100-04 has not started.
 
