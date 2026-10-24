@@ -125,6 +125,15 @@ export function formatInstallManifest(manifest: InstallManifest): string {
         return { ...entry, targets: sorted(entry.targets), servers: sorted(entry.servers) };
       }
 
+      if (entry.kind === "settings") {
+        return {
+          ...entry,
+          targets: sorted(entry.targets),
+          servers: sorted(entry.servers),
+          hooks: sorted(entry.hooks),
+        };
+      }
+
       if (entry.kind === "agent") {
         return { ...entry, targets: sorted(entry.targets) };
       }

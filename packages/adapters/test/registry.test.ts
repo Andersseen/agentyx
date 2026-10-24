@@ -25,8 +25,8 @@ const fakeAdapter = (id: string): AgentAdapter => ({
 });
 
 describe("builtInAdapterRegistry", () => {
-  it("lists codex, claude and kimi, in that order", () => {
-    expect(builtInAdapterRegistry.ids).toEqual(["codex", "claude", "kimi"]);
+  it("lists codex, claude, kimi and qwen, in that order", () => {
+    expect(builtInAdapterRegistry.ids).toEqual(["codex", "claude", "kimi", "qwen"]);
   });
 
   it("retrieves a known adapter", () => {
@@ -36,11 +36,13 @@ describe("builtInAdapterRegistry", () => {
     expect(codex.name).toBe("Codex");
     expect(builtInAdapterRegistry.get("claude").name).toBe("Claude Code");
     expect(builtInAdapterRegistry.get("kimi").name).toBe("Kimi Code");
+    expect(builtInAdapterRegistry.get("qwen").name).toBe("Qwen Code");
   });
 
   it("answers has() without loading anything", () => {
     expect(builtInAdapterRegistry.has("codex")).toBe(true);
     expect(builtInAdapterRegistry.has("kimi")).toBe(true);
+    expect(builtInAdapterRegistry.has("qwen")).toBe(true);
     expect(builtInAdapterRegistry.has("opencode")).toBe(false);
   });
 
@@ -51,7 +53,7 @@ describe("builtInAdapterRegistry", () => {
   it("fails on an unknown target with a domain error", () => {
     expect(() => builtInAdapterRegistry.get("opencode")).toThrow(UnknownAdapterError);
     expect(() => builtInAdapterRegistry.get("opencode")).toThrow(
-      'Unknown target "opencode". Known targets: claude, codex, kimi.',
+      'Unknown target "opencode". Known targets: claude, codex, kimi, qwen.',
     );
 
     try {

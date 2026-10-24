@@ -15,6 +15,12 @@ export const CLAUDE_HOOKS_CONFIG_SEGMENTS = [".claude", "settings.json"] as cons
 export const CODEX_HOOKS_CONFIG_SEGMENTS = [".codex", "hooks.json"] as const;
 /** Codex also reads inline `[hooks]` from here; see {@link hasInlineCodexHooks}. */
 export const CODEX_INLINE_HOOKS_SEGMENTS = [".codex", "config.toml"] as const;
+/**
+ * Qwen Code reads project hooks from the same settings document as its MCP servers, so this is
+ * also {@link QWEN_MCP_CONFIG_SEGMENTS}. Project-level hooks load only for a folder the user has
+ * trusted, which is why the adapter reports `review-may-be-required`.
+ */
+export const QWEN_HOOKS_CONFIG_SEGMENTS = [".qwen", "settings.json"] as const;
 
 /** Every Agentyx-owned hook entry carries this prefix as its `statusMessage`. */
 export const AGENTYX_HOOK_MARKER = "agentyx:";
@@ -22,15 +28,25 @@ export const AGENTYX_HOOK_MARKER = "agentyx:";
 /** The matcher Agentyx registers a `SessionStart` hook against when it declares none: fresh sessions only. */
 const SESSION_START_MATCHER = "startup";
 
-/**
- * Hook events only Claude Code has. They stay in the adapter: the provider-neutral hook model does
- * not grow a Claude-only event. `UserPromptExpansion` is how a directly typed `/skill` is seen.
- */
-const CLAUDE_EXTRA_EVENTS: Readonly<Record<string, readonly string[]>> = {
-  "observe-tool-use": ["UserPromptExpansion"],
+export type HookConfigFlavor = "claude" | "codex" | "qwen";
+
+const HOOKS_CONFIG_SEGMENTS: Readonly<Record<HookConfigFlavor, readonly string[]>> = {
+  claude: CLAUDE_HOOKS_CONFIG_SEGMENTS,
+  codex: CODEX_HOOKS_CONFIG_SEGMENTS,
+  qwen: QWEN_HOOKS_CONFIG_SEGMENTS,
 };
 
-export type HookConfigFlavor = "claude" | "codex";
+/**
+ * Hook events only some providers have. They stay in the adapter: the provider-neutral hook model
+ * does not grow a provider-only event. `UserPromptExpansion` is how Claude Code sees a directly
+ * typed `/skill`; Agentyx registers it only where the signal is actually reported (see
+ * `normalizeQwenHook` for why Qwen Code is not one of them).
+ */
+const EXTRA_EVENTS: Readonly<
+  Partial<Record<HookConfigFlavor, Readonly<Record<string, readonly string[]>>>>
+> = {
+  claude: { "observe-tool-use": ["UserPromptExpansion"] },
+};
 
 export function claudeHooksConfigPath(projectDir: string): string {
   return resolve(projectDir, ...CLAUDE_HOOKS_CONFIG_SEGMENTS);
@@ -42,6 +58,10 @@ export function codexHooksConfigPath(projectDir: string): string {
 
 export function codexInlineHooksConfigPath(projectDir: string): string {
   return resolve(projectDir, ...CODEX_INLINE_HOOKS_SEGMENTS);
+}
+
+export function qwenHooksConfigPath(projectDir: string): string {
+  return resolve(projectDir, ...QWEN_HOOKS_CONFIG_SEGMENTS);
 }
 
 /**
@@ -87,9 +107,7 @@ export function renderJsonHooksConfig(
   hooks: readonly HookDefinition[],
   existing: ExistingHookConfig,
 ): RenderedHookConfig {
-  const path = (
-    flavor === "claude" ? CLAUDE_HOOKS_CONFIG_SEGMENTS : CODEX_HOOKS_CONFIG_SEGMENTS
-  ).join("/");
+  const path = HOOKS_CONFIG_SEGMENTS[flavor].join("/");
   const config = parseJsonObject(existing.content, path);
   const hooksConfig = optionalRecord(config.hooks, path, "hooks");
   const events: Record<string, JsonRecord[]> = {};
@@ -103,8 +121,7 @@ export function renderJsonHooksConfig(
   }
 
   for (const hook of hooks) {
-    const targets =
-      flavor === "claude" ? [hook.event, ...(CLAUDE_EXTRA_EVENTS[hook.name] ?? [])] : [hook.event];
+    const targets = [hook.event, ...(EXTRA_EVENTS[flavor]?.[hook.name] ?? [])];
 
     for (const event of targets) {
       const groups = events[event] ?? [];

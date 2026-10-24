@@ -102,7 +102,9 @@ export class NavbarComponent {
   readonly links: NavLink[] = [
     { label: "How it works", href: "#workflow" },
     { label: "Doctor", href: "#doctor" },
-    { label: "Packs", href: "#packs" },
+    { label: "Providers", href: "/providers" },
+    { label: "Packs", href: "/packs" },
+    { label: "Docs", href: "/docs" },
   ];
 
   toggleMenu(): void {

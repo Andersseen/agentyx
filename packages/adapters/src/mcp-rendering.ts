@@ -8,6 +8,11 @@ import { type JsonRecord, optionalRecord, parseJsonObject, sortRecord } from "./
 export const CODEX_MCP_CONFIG_SEGMENTS = [".codex", "config.toml"] as const;
 export const CLAUDE_MCP_CONFIG_SEGMENTS = [".mcp.json"] as const;
 export const KIMI_MCP_CONFIG_SEGMENTS = [".kimi-code", "mcp.json"] as const;
+/**
+ * Qwen Code keeps project MCP servers *and* hooks in one settings document, so this is also
+ * {@link QWEN_HOOKS_CONFIG_SEGMENTS}; see `planSharedSettings` for how one write covers both.
+ */
+export const QWEN_MCP_CONFIG_SEGMENTS = [".qwen", "settings.json"] as const;
 
 export function codexMcpConfigPath(projectDir: string): string {
   return resolve(projectDir, ...CODEX_MCP_CONFIG_SEGMENTS);
@@ -19,6 +24,10 @@ export function claudeMcpConfigPath(projectDir: string): string {
 
 export function kimiMcpConfigPath(projectDir: string): string {
   return resolve(projectDir, ...KIMI_MCP_CONFIG_SEGMENTS);
+}
+
+export function qwenMcpConfigPath(projectDir: string): string {
+  return resolve(projectDir, ...QWEN_MCP_CONFIG_SEGMENTS);
 }
 
 /**
@@ -90,6 +99,18 @@ export function renderKimiMcpConfig(
     existing,
     KIMI_MCP_CONFIG_SEGMENTS.join("/"),
     renderKimiMcpServer,
+  );
+}
+
+export function renderQwenMcpConfig(
+  servers: readonly McpServerDefinition[],
+  existing: ExistingMcpConfig,
+): RenderedMcpConfig {
+  return renderJsonMcpConfig(
+    servers,
+    existing,
+    QWEN_MCP_CONFIG_SEGMENTS.join("/"),
+    renderQwenMcpServer,
   );
 }
 
@@ -230,6 +251,44 @@ export function renderKimiMcpServer(server: McpServerDefinition): JsonRecord {
 
   return {
     url: server.url,
+  };
+}
+
+/**
+ * Qwen Code documents `$VAR`/`${VAR}` expansion for a stdio server's `env`, which is the same
+ * syntax Agentyx already renders for Claude Code.
+ *
+ * `headers` is the opposite case: Qwen Code documents them as custom HTTP header *values* with no
+ * reference mechanism, so an authentication header cannot be sourced from the environment. Such a
+ * server fails instead of being written, because `${VAR}` in a header would be sent to the server
+ * as the literal credential. Qwen Code's own alternative for authenticated HTTP is its `oauth`
+ * object, which Agentyx's provider-neutral model does not express.
+ *
+ * `httpUrl` is the streamable-HTTP key; `url` is Qwen Code's legacy SSE key, so Agentyx's `http`
+ * transport must not be rendered as `url`.
+ */
+export function renderQwenMcpServer(server: McpServerDefinition): JsonRecord {
+  if (server.transport === "stdio") {
+    return {
+      command: server.command,
+      args: server.args,
+      env: renderExpandedEnv(server.env),
+    };
+  }
+
+  const headers = Object.keys(server.headers);
+
+  if (headers.length > 0) {
+    throw new UnsupportedMcpEnvReferenceError(
+      "qwen",
+      server.name,
+      `Qwen Code documents headers as literal values with no environment reference, so ` +
+        `${headers.sort().join(", ")} cannot be rendered from one.`,
+    );
+  }
+
+  return {
+    httpUrl: server.url,
   };
 }
 

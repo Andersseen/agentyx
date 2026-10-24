@@ -15,12 +15,14 @@ on core; core never depends on it.
 | `codex`  | Codex       | `.agents/skills`          |
 | `claude` | Claude Code | `.claude/skills`          |
 | `kimi`   | Kimi Code   | `.agents/skills`          |
+| `qwen`   | Qwen Code   | `.qwen/skills`            |
 
-Both destinations are the providers' documented project-local conventions:
+Every destination is the provider's documented project-local convention:
 [Codex](https://developers.openai.com/codex/skills) reads repository skills from the vendor-neutral
-`.agents/skills`, [Claude Code](https://code.claude.com/docs/en/skills) from `.claude/skills`, and
+`.agents/skills`, [Claude Code](https://code.claude.com/docs/en/skills) from `.claude/skills`,
 [Kimi Code](https://www.kimi.com/code/docs/en/kimi-code-cli/customization/skills.html) also scans
-project `.agents/skills`.
+project `.agents/skills`, and
+[Qwen Code](https://qwenlm.github.io/qwen-code-docs/en/users/features/skills/) from `.qwen/skills`.
 Installation is project-local — nothing is written to `$HOME`.
 
 ## Plan first, then write
@@ -32,7 +34,11 @@ import { builtInSkillRegistry } from "@agentyx/core";
 const skills = ["planning", "angular-modern"].map((name) => builtInSkillRegistry.get(name));
 
 // Reads the destinations to classify each file, and writes nothing.
-const plans = await planInstall({ targets: ["codex", "claude", "kimi"], projectDir, skills });
+const plans = await planInstall({
+  targets: ["codex", "claude", "kimi", "qwen"],
+  projectDir,
+  skills,
+});
 
 // The only code in Agentyx that mutates a project. Skipping it is a dry run.
 await applyInstallPlans(plans);
@@ -72,17 +78,27 @@ remote registry — an adapter is a value you pass in.
 
 ## Safety
 
-Agentyx only manages `<destination>/<skill>/SKILL.md` for skills it resolved, plus the MCP server keys
-it added to a provider project config. A plan that would write outside the directory or project file a
+Agentyx only manages `<destination>/<skill>/SKILL.md` for skills it resolved, `<agents dir>/<agent>.md`
+(or `.toml`) for agents it resolved, and the MCP server and hook keys it added to a provider project
+config. A plan that would write outside the directory or project file a
 target owns is refused with `InstallPathError`, including project-local paths redirected through
 symlinks. Unchanged files are not rewritten, writes are UTF-8, and nothing is executed, fetched, or
 installed globally.
 
-Project MCP configuration is planned and written through the same plan-first machinery. Adapters
-receive only active MCP definitions; pack and optional-capability resolution stays in core. Hooks,
-permissions and user-global configuration are not part of the contract yet.
+Project MCP configuration, project hooks and project agents are planned and written through the same
+plan-first machinery. Adapters receive only active definitions; pack and optional-capability
+resolution stays in core. Permissions and user-global configuration are not part of the contract:
+Agentyx never writes under `$HOME`, which is why a provider whose hooks are user-level only — Kimi
+Code — gets no hook installation at all.
 
-Prune and uninstall act only on paths and MCP server keys recorded in `.agentyx.lock.json`. A file
+When one provider document carries several capabilities, it is still one write. Qwen Code reads both
+`mcpServers` and `hooks` from `.qwen/settings.json`, so the planner composes the two merges into a
+single operation and the lock records a single `settings` entry naming both the servers and the
+hooks; two independent merges of one file would each be planned from a stale read, and the second
+write would drop the first.
+
+Prune and uninstall act only on paths, MCP server keys and hook names recorded in
+`.agentyx.lock.json`. A file
 whose current content no longer matches the manifest hash is reported as a conflict and left alone
 unless the caller explicitly chooses `--force`.
 

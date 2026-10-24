@@ -18,7 +18,7 @@ import { PackDetailComponent } from "./pack-detail.component.js";
     <section id="packs" class="section-band border-b border-border">
       <div class="mx-auto max-w-6xl px-4 py-20 sm:px-6 lg:py-28">
         <div class="max-w-3xl">
-          <p class="text-xs font-bold uppercase tracking-[0.15em] text-primary">03 / THE PACK CATALOGUE</p>
+          <p class="text-xs font-bold uppercase tracking-[0.15em] text-primary">04 / THE PACK CATALOGUE</p>
           <h2 class="mt-4 text-4xl font-semibold tracking-tight sm:text-5xl">Pick capabilities with a purpose.</h2>
           <p class="mt-5 text-lg leading-8 text-muted-foreground">Packs are composable. Add a language, then layer engineering and workflow practices that fit the project. Select one to see what it brings.</p>
         </div>

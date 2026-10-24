@@ -12,9 +12,12 @@ Skill registries, provider-agnostic MCP definitions, pack/Skill/MCP resolution, 
 footprint, baseline-aware observations and conservative cleanup hints), provider-neutral lifecycle
 hooks (`SessionStart`, `SessionEnd`, `PostToolUse`), and
 provider adapters that install into Codex
-(`.agents/skills`), Claude Code (`.claude/skills`) and Kimi Code (`.agents/skills`). Installation is
+(`.agents/skills`), Claude Code (`.claude/skills`), Kimi Code (`.agents/skills`) and Qwen Code
+(`.qwen/skills`). Installation is
 project-local, plan-first, and covers Skill and agent files, project MCP configuration and project hooks
-(Claude `.claude/settings.json`, Codex `.codex/hooks.json`; Kimi Code supports hooks only in
+(Claude `.claude/settings.json`, Codex `.codex/hooks.json`, Qwen Code `.qwen/settings.json` — which
+also holds its MCP servers, so Agentyx plans and writes that one document as a single merge under a
+single `settings` lock entry; Kimi Code supports hooks only in
 user-level config, so Agentyx installs none). It is also
 reversible: `.agentyx.lock.json` records Agentyx-owned installed state, which is what `sync`,
 `install --prune` and `uninstall` act on. `.agentyx.json` remains desired state; provider files never

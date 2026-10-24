@@ -71,6 +71,11 @@ describe("prompt options", () => {
   });
 
   it("offers every target regardless of what was detected", () => {
-    expect(targetOptions().map((option) => option.value)).toEqual(["codex", "claude", "kimi"]);
+    expect(targetOptions().map((option) => option.value)).toEqual([
+      "codex",
+      "claude",
+      "kimi",
+      "qwen",
+    ]);
   });
 });

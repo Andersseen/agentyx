@@ -23,22 +23,22 @@ Three words are kept apart throughout:
 
 ## Matrix
 
-| Capability | Codex | Claude Code | Kimi Code |
-|---|---|---|---|
-| Skills | supported | supported | supported |
-| Skill path (Agentyx writes) | `.agents/skills/<name>/SKILL.md` | `.claude/skills/<name>/SKILL.md` | `.agents/skills/<name>/SKILL.md` |
-| Skill path also read by provider | `.agents/skills` from cwd up to the repo root | — | `.kimi-code/skills` |
-| MCP project config | `.codex/config.toml`, `[mcp_servers.<name>]` | `.mcp.json`, `mcpServers` | `.kimi-code/mcp.json`, `mcpServers` |
-| stdio MCP | supported | supported | supported |
-| HTTP MCP | supported | supported | supported |
-| SSE MCP | not modeled by Agentyx | not modeled (provider: deprecated) | not modeled (provider supports it) |
-| Env references in MCP | stdio: `env_vars`; HTTP headers: `env_http_headers` | `${VAR}` in `env` and `headers` | **not renderable** — see below |
-| Project hooks | provider supports; Agentyx supports `.codex/hooks.json` | provider supports; Agentyx supports `.claude/settings.json` | provider supports; **Agentyx declines** (user-level only) |
-| Doctor runtime observation | session lifecycle, tool use, MCP use | session lifecycle, tool use, Skill use, MCP use, context size (resume/fork only) | none |
-| Custom project agents | supported | supported | supported |
-| Agent path (Agentyx writes) | `.codex/agents/<name>.toml` | `.claude/agents/<name>.md` | `.agents/agents/<name>.md` |
-| Agent format | TOML | Markdown + YAML frontmatter | Markdown + YAML frontmatter |
-| Everything project-local, nothing under `$HOME` | yes | yes | yes |
+| Capability | Codex | Claude Code | Kimi Code | Qwen Code |
+|---|---|---|---|---|
+| Skills | supported | supported | supported | supported |
+| Skill path (Agentyx writes) | `.agents/skills/<name>/SKILL.md` | `.claude/skills/<name>/SKILL.md` | `.agents/skills/<name>/SKILL.md` | `.qwen/skills/<name>/SKILL.md` |
+| Skill path also read by provider | `.agents/skills` from cwd up to the repo root | — | `.kimi-code/skills` | — (extra dirs only through user-level `skills.directories`) |
+| MCP project config | `.codex/config.toml`, `[mcp_servers.<name>]` | `.mcp.json`, `mcpServers` | `.kimi-code/mcp.json`, `mcpServers` | `.qwen/settings.json`, `mcpServers` |
+| stdio MCP | supported | supported | supported | supported |
+| HTTP MCP | supported | supported | supported | supported (`httpUrl`; its `url` key is legacy SSE) |
+| SSE MCP | not modeled by Agentyx | not modeled (provider: deprecated) | not modeled (provider supports it) | not modeled (provider: legacy) |
+| Env references in MCP | stdio: `env_vars`; HTTP headers: `env_http_headers` | `${VAR}` in `env` and `headers` | **not renderable** — see below | stdio: `${VAR}` in `env`; HTTP headers: **not renderable** — see below |
+| Project hooks | provider supports; Agentyx supports `.codex/hooks.json` | provider supports; Agentyx supports `.claude/settings.json` | provider supports; **Agentyx declines** (user-level only) | provider supports; Agentyx supports `.qwen/settings.json` (the same file as MCP) |
+| Doctor runtime observation | session lifecycle, tool use, MCP use | session lifecycle, tool use, Skill use, MCP use, context size (resume/fork only) | none | session lifecycle, tool use, MCP use |
+| Custom project agents | supported | supported | supported | supported |
+| Agent path (Agentyx writes) | `.codex/agents/<name>.toml` | `.claude/agents/<name>.md` | `.agents/agents/<name>.md` | `.qwen/agents/<name>.md` |
+| Agent format | TOML | Markdown + YAML frontmatter | Markdown + YAML frontmatter | Markdown + YAML frontmatter (`tools` as a YAML list) |
+| Everything project-local, nothing under `$HOME` | yes | yes | yes | yes |
 
 ### Trust and approval behavior Agentyx does not bypass
 
@@ -49,6 +49,10 @@ Three words are kept apart throughout:
   (non-interactive `-p` runs load them without asking). Agentyx emits no agent frontmatter hooks.
 - **Kimi Code** treats stdio entries in a project `.kimi-code/mcp.json` as local command execution
   behind its workspace trust prompt.
+- **Qwen Code** loads project-level hooks from `.qwen/settings.json` **only when the folder is
+  trusted**; user-level hooks load regardless. `--safe-mode` and `--bare` disable all hooks, and
+  `disableAllHooks` turns them off globally. Its adapter therefore reports `review-may-be-required`,
+  the same posture as Codex: Agentyx can prove a hook is *configured*, never that it *ran*.
 
 Treat project agent files as prompt configuration and review them in untrusted repositories.
 
@@ -61,13 +65,13 @@ Windows session. See the current [Claude Code command hook fields](https://code.
 
 Every path is relative to the project root. Agentyx writes nothing else, and never `$HOME`.
 
-| Resource | Codex | Claude Code | Kimi Code |
-|---|---|---|---|
-| Skills | `.agents/skills/…` (shared with Kimi) | `.claude/skills/…` | `.agents/skills/…` (shared with Codex) |
-| MCP | `.codex/config.toml` | `.mcp.json` | `.kimi-code/mcp.json` |
-| Hooks | `.codex/hooks.json` | `.claude/settings.json` | none |
-| Agents | `.codex/agents/…` | `.claude/agents/…` | `.agents/agents/…` |
-| Ownership record | `.agentyx.lock.json` | same | same |
+| Resource | Codex | Claude Code | Kimi Code | Qwen Code |
+|---|---|---|---|---|
+| Skills | `.agents/skills/…` (shared with Kimi) | `.claude/skills/…` | `.agents/skills/…` (shared with Codex) | `.qwen/skills/…` |
+| MCP | `.codex/config.toml` | `.mcp.json` | `.kimi-code/mcp.json` | `.qwen/settings.json` |
+| Hooks | `.codex/hooks.json` | `.claude/settings.json` | none | `.qwen/settings.json` (the same file) |
+| Agents | `.codex/agents/…` | `.claude/agents/…` | `.agents/agents/…` | `.qwen/agents/…` |
+| Ownership record | `.agentyx.lock.json` | same | same | same |
 
 Provider config files that users also edit (MCP, hooks) are never claimed as a whole: the lock
 records only the server and hook keys Agentyx added, and prune/uninstall remove only those. Skill
@@ -76,6 +80,24 @@ and agent files are claimed per file with a content hash; an unmanaged same-path
 
 Codex hooks: when `.codex/config.toml` already defines inline `[hooks]`, Agentyx does not add
 `.codex/hooks.json` (Codex warns when one layer uses both).
+
+### One document for MCP and hooks (Qwen Code)
+
+Qwen Code reads project MCP servers and project hooks from the same `.qwen/settings.json`. Two
+independent merges of one file cannot both be planned from a read of that file: the second write
+would drop what the first added, and the lock — indexed by path — could only keep one of the two
+ownership records, so pruning would lose track of the other half.
+
+Agentyx therefore plans that file **once**: the MCP merge runs first and its output is handed to the
+hook merge as the document to merge into. Both merges preserve keys they do not own, so unrelated
+user settings survive, and the composition is stable — a second `sync` is a no-op. The result is one
+operation and one lock entry of kind `settings`, which records both the server names and the hook
+names. `agentyx target show qwen` names the file twice, once per capability, because that is what the
+provider does.
+
+Every other provider keeps the two in separate files and is unaffected: their entries stay `mcp` and
+`hook`. A lock written before a provider shared one document is still read — whichever half it
+recorded is what gets pruned.
 
 ### Shared `.agents` directory
 
@@ -89,21 +111,27 @@ live in `.codex/agents`, so the agent directories are not shared today.
 ## Agent rendering
 
 Core knows two access levels, `read-only` and `workspace-write`, and no provider tool names. Each
-adapter maps them. All three providers get the same canonical instruction body.
+adapter maps them. All four providers get the same canonical instruction body.
 
-| | Codex | Claude Code | Kimi Code |
-|---|---|---|---|
-| Required fields (provider) | `name`, `description`, `developer_instructions` | `name`, `description` | `description` (`name` optional) |
-| Fields Agentyx emits | those three + `sandbox_mode` | `name`, `description`, `tools` | `name`, `description`, `tools`, `override: false` |
-| `read-only` | `sandbox_mode = "read-only"` | `tools: Read, Grep, Glob` | `tools: Read, Grep, Glob` |
-| `workspace-write` | `sandbox_mode = "workspace-write"` | `tools: Read, Grep, Glob, Bash, Write, Edit` | same tool list |
-| Enforcement | sandbox | tool allowlist | tool allowlist |
+| | Codex | Claude Code | Kimi Code | Qwen Code |
+|---|---|---|---|---|
+| Required fields (provider) | `name`, `description`, `developer_instructions` | `name`, `description` | `description` (`name` optional) | `name`, `description` |
+| Fields Agentyx emits | those three + `sandbox_mode` | `name`, `description`, `tools` | `name`, `description`, `tools`, `override: false` | `name`, `description`, `tools` |
+| `read-only` | `sandbox_mode = "read-only"` | `tools: Read, Grep, Glob` | `tools: Read, Grep, Glob` | `tools:` list of `read_file`, `grep_search`, `glob` |
+| `workspace-write` | `sandbox_mode = "workspace-write"` | `tools: Read, Grep, Glob, Bash, Write, Edit` | same tool list | that list plus `run_shell_command`, `write_file`, `edit` |
+| Enforcement | sandbox | tool allowlist | tool allowlist | tool allowlist |
 
 What this does and does not guarantee:
 
 - Claude Code and Kimi Code: `tools` is an explicit allowlist. A read-only agent receives no
   `Bash`, `Write`, `Edit` or delegation tool, and a workspace-write agent never receives
   `Agent`, a wildcard or MCP tools. Omitting `tools` would inherit everything, so it is always set.
+- Qwen Code: the same rule, in its own tool names (`read_file`, `run_shell_command`, …) and as a
+  YAML list rather than a comma-separated string. Its documentation is explicit that omitting
+  `tools` inherits *every* tool from the parent session including MCP tools, so Agentyx always sets
+  it. Agentyx writes no `model` (omitting it means inherit) and no `disallowedTools`, `executor` or
+  `approvalMode`; Qwen Code also accepts Claude Code frontmatter fields, which Agentyx does not rely
+  on. MCP tools are not in the allowlist, so an installed agent cannot reach them.
 - Codex: there is no per-tool list in the documented format. `sandbox_mode` is the only enforceable
   boundary. The provider documents that live parent-turn overrides (such as `/permissions` or
   `--yolo`) are reapplied to child agents, so the file is a default, not an absolute ceiling. A
@@ -119,12 +147,12 @@ What this does and does not guarantee:
 Agentyx's MCP model has two transports (`stdio`, `http`) and values that are environment
 *references*, never secrets.
 
-| | Codex (`.codex/config.toml`) | Claude Code (`.mcp.json`) | Kimi Code (`.kimi-code/mcp.json`) |
-|---|---|---|---|
-| stdio | `command`, `args`, `env`, `enabled` | `type: "stdio"`, `command`, `args`, `env` | `command`, `args`, `env` |
-| HTTP | `url`, `enabled` | `type: "http"`, `url` | `url` |
-| env reference (stdio) | `env_vars = ["NAME"]` | `"NAME": "${NAME}"` | omitted |
-| header reference (HTTP) | `env_http_headers = { Header = "NAME" }` | `"Header": "${NAME}"` | omitted |
+| | Codex (`.codex/config.toml`) | Claude Code (`.mcp.json`) | Kimi Code (`.kimi-code/mcp.json`) | Qwen Code (`.qwen/settings.json`) |
+|---|---|---|---|---|
+| stdio | `command`, `args`, `env`, `enabled` | `type: "stdio"`, `command`, `args`, `env` | `command`, `args`, `env` | `command`, `args`, `env` |
+| HTTP | `url`, `enabled` | `type: "http"`, `url` | `url` | `httpUrl` |
+| env reference (stdio) | `env_vars = ["NAME"]` | `"NAME": "${NAME}"` | omitted | `"NAME": "${NAME}"` |
+| header reference (HTTP) | `env_http_headers = { Header = "NAME" }` | `"Header": "${NAME}"` | omitted | **fails** — see below |
 
 - **Codex** `env` holds literal values and `env_vars` forwards named host variables, so a reference
   is only expressible when the server expects the variable under its own name. Any other mapping
@@ -134,6 +162,13 @@ Agentyx's MCP model has two transports (`stdio`, `http`) and values that are env
   instead of a literal variable *name*. Whether the child process inherits the host environment is
   not documented; a server needing a token (for example `supabase`) relies on that. This is a known
   limitation, not a verified pass.
+- **Qwen Code** documents `$VAR`/`${VAR}` expansion for a stdio server's `env`, which Agentyx
+  renders. It documents `headers` as literal header values with no reference mechanism, so an HTTP
+  server that needs a header from the environment cannot be expressed: Agentyx fails with
+  `unsupported_mcp_env_reference` instead of writing `${VAR}`, which Qwen Code would send as the
+  credential itself. Qwen Code's own alternative for authenticated HTTP is its `oauth` object,
+  which Agentyx's provider-neutral model does not express. Note also that Agentyx's `http` transport
+  renders as `httpUrl`; Qwen Code's `url` key is its legacy SSE transport.
 - A server whose transport an adapter does not declare in `capabilities.mcp.transports` fails with
   `unsupported_mcp_transport`; it is never rendered. Providers whose capabilities declare no
   project MCP scope report the servers as unsupported without failing Skill installation.
@@ -157,19 +192,28 @@ Flags live in each adapter's `capabilities.observability` and are asserted in
 `packages/adapters/test/compatibility.test.ts`. They describe signals Agentyx's hooks can receive,
 not whether a hook was trusted or runs.
 
-| Signal | Codex | Claude Code | Kimi Code |
-|---|---|---|---|
-| Session lifecycle | yes | yes | no |
-| Tool use | yes | yes | no |
-| Skill use | no (undocumented) | yes | no |
-| MCP use | yes (`mcp__server__tool`) | yes (`mcp__<server>__<tool>`) | no |
-| Context size | no | `context_tokens`, `SessionStart` on resume/fork only | no |
+| Signal | Codex | Claude Code | Kimi Code | Qwen Code |
+|---|---|---|---|---|
+| Session lifecycle | yes | yes | no | yes |
+| Tool use | yes | yes | no | yes |
+| Skill use | no (undocumented) | yes | no | no (no documented Skill tool) |
+| MCP use | yes (`mcp__server__tool`) | yes (`mcp__<server>__<tool>`) | no | yes (`mcp__<server>__<tool>`) |
+| Context size | no | `context_tokens`, `SessionStart` on resume/fork only | no | no |
 
 Verification gaps, stated plainly: the Claude hooks reference confirms that a `Skill` tool exists
 and that `UserPromptExpansion` can see a typed `/skill`, but the pages read do not spell out the
 `PostToolUse` `tool_input` field name Agentyx reads for Skill use, so the Claude Skill signal rests
 on provider behavior beyond what was confirmed. Context size is reported only for resumed or
 forked sessions. "No observed use" remains distinct from "unobservable" in Doctor.
+
+Qwen Code's Skill signal is a deliberate `no`, not an oversight. Its documentation defines no
+`Skill` tool, so a Skill the model selects on its own produces no hook payload; only an explicitly
+typed `/skill` fires `UserPromptExpansion` with a `command_name`. Recording just that half would
+report every model-selected use as "no observed use", which is the exact mistake the observability
+contract forbids, so Agentyx declares Skill use unobservable for Qwen Code and does not register
+the event. Session lifecycle (`SessionStart`, `SessionEnd`), tool use and MCP use are documented and
+enabled; Qwen Code's `SessionStart` matcher targets its `source` field, whose `startup` value is
+what Agentyx already registers for a fresh session. No context size is documented in its payloads.
 
 ## Not verified against documentation
 
@@ -179,6 +223,17 @@ unchanged by this task:
 - Codex MCP `enabled = true` and `env = {}`.
 - Claude Code's `statusMessage` field as a durable ownership marker. Agentyx stamps generated
   entries with `agentyx:<hook>`; it does not claim that providers will preserve that marker forever.
+
+Qwen Code pages were read on **2026-10-24**. Written by Agentyx but not spelled out there:
+
+- Qwen Code's `statusMessage` field as a durable ownership marker. Its hooks reference documents the
+  field for `command`, `http` and `prompt` hooks, but not that it survives round-trips through
+  `qwen mcp add`-style tooling or future versions. It is the same assumption Claude Code's marker
+  rests on, and the same mitigation: entries Agentyx does not recognise are never touched.
+- Whether a Qwen Code subagent's `tools` allowlist is enforced against MCP tools at runtime. The
+  documentation states that *omitting* `tools` inherits every tool including MCP ones; Agentyx
+  relies on the allowlist being exclusive, which its own agent-format tests assert on the rendered
+  file but no live Qwen Code session has confirmed.
 
 ## Platforms
 
@@ -191,8 +246,8 @@ unchanged by this task:
 `pnpm smoke:pack` builds, packs the three tarballs, installs them into a project **outside the
 workspace**, and runs the packed CLI (with `$HOME` pointed at an empty directory that must stay
 empty) through: init, configure, sync, doctor, hooks, MCP, agents, prune, uninstall, JSON output and
-exit codes, for Codex, Claude Code and Kimi Code together. It also compares the packaged Skill and
-agent directories to the source tree. `engines.node` stays `>=22`; changing it is a product
+exit codes, for Codex, Claude Code, Kimi Code and Qwen Code together. It also compares the packaged
+Skill and agent directories to the source tree. `engines.node` stays `>=22`; changing it is a product
 decision, not a by-product of another version passing.
 
 ## Plan freshness, partial application and recovery
@@ -273,3 +328,11 @@ All fetched 2026-10-10. Codex documentation has moved from `developers.openai.co
 - Kimi Code hooks — <https://www.kimi.com/code/docs/en/kimi-code-cli/customization/hooks.html>
 - Kimi Code agents — <https://www.kimi.com/code/docs/en/kimi-code-cli/customization/agents.html>
 - Kimi Code built-in tools — <https://www.kimi.com/code/docs/en/kimi-code-cli/reference/tools.html>
+
+Fetched 2026-10-24:
+
+- Qwen Code skills — <https://qwenlm.github.io/qwen-code-docs/en/users/features/skills/>
+- Qwen Code MCP — <https://qwenlm.github.io/qwen-code-docs/en/users/features/mcp/>
+- Qwen Code hooks — <https://qwenlm.github.io/qwen-code-docs/en/users/features/hooks/>
+- Qwen Code subagents — <https://qwenlm.github.io/qwen-code-docs/en/users/features/sub-agents/>
+- Qwen Code settings — <https://qwenlm.github.io/qwen-code-docs/en/users/configuration/settings/>

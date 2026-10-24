@@ -141,6 +141,38 @@ export const builtInAdapterDefinitions: readonly SkillDirectoryAdapterDefinition
         "project-local installation for them and does not write under $HOME.",
     },
   },
+  {
+    id: "qwen",
+    name: "Qwen Code",
+    skillsDir: [".qwen", "skills"],
+    markers: [[".qwen"], ["QWEN.md"]],
+    reference: "https://qwenlm.github.io/qwen-code-docs/en/users/features/skills/",
+    mcp: {
+      project: true,
+      config: "qwen-json",
+      transports: ["stdio", "http"],
+      reference: "https://qwenlm.github.io/qwen-code-docs/en/users/features/mcp/",
+    },
+    hooks: {
+      config: "qwen-settings-json",
+      reference: "https://qwenlm.github.io/qwen-code-docs/en/users/features/hooks/",
+    },
+    agents: {
+      dir: [".qwen", "agents"],
+      format: "qwen",
+      reference: "https://qwenlm.github.io/qwen-code-docs/en/users/features/sub-agents/",
+    },
+    observability: {
+      sessionLifecycle: true,
+      toolUse: true,
+      skillUse: false,
+      mcpUse: true,
+      contextTokens: false,
+      reason:
+        "Qwen Code documents no Skill tool, so a model-selected Skill leaves no hook payload; only " +
+        "an explicitly typed /skill fires UserPromptExpansion, which would under-report use.",
+    },
+  },
 ];
 
 /** The adapters Agentyx ships with, in listing order. */

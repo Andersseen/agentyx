@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "@voltui/components/themes.css";
+@import "@doqs/analog/styles.css";
 
 @custom-variant dark (&:where(.dark, .dark *));
 

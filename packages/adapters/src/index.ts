@@ -46,6 +46,7 @@ export {
   mcpServerFromToolName,
   normalizeClaudeHook,
   normalizeCodexHook,
+  normalizeQwenHook,
 } from "./hook-observer.js";
 export type {
   DeleteOperation,

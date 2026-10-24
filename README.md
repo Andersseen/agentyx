@@ -1,7 +1,7 @@
 # Agentyx
 
 Agentyx is a provider-agnostic CLI for giving coding agents the same project-local development
-behavior across Codex, Claude Code, and Kimi Code.
+behavior across Codex, Claude Code, Kimi Code, and Qwen Code.
 
 You choose composable capability **packs**:
 
@@ -87,7 +87,7 @@ and performance packs when those concerns apply:
 {
   "packs": ["technical", "typescript", "angular", "ui-ux", "accessibility", "performance"],
   "enable": ["playwright"],
-  "targets": ["codex", "claude", "kimi"]
+  "targets": ["codex", "claude", "kimi", "qwen"]
 }
 ```
 
@@ -106,9 +106,9 @@ print the same distinction (`runtime: local` vs `runtime: may-download`) before 
 
 The `agentic` pack exposes optional native project agents. Enable the roles you want with
 `agentyx configure --enable agentyx-reviewer --yes`, then run `agentyx sync`. Agentyx renders one
-canonical provider-neutral definition through each provider adapter. Claude Code, Kimi Code, and
-Codex CLI install their documented project-local formats; unsupported providers continue to use
-Skills normally. Subagents isolate task context, but each may consume additional model tokens.
+canonical provider-neutral definition through each provider adapter. Claude Code, Kimi Code, Codex
+CLI and Qwen Code install their documented project-local formats; unsupported providers continue to
+use Skills normally. Subagents isolate task context, but each may consume additional model tokens.
 Agentyx defines the harness and does not orchestrate agents or call provider APIs. Review project
 agent files in repositories you do not trust.
 
@@ -116,13 +116,14 @@ agent files in repositories you do not trust.
 {
   "packs": ["technical", "agentic"],
   "enable": ["agentyx-reviewer"],
-  "targets": ["codex", "claude", "kimi"]
+  "targets": ["codex", "claude", "kimi", "qwen"]
 }
 ```
 
 Provider references: [Claude Code subagents](https://code.claude.com/docs/en/sub-agents),
 [Kimi Code agents](https://www.kimi.com/code/docs/en/kimi-code-cli/customization/agents.html),
-[Codex CLI subagents](https://developers.openai.com/codex/multi-agent).
+[Codex CLI subagents](https://developers.openai.com/codex/multi-agent),
+[Qwen Code subagents](https://qwenlm.github.io/qwen-code-docs/en/users/features/sub-agents/).
 
 ## Harness observability
 
@@ -189,14 +190,19 @@ Provider support:
 | --- | --- | --- | --- | --- | --- |
 | Claude Code | yes | yes | yes | yes | provider-reported, when sent |
 | Codex | yes (`.codex/hooks.json`) | yes | yes | not documented | no |
+| Qwen Code | yes (`.qwen/settings.json`, shared with MCP) | yes | yes | not documented | no |
 | Kimi Code | no | no | no | no | no |
 
 Codex requires you to review and trust project hooks (`/hooks`); Agentyx never bypasses that, so Doctor
 reports Codex hooks as *configured, user review may be required* rather than active. If
 `.codex/config.toml` already defines inline `[hooks]`, Agentyx adds no second `hooks.json` (Codex
-warns about two sources in one layer) and says so. Kimi Code supports hooks, but only in user-level
-`~/.kimi-code/config.toml`; Agentyx refuses to mutate `$HOME`, so Kimi gets the full static analysis
-and runtime observation is reported as unavailable.
+warns about two sources in one layer) and says so. Qwen Code loads project hooks only for a folder
+you have trusted, so it gets the same *configured, review may be required* wording; it keeps MCP
+servers and hooks in one `.qwen/settings.json`, which Agentyx plans and writes as a single merge
+under one lock entry. Qwen Code documents no `Skill` tool, so a model-selected Skill leaves no hook
+payload — Skill use is reported as unobservable rather than as zero use. Kimi Code supports hooks,
+but only in user-level `~/.kimi-code/config.toml`; Agentyx refuses to mutate `$HOME`, so Kimi gets
+the full static analysis and runtime observation is reported as unavailable.
 
 The observer hooks run `npx --no-install agentyx ...`, so `@agentyx/cli` must be a project dependency.
 Skill use is recorded for Agentyx's built-in Skills only. RTK runs through shell commands, which
@@ -542,10 +548,11 @@ agentyx graph owner backend-api
 
 Project identity, relationships, and the optional `context` facts generate one canonical
 `agentyx-project-context` Skill. The existing adapters install identical Skill content for Claude,
-Codex and Kimi. Repository and docs links are descriptive references; Agentyx does not fetch them,
-call declared MCP servers, or infer relationships from package dependencies. Interactive `init` can
-offer existing `check`, `test`, `build`, and `lint` scripts as project commands when one package
-manager is clear; none are selected by default, and non-interactive init does not synthesize context.
+Codex, Kimi and Qwen. Repository and docs links are descriptive references; Agentyx does not fetch
+them, call declared MCP servers, or infer relationships from package dependencies. Interactive
+`init` can offer existing `check`, `test`, `build`, and `lint` scripts as project commands when one
+package manager is clear; none are selected by default, and non-interactive init does not
+synthesize context.
 
 ## Project report
 

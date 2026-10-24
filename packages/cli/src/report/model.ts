@@ -357,7 +357,10 @@ async function ownershipEntries(
             ? [entry.agent]
             : entry.kind === "mcp"
               ? entry.servers
-              : entry.hooks,
+              : entry.kind === "hook"
+                ? entry.hooks
+                : // One document holding both halves reports both.
+                  [...entry.servers, ...entry.hooks],
       targets: entry.targets,
       state: !exists
         ? "missing"
