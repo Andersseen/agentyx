@@ -32,6 +32,14 @@ test("packs page renders the full catalogue", async ({ page }) => {
   ).toBeVisible();
   await expect(page.getByTestId("pack-list").getByRole("button")).not.toHaveCount(0);
   await expect(page.locator("body")).not.toHaveCSS("overflow-x", "scroll");
+
+  // The navbar reports the current route, not a scroll position. CSS selectors, not roles: below
+  // the `md` breakpoint the desktop list is display:none and therefore absent from the
+  // accessibility tree, while routerLinkActive still sets the attribute on it. Scoped to the link
+  // list because the logo is a second `a[href="/"]` inside the same nav.
+  const navLinks = page.locator('nav[aria-label="Main navigation"] ul');
+  await expect(navLinks.locator('a[href="/packs"]')).toHaveAttribute("aria-current", "page");
+  await expect(navLinks.locator('a[href="/"]')).not.toHaveAttribute("aria-current", "page");
 });
 
 test("documentation region renders Markdown with its own navigation", async ({
@@ -44,6 +52,11 @@ test("documentation region renders Markdown with its own navigation", async ({
   await page.goto("/docs/getting-started");
 
   await expect(page.getByRole("heading", { name: "Getting started" })).toBeVisible();
+  // The documentation region keeps the site navbar, and the navbar marks Docs as the current route.
+  await expect(page.locator('nav[aria-label="Main navigation"] a[href="/docs"]')).toHaveAttribute(
+    "aria-current",
+    "page",
+  );
   // Rendered from Markdown, not from a component template.
   await expect(
     page.getByRole("heading", { name: "Run it without installing anything" }),

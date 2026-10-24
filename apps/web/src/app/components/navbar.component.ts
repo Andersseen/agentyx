@@ -1,5 +1,5 @@
 import { Component, signal } from "@angular/core";
-import { RouterLink } from "@angular/router";
+import { RouterLink, RouterLinkActive } from "@angular/router";
 import { MoveInViewDirective, MoveTapDirective } from "angular-movement";
 import { LmnBars3Icon } from "lumen-icons/bars-3";
 import { LmnCommandLineIcon } from "lumen-icons/command-line";
@@ -7,15 +7,17 @@ import { LmnXMarkIcon } from "lumen-icons/x-mark";
 import { ThemeToggleComponent } from "./theme-toggle.component.js";
 
 interface NavLink {
-  label: string;
-  route: string;
-  fragment?: string;
+  readonly label: string;
+  readonly route: string;
+  /** The home route must match exactly, or it would report active on every page. */
+  readonly exact: boolean;
 }
 
 @Component({
   selector: "app-navbar",
   imports: [
     RouterLink,
+    RouterLinkActive,
     LmnBars3Icon,
     LmnCommandLineIcon,
     LmnXMarkIcon,
@@ -36,7 +38,6 @@ interface NavLink {
       >
         <a
           routerLink="/"
-          fragment="hero"
           class="group flex items-center gap-2 text-lg font-semibold tracking-tight"
           [moveWhileTap]="{ scale: [1, 0.97, 1] }"
         >
@@ -52,8 +53,10 @@ interface NavLink {
               <li>
                 <a
                   [routerLink]="link.route"
-                  [fragment]="link.fragment"
-                  class="rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                  routerLinkActive="nav-link--active"
+                  [routerLinkActiveOptions]="{ exact: link.exact }"
+                  ariaCurrentWhenActive="page"
+                  class="nav-link focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                 >
                   {{ link.label }}
                 </a>
@@ -90,8 +93,10 @@ interface NavLink {
             @for (link of links; track link.label) {
               <a
                 [routerLink]="link.route"
-                [fragment]="link.fragment"
-                class="rounded-md px-3 py-3 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                routerLinkActive="nav-link--active"
+                [routerLinkActiveOptions]="{ exact: link.exact }"
+                ariaCurrentWhenActive="page"
+                class="nav-link-block"
                 (click)="closeMenu()"
               >
                 {{ link.label }}
@@ -106,11 +111,10 @@ interface NavLink {
 export class NavbarComponent {
   readonly menuOpen = signal(false);
   readonly links: NavLink[] = [
-    { label: "How it works", route: "/", fragment: "workflow" },
-    { label: "Doctor", route: "/", fragment: "doctor" },
-    { label: "Providers", route: "/providers" },
-    { label: "Packs", route: "/packs" },
-    { label: "Docs", route: "/docs" },
+    { label: "Overview", route: "/", exact: true },
+    { label: "Providers", route: "/providers", exact: false },
+    { label: "Packs", route: "/packs", exact: false },
+    { label: "Docs", route: "/docs", exact: false },
   ];
 
   toggleMenu(): void {
