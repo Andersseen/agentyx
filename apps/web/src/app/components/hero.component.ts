@@ -1,4 +1,5 @@
 import { Component } from "@angular/core";
+import { RouterLink } from "@angular/router";
 import {
   VoltBadge,
   VoltCard,
@@ -14,6 +15,7 @@ import { LmnGithubIcon } from "lumen-icons/github";
 @Component({
   selector: "app-hero",
   imports: [
+    RouterLink,
     VoltBadge,
     VoltCard,
     VoltCardContent,
@@ -40,10 +42,22 @@ import { LmnGithubIcon } from "lumen-icons/github";
             actually observable.
           </p>
           <div class="mt-9 flex flex-wrap gap-3">
-            <a voltButton href="#workflow" size="lg" [moveWhileTap]="{ scale: [1, 0.97, 1] }">
+            <a
+              voltButton
+              routerLink="/"
+              fragment="workflow"
+              size="lg"
+              [moveWhileTap]="{ scale: [1, 0.97, 1] }"
+            >
               See how it works <lmn-arrow-right class="h-4 w-4" aria-hidden="true" />
             </a>
-            <a voltButton variant="outline" size="lg" href="/docs" [moveWhileTap]="{ scale: [1, 0.97, 1] }">
+            <a
+              voltButton
+              variant="outline"
+              size="lg"
+              routerLink="/docs"
+              [moveWhileTap]="{ scale: [1, 0.97, 1] }"
+            >
               Read the docs
             </a>
             <a

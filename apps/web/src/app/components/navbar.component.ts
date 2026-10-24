@@ -1,4 +1,5 @@
 import { Component, signal } from "@angular/core";
+import { RouterLink } from "@angular/router";
 import { MoveInViewDirective, MoveTapDirective } from "angular-movement";
 import { LmnBars3Icon } from "lumen-icons/bars-3";
 import { LmnCommandLineIcon } from "lumen-icons/command-line";
@@ -7,12 +8,14 @@ import { ThemeToggleComponent } from "./theme-toggle.component.js";
 
 interface NavLink {
   label: string;
-  href: string;
+  route: string;
+  fragment?: string;
 }
 
 @Component({
   selector: "app-navbar",
   imports: [
+    RouterLink,
     LmnBars3Icon,
     LmnCommandLineIcon,
     LmnXMarkIcon,
@@ -32,7 +35,8 @@ interface NavLink {
         aria-label="Main navigation"
       >
         <a
-          href="#hero"
+          routerLink="/"
+          fragment="hero"
           class="group flex items-center gap-2 text-lg font-semibold tracking-tight"
           [moveWhileTap]="{ scale: [1, 0.97, 1] }"
         >
@@ -44,10 +48,11 @@ interface NavLink {
 
         <div class="flex items-center gap-1 md:gap-4">
           <ul class="hidden items-center gap-1 md:flex">
-            @for (link of links; track link.href) {
+            @for (link of links; track link.label) {
               <li>
                 <a
-                  [href]="link.href"
+                  [routerLink]="link.route"
+                  [fragment]="link.fragment"
                   class="rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                 >
                   {{ link.label }}
@@ -82,9 +87,10 @@ interface NavLink {
           [moveDuration]="240"
         >
           <div class="mx-auto grid max-w-6xl gap-1">
-            @for (link of links; track link.href) {
+            @for (link of links; track link.label) {
               <a
-                [href]="link.href"
+                [routerLink]="link.route"
+                [fragment]="link.fragment"
                 class="rounded-md px-3 py-3 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
                 (click)="closeMenu()"
               >
@@ -100,11 +106,11 @@ interface NavLink {
 export class NavbarComponent {
   readonly menuOpen = signal(false);
   readonly links: NavLink[] = [
-    { label: "How it works", href: "#workflow" },
-    { label: "Doctor", href: "#doctor" },
-    { label: "Providers", href: "/providers" },
-    { label: "Packs", href: "/packs" },
-    { label: "Docs", href: "/docs" },
+    { label: "How it works", route: "/", fragment: "workflow" },
+    { label: "Doctor", route: "/", fragment: "doctor" },
+    { label: "Providers", route: "/providers" },
+    { label: "Packs", route: "/packs" },
+    { label: "Docs", route: "/docs" },
   ];
 
   toggleMenu(): void {

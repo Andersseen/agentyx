@@ -1,16 +1,25 @@
 import { Component } from "@angular/core";
+import { RouterLink } from "@angular/router";
 import { VoltNativeButton } from "@voltui/components";
 import { LmnArrowTopRightOnSquareIcon } from "lumen-icons/arrow-top-right-on-square";
 import { LmnGithubIcon } from "lumen-icons/github";
 
+interface FooterLink {
+  readonly label: string;
+  /** Internal routes navigate through the router; external ones stay plain links. */
+  readonly route?: string;
+  readonly fragment?: string;
+  readonly href?: string;
+}
+
 interface FooterColumn {
   readonly title: string;
-  readonly links: readonly { readonly label: string; readonly href: string }[];
+  readonly links: readonly FooterLink[];
 }
 
 @Component({
   selector: "app-footer",
-  imports: [VoltNativeButton, LmnGithubIcon, LmnArrowTopRightOnSquareIcon],
+  imports: [RouterLink, VoltNativeButton, LmnGithubIcon, LmnArrowTopRightOnSquareIcon],
   template: `
     <footer class="border-t border-border bg-background">
       <div class="mx-auto max-w-6xl px-4 py-14 sm:px-6">
@@ -32,13 +41,22 @@ interface FooterColumn {
                 {{ column.title }}
               </p>
               <ul class="mt-3 space-y-2">
-                @for (link of column.links; track link.href) {
+                @for (link of column.links; track link.label) {
                   <li>
-                    <a
-                      [href]="link.href"
-                      class="text-sm text-muted-foreground transition-colors hover:text-foreground"
-                      >{{ link.label }}</a
-                    >
+                    @if (link.route) {
+                      <a
+                        [routerLink]="link.route"
+                        [fragment]="link.fragment"
+                        class="text-sm text-muted-foreground transition-colors hover:text-foreground"
+                        >{{ link.label }}</a
+                      >
+                    } @else {
+                      <a
+                        [href]="link.href"
+                        class="text-sm text-muted-foreground transition-colors hover:text-foreground"
+                        >{{ link.label }}</a
+                      >
+                    }
                   </li>
                 }
               </ul>
@@ -77,21 +95,21 @@ export class FooterComponent {
     {
       title: "Product",
       links: [
-        { label: "How it works", href: "/#workflow" },
-        { label: "Doctor", href: "/#doctor" },
-        { label: "Packs", href: "/packs" },
-        { label: "Providers", href: "/providers" },
+        { label: "How it works", route: "/", fragment: "workflow" },
+        { label: "Doctor", route: "/", fragment: "doctor" },
+        { label: "Packs", route: "/packs" },
+        { label: "Providers", route: "/providers" },
       ],
     },
     {
       title: "Documentation",
       links: [
-        { label: "Getting started", href: "/docs/getting-started" },
-        { label: "Configuration", href: "/docs/configuration" },
-        { label: "Observability", href: "/docs/guides/observability" },
-        { label: "Reproducibility", href: "/docs/guides/reproducibility" },
-        { label: "CLI reference", href: "/docs/reference/cli" },
-        { label: "Compatibility", href: "/docs/reference/compatibility" },
+        { label: "Getting started", route: "/docs/getting-started" },
+        { label: "Configuration", route: "/docs/configuration" },
+        { label: "Observability", route: "/docs/guides/observability" },
+        { label: "Reproducibility", route: "/docs/guides/reproducibility" },
+        { label: "CLI reference", route: "/docs/reference/cli" },
+        { label: "Compatibility", route: "/docs/reference/compatibility" },
       ],
     },
     {

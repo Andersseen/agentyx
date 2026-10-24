@@ -32,7 +32,14 @@
     "Helvetica Neue", Arial, sans-serif;
 }
 
-:root {
+/*
+ * Token blocks use `html:root` / `html.dark` on purpose: @voltui/components/themes.css declares its
+ * own `:root` and `.dark` blocks for the same custom properties at specificity (0,1,0). In a
+ * production bundle our definitions win by source order, but Vite's dev server injects stylesheet
+ * modules in dependency order, which can put VoltUI's blocks after ours and leave components on the
+ * wrong theme. One extra element selector makes ours win in every order.
+ */
+html:root {
   --background: #f9fafd;
   --foreground: #151822;
   --surface: #ffffff;
@@ -58,7 +65,7 @@
   --ring: #4c5bc9;
 }
 
-.dark {
+html.dark {
   --background: #0c0e14;
   --foreground: #f9fafd;
   --surface: #141821;
@@ -70,9 +77,11 @@
   --border: rgba(249, 250, 253, 0.15);
   --input: rgba(249, 250, 253, 0.15);
   --primary: #6c7eff;
-  --primary-foreground: #ffffff;
+  /* Dark ink on the light fills, like success/warning/info/danger already do: white on #6c7eff is
+     3.46:1, below WCAG AA; #0c0e14 on it is 5.2:1. */
+  --primary-foreground: #0c0e14;
   --secondary: #a87cd9;
-  --secondary-foreground: #ffffff;
+  --secondary-foreground: #0c0e14;
   --info: #5aa5fa;
   --info-foreground: #0c0e14;
   --success: #4ade80;

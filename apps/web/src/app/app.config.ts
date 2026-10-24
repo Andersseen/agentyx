@@ -2,7 +2,7 @@ import { provideFileRouter, requestContextInterceptor, withExtraRoutes } from "@
 import { provideHttpClient, withInterceptors } from "@angular/common/http";
 import { type ApplicationConfig, provideZonelessChangeDetection } from "@angular/core";
 import { provideClientHydration, withEventReplay } from "@angular/platform-browser";
-import type { Route } from "@angular/router";
+import { type Route, withInMemoryScrolling } from "@angular/router";
 import { provideMovement } from "angular-movement";
 import { doqPaths } from "../doq.paths";
 
@@ -23,7 +23,12 @@ export const docsRoute: Route = {
 export const appConfig: ApplicationConfig = {
   providers: [
     provideZonelessChangeDetection(),
-    provideFileRouter(withExtraRoutes([docsRoute])),
+    // Internal links are routerLinks, so fragment navigation and scroll restoration belong to the
+    // router; without these options a `[fragment]` link changes the URL but never scrolls.
+    provideFileRouter(
+      withExtraRoutes([docsRoute]),
+      withInMemoryScrolling({ anchorScrolling: "enabled", scrollPositionRestoration: "enabled" }),
+    ),
     provideHttpClient(withInterceptors([requestContextInterceptor])),
     provideClientHydration(withEventReplay()),
     provideMovement({

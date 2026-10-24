@@ -1,4 +1,5 @@
 import { Component } from "@angular/core";
+import { RouterLink } from "@angular/router";
 import { AboutComponent } from "../components/about.component.js";
 import { DoctorComponent } from "../components/doctor.component.js";
 import { HeroComponent } from "../components/hero.component.js";
@@ -7,7 +8,14 @@ import { ProvidersComponent } from "../components/providers.component.js";
 
 @Component({
   selector: "app-home-page",
-  imports: [HeroComponent, AboutComponent, DoctorComponent, ProvidersComponent, PacksComponent],
+  imports: [
+    RouterLink,
+    HeroComponent,
+    AboutComponent,
+    DoctorComponent,
+    ProvidersComponent,
+    PacksComponent,
+  ],
   template: `
     <div class="overflow-x-hidden bg-background">
       <main>
@@ -28,7 +36,7 @@ import { ProvidersComponent } from "../components/providers.component.js";
                 and each one is that provider's own documented convention.
                 <a
                   class="font-semibold text-primary underline underline-offset-4"
-                  href="/providers"
+                  routerLink="/providers"
                   >See the full compatibility matrix</a
                 >.
               </p>
