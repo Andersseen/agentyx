@@ -123,6 +123,8 @@ function renderJson(input: UninstallCommandInput, plans: readonly InstallPlan[])
       mcpOperations: plan.mcpOperations.map((operation) => ({
         status: operation.status,
         servers: operation.servers,
+        // Present only when the provider keeps MCP servers and hooks in one settings document.
+        ...(operation.hooks === undefined ? {} : { hooks: operation.hooks }),
         path: operation.relativePath,
       })),
       hookOperations: plan.hookOperations.map((operation) => ({

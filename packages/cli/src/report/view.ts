@@ -202,6 +202,7 @@ const OWNERSHIP_TITLES: Readonly<Record<OwnershipKind, string>> = {
   agent: "Agent files",
   mcp: "MCP configuration",
   hook: "Hook configuration",
+  settings: "Provider settings (MCP + hooks)",
 };
 
 const SUPPORT_LABEL: Readonly<Record<RenderSupport, string>> = {

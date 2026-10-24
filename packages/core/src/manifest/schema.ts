@@ -83,11 +83,34 @@ export const hookManifestEntrySchema = z.strictObject({
   created: z.boolean(),
 });
 
+/**
+ * A single provider settings document Agentyx contributed *both* MCP servers and hooks to.
+ *
+ * Some providers keep both in one file — Qwen Code reads `mcpServers` and `hooks` from the same
+ * `.qwen/settings.json` — and one file can only be written once per run, so it also gets one
+ * ownership record. Splitting it across an `mcp` and a `hook` entry would leave two entries for
+ * the same path, of which only one could survive the by-path index, and pruning would lose track
+ * of the other half.
+ *
+ * Both lists may be empty: the entry records what Agentyx claims in that document, not that either
+ * capability is currently wanted.
+ */
+export const settingsManifestEntrySchema = z.strictObject({
+  kind: z.literal("settings"),
+  path: managedPathSchema,
+  servers: z.array(z.string().min(1, "MCP server names must be non-empty strings.")),
+  hooks: z.array(z.string().min(1, "Hook names must be non-empty strings.")),
+  targets: targetsSchema,
+  hash: contentHashSchema,
+  created: z.boolean(),
+});
+
 export const installManifestEntrySchema = z.discriminatedUnion("kind", [
   skillManifestEntrySchema,
   agentManifestEntrySchema,
   mcpManifestEntrySchema,
   hookManifestEntrySchema,
+  settingsManifestEntrySchema,
 ]);
 
 /** The `.agentyx.lock.json` record of everything Agentyx installed into a project. */
@@ -111,6 +134,7 @@ export type SkillManifestEntry = z.infer<typeof skillManifestEntrySchema>;
 export type AgentManifestEntry = z.infer<typeof agentManifestEntrySchema>;
 export type McpManifestEntry = z.infer<typeof mcpManifestEntrySchema>;
 export type HookManifestEntry = z.infer<typeof hookManifestEntrySchema>;
+export type SettingsManifestEntry = z.infer<typeof settingsManifestEntrySchema>;
 export type InstallManifestEntry = z.infer<typeof installManifestEntrySchema>;
 
 export type InstallManifestV1 = z.infer<typeof installManifestV1Schema>;

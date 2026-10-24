@@ -508,20 +508,44 @@ function nextManifest(
       }
 
       const previousEntry = previousByPath.get(operation.relativePath);
+      // Whichever half an earlier run recorded, it is the same file, so it is the same `created`.
+      const previouslyCreated =
+        previousEntry?.kind === "mcp" ||
+        previousEntry?.kind === "hook" ||
+        previousEntry?.kind === "settings"
+          ? previousEntry.created
+          : undefined;
+      const targets = retainedTargets(
+        operation.usedBy,
+        previousByPath,
+        operation.relativePath,
+        plannedTargets,
+      );
+      const hash = hashContent(operation.content);
 
-      rewritten.set(operation.relativePath, {
-        kind: "mcp",
-        path: operation.relativePath,
-        servers: [...operation.servers],
-        targets: retainedTargets(
-          operation.usedBy,
-          previousByPath,
-          operation.relativePath,
-          plannedTargets,
-        ),
-        hash: hashContent(operation.content),
-        created: previousEntry?.kind === "mcp" ? previousEntry.created : operation.created,
-      });
+      // A document carrying hooks as well as servers is owned by one `settings` entry: two entries
+      // for one path could not both survive the by-path index, and pruning would lose half.
+      rewritten.set(
+        operation.relativePath,
+        operation.hooks === undefined
+          ? {
+              kind: "mcp",
+              path: operation.relativePath,
+              servers: [...operation.servers],
+              targets,
+              hash,
+              created: previouslyCreated ?? operation.created,
+            }
+          : {
+              kind: "settings",
+              path: operation.relativePath,
+              servers: [...operation.servers],
+              hooks: [...operation.hooks],
+              targets,
+              hash,
+              created: previouslyCreated ?? operation.created,
+            },
+      );
     }
 
     for (const operation of plan.hookOperations) {

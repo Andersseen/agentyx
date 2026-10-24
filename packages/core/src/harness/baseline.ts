@@ -48,11 +48,23 @@ export interface HarnessBaseline {
 export function installedCapabilities(manifest: InstallManifest): BaselineCapability[] {
   return manifest.entries.flatMap((entry): BaselineCapability[] => {
     if (entry.kind === "agent") return [];
-    const names =
-      entry.kind === "skill" ? [entry.skill] : entry.kind === "mcp" ? entry.servers : entry.hooks;
+
+    // A `settings` document holds both halves of one file, but each name is still the capability
+    // it always was: the baseline must not change meaning just because a provider shares a file.
+    const capabilities: readonly { kind: BaselineCapability["kind"]; name: string }[] =
+      entry.kind === "skill"
+        ? [{ kind: "skill", name: entry.skill }]
+        : entry.kind === "mcp"
+          ? entry.servers.map((name) => ({ kind: "mcp" as const, name }))
+          : entry.kind === "hook"
+            ? entry.hooks.map((name) => ({ kind: "hook" as const, name }))
+            : [
+                ...entry.servers.map((name) => ({ kind: "mcp" as const, name })),
+                ...entry.hooks.map((name) => ({ kind: "hook" as const, name })),
+              ];
 
     return entry.targets.flatMap((target) =>
-      names.map((name) => ({ kind: entry.kind, name, target })),
+      capabilities.map((capability) => ({ ...capability, target })),
     );
   });
 }

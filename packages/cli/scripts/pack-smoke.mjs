@@ -94,6 +94,8 @@ await run(
     "claude",
     "--target",
     "kimi",
+    "--target",
+    "qwen",
     "--yes",
   ],
   projectDir,
@@ -153,6 +155,7 @@ for (const [path, body] of [
   [".claude/agents/unrelated.md", "user Claude agent\n"],
   [".agents/agents/unrelated.md", "user Kimi agent\n"],
   [".codex/agents/unrelated.toml", 'name = "user_agent"\n'],
+  [".qwen/agents/unrelated.md", "user Qwen agent\n"],
 ]) {
   await mkdir(dirname(join(projectDir, path)), { recursive: true });
   await writeFile(join(projectDir, path), body);
@@ -171,6 +174,7 @@ for (const path of [
   ".claude/agents/agentyx-reviewer.md",
   ".agents/agents/agentyx-reviewer.md",
   ".codex/agents/agentyx-reviewer.toml",
+  ".qwen/agents/agentyx-reviewer.md",
 ])
   await readFile(join(projectDir, path), "utf8");
 const agentSecondSync = JSON.parse((await run(cli, ["sync", "--json"], projectDir)).stdout);
@@ -190,6 +194,7 @@ for (const path of [
   ".claude/agents/agentyx-reviewer.md",
   ".agents/agents/agentyx-reviewer.md",
   ".codex/agents/agentyx-reviewer.toml",
+  ".qwen/agents/agentyx-reviewer.md",
 ])
   if ((await readdir(dirname(join(projectDir, path)))).includes(path.split("/").at(-1)))
     throw new Error(`Managed agent was not pruned: ${path}`);
@@ -197,6 +202,7 @@ for (const path of [
   ".claude/agents/unrelated.md",
   ".agents/agents/unrelated.md",
   ".codex/agents/unrelated.toml",
+  ".qwen/agents/unrelated.md",
 ])
   await readFile(join(projectDir, path), "utf8");
 assertIncludes(await run(cli, ["configure", "--dry-run"], projectDir), "No configuration changes.");
@@ -287,11 +293,15 @@ if (!claudeMcp.mcpServers.handWritten || claudeMcp.mcpServers.playwright)
   throw new Error("Sync did not preserve user MCP config while pruning its own entry.");
 if ((await readdir(join(projectDir, ".agents", "skills"))).includes("local-smoke-skill"))
   throw new Error("Sync did not prune the removed local pack Skill.");
-for (const path of [".codex/hooks.json", ".claude/settings.json"]) {
+for (const path of [".codex/hooks.json", ".claude/settings.json", ".qwen/settings.json"]) {
   await readFile(join(projectDir, path), "utf8");
 }
 if ((await readdir(projectDir)).includes(".kimi-code"))
   throw new Error("Kimi unexpectedly received project-local hooks.");
+// Qwen Code keeps MCP servers and hooks in one document; both halves must have survived pruning.
+const qwenSettings = JSON.parse(await readFile(join(projectDir, ".qwen/settings.json"), "utf8"));
+if (!qwenSettings.hooks?.SessionStart || qwenSettings.mcpServers?.playwright)
+  throw new Error("Qwen's shared settings document lost a half during prune.");
 const gitStatus = await run("git", ["status", "--short"], projectDir);
 if (gitStatus.stdout.includes("usage-v2.jsonl"))
   throw new Error("Observation data appeared in git status.");
@@ -331,6 +341,7 @@ for (const expected of [
   "Codex",
   "Claude",
   "Kimi",
+  "Qwen",
   "targeted-exploration",
   "agentyx-project-context",
   "Locked resolution",
@@ -371,7 +382,7 @@ assertArrays(
   ["skills", "mcpServers", "hooks", "agents", "targets"],
   "resolve --json",
 );
-for (const target of ["codex", "claude", "kimi"])
+for (const target of ["codex", "claude", "kimi", "qwen"])
   if (!resolvedJson.targets.includes(target))
     throw new Error(`resolve --json omitted target ${target}.`);
 const explainedJson = await parseJson(["resolve", "--explain", "--json"]);
@@ -472,6 +483,8 @@ await run(
     "claude",
     "--target",
     "kimi",
+    "--target",
+    "qwen",
     "--yes",
   ],
   lifeDir,
@@ -480,6 +493,7 @@ const userFiles = {
   ".claude/agents/mine.md": "user\n",
   ".agents/agents/mine.md": "user\n",
   ".codex/agents/mine.toml": 'name = "mine"\n',
+  ".qwen/agents/mine.md": "user\n",
   ".agents/skills/mine/SKILL.md": "user\n",
 };
 for (const [path, body] of Object.entries(userFiles)) {
@@ -493,7 +507,7 @@ if (initialLock.version !== 2 || initialLock.resolution === null)
   throw new Error("Normal packed sync did not write a version-2 lock with a complete resolution.");
 if (initialLock.resolution.agentyxVersion !== installedCliPackage.version)
   throw new Error("The lock snapshot does not record the packed CLI version.");
-if ([...initialLock.resolution.targets].sort().join() !== "claude,codex,kimi")
+if ([...initialLock.resolution.targets].sort().join() !== "claude,codex,kimi,qwen")
   throw new Error("The lock snapshot does not record the configured targets.");
 if (!initialLock.resolution.skills.some((skill) => skill.name === "planning"))
   throw new Error("The lock snapshot does not record the selected Skills.");

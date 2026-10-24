@@ -73,11 +73,11 @@ export interface DeleteOperation {
   readonly type: "delete-file";
   readonly status: DeleteOperationStatus;
   /**
-   * What is being removed. A `skill` file is Agentyx's alone; an `mcp` or
-   * `hook` file is only ever removed when Agentyx created it and nothing is
-   * left in it.
+   * What is being removed. A `skill` file is Agentyx's alone; an `mcp`, `hook` or `settings` file
+   * is only ever removed when Agentyx created it and nothing is left in it. `settings` is the one
+   * document a provider reads both MCP servers and hooks from.
    */
-  readonly kind: "skill" | "agent" | "mcp" | "hook";
+  readonly kind: "skill" | "agent" | "mcp" | "hook" | "settings";
   readonly path: string;
   readonly relativePath: string;
   /** The skill the file was generated from, for `skill` removals. */
@@ -95,6 +95,14 @@ export interface McpInstallOperation {
   readonly path: string;
   readonly relativePath: string;
   readonly servers: readonly string[];
+  /**
+   * Hook names merged into this same document, present only when the provider keeps MCP servers
+   * and hooks in one settings file — Qwen Code reads both from `.qwen/settings.json`.
+   *
+   * One file is written once, so it is also owned by one manifest entry; without this the second
+   * merge would be planned from a stale read of the file and clobber the first.
+   */
+  readonly hooks?: readonly string[];
   readonly content: string;
   /**
    * Whether this file did not exist before the plan was made. Recorded in the

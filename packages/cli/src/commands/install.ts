@@ -713,9 +713,8 @@ function renderText(
           ),
         ...plan.unsupportedMcp.map((name) => `unsupported project scope ${name}`),
       ]),
-      section(
-        "Hooks",
-        plan.hookOperations
+      section("Hooks", [
+        ...plan.hookOperations
           .filter((operation) => operation.usedBy[0] === plan.target)
           .map((operation) =>
             renderOperationLine(
@@ -724,7 +723,20 @@ function renderText(
               operation.usedBy,
             ),
           ),
-      ),
+        // Hooks merged into a provider's shared settings document ride along in that document's
+        // own operation; without this the section would report none while four were written.
+        ...plan.mcpOperations
+          .filter(
+            (operation) => operation.usedBy[0] === plan.target && operation.hooks !== undefined,
+          )
+          .map((operation) =>
+            renderOperationLine(
+              operation.status,
+              `${operation.relativePath} (${(operation.hooks ?? []).join(", ")})`,
+              operation.usedBy,
+            ),
+          ),
+      ]),
       ...(plan.deletions.length > 0
         ? [
             section(
@@ -841,6 +853,8 @@ function buildInstallReport(
         type: operation.type,
         status: operation.status,
         servers: operation.servers,
+        // Present only when the provider keeps MCP servers and hooks in one settings document.
+        ...(operation.hooks === undefined ? {} : { hooks: operation.hooks }),
         path: operation.relativePath,
         usedBy: operation.usedBy,
       })),

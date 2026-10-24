@@ -22,7 +22,7 @@ afterEach(async () => {
 
 describe("agentyx target list", () => {
   it("prints the installable target ids", () => {
-    expect(runTargetListCommand()).toBe(["codex", "claude", "kimi"].join("\n"));
+    expect(runTargetListCommand()).toBe(["codex", "claude", "kimi", "qwen"].join("\n"));
   });
 });
 
@@ -67,6 +67,21 @@ describe("agentyx target show", () => {
         "Reference: https://www.kimi.com/code/docs/en/kimi-code-cli/customization/skills.html",
         "Reference: https://www.kimi.com/code/docs/en/kimi-code-cli/customization/mcp.html",
         "Reference: https://www.kimi.com/code/docs/en/kimi-code-cli/customization/agents.html",
+      ].join("\n"),
+    );
+    // Qwen Code reads MCP servers and hooks from one document, and says so by naming it twice.
+    expect(await runTargetShowCommand({ target: "qwen", json: false, cwd: projectDir })).toBe(
+      [
+        "qwen",
+        "Qwen Code",
+        "Skills: .qwen/skills (not present)",
+        "MCP: .qwen/settings.json",
+        "MCP transports: stdio, http",
+        "Hooks: .qwen/settings.json",
+        "Reference: https://qwenlm.github.io/qwen-code-docs/en/users/features/skills/",
+        "Reference: https://qwenlm.github.io/qwen-code-docs/en/users/features/mcp/",
+        "Reference: https://qwenlm.github.io/qwen-code-docs/en/users/features/hooks/",
+        "Reference: https://qwenlm.github.io/qwen-code-docs/en/users/features/sub-agents/",
       ].join("\n"),
     );
   });

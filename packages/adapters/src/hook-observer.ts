@@ -134,3 +134,16 @@ export const normalizeClaudeHook: HookPayloadNormalizer = (payload, known) =>
       ? { sessionId, event: "skill-used", capabilityKind: "skill", capability: skill }
       : undefined;
   });
+
+/**
+ * Qwen Code: session lifecycle and MCP use, like Codex.
+ *
+ * Qwen Code documents no `Skill` tool, so a Skill the model selects on its own produces no hook
+ * payload at all. It does fire `UserPromptExpansion` with a `command_name` when the user types
+ * `/skill` explicitly — but that is one of the two ways a Skill runs, and counting only explicit
+ * invocations would report every model-selected use as "no observed use". Agentyx therefore treats
+ * Skill use as unobservable for this provider rather than partially observable, and does not
+ * register the event: recording evidence it would never report is worse than declaring the gap.
+ */
+export const normalizeQwenHook: HookPayloadNormalizer = (payload, known) =>
+  normalizeCommon(payload, known, () => undefined);

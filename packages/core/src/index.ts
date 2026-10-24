@@ -197,6 +197,7 @@ export type {
   InstallManifestV1,
   InstallManifestV2,
   McpManifestEntry,
+  SettingsManifestEntry,
   SkillManifestEntry,
 } from "./manifest/schema.js";
 export {
@@ -210,6 +211,7 @@ export {
   installManifestV1Schema,
   installManifestV2Schema,
   mcpManifestEntrySchema,
+  settingsManifestEntrySchema,
   skillManifestEntrySchema,
 } from "./manifest/schema.js";
 export { builtInMcpServerNames, builtInMcpServerRegistry } from "./mcp/built-in.js";

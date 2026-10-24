@@ -31,7 +31,7 @@ import { applyInstallPlans } from "../src/executor.js";
 import { planInstall, planUninstall } from "../src/planner.js";
 import { createAdapterRegistry } from "../src/registry.js";
 
-const TARGETS = ["codex", "claude", "kimi"] as const;
+const TARGETS = ["codex", "claude", "kimi", "qwen"] as const;
 type Target = (typeof TARGETS)[number];
 
 let dir: string;
@@ -112,9 +112,38 @@ function frontmatter(markdown: string): { fields: Map<string, string>; body: str
   return { fields, body: match[2] ?? "" };
 }
 
+/**
+ * Reads a YAML block list (`key:` followed by `  - item` lines) out of a frontmatter document.
+ *
+ * Qwen Code documents `tools` as a list rather than the comma-separated string Claude Code and
+ * Kimi Code take, so `frontmatter`'s line-per-field parsing cannot express it.
+ */
+function yamlList(markdown: string, key: string): string[] {
+  const match = /^---\n([\s\S]*?)\n---/.exec(markdown);
+  if (match === null) throw new Error(`Not Markdown with frontmatter:\n${markdown}`);
+
+  const items: string[] = [];
+  let inside = false;
+
+  for (const line of (match[1] ?? "").split("\n")) {
+    if (line === `${key}:`) {
+      inside = true;
+      continue;
+    }
+
+    if (!inside) continue;
+
+    const item = /^\s+-\s+(.+)$/.exec(line);
+    if (item === null) break;
+    items.push((item[1] ?? "").trim());
+  }
+
+  return items;
+}
+
 describe("adapter references", () => {
   it("point every capability at an official provider documentation host", () => {
-    const official = ["learn.chatgpt.com", "code.claude.com", "www.kimi.com"];
+    const official = ["learn.chatgpt.com", "code.claude.com", "www.kimi.com", "qwenlm.github.io"];
     for (const definition of builtInAdapterDefinitions) {
       const urls = [
         definition.reference,
@@ -134,6 +163,7 @@ describe("adapter references", () => {
       codex: [".agents/skills/planning/SKILL.md", ".codex/agents/agentyx-reviewer.toml"],
       claude: [".claude/skills/planning/SKILL.md", ".claude/agents/agentyx-reviewer.md"],
       kimi: [".agents/skills/planning/SKILL.md", ".agents/agents/agentyx-reviewer.md"],
+      qwen: [".qwen/skills/planning/SKILL.md", ".qwen/agents/agentyx-reviewer.md"],
     };
     for (const target of TARGETS) {
       const [plan] = await planInstall({
@@ -152,13 +182,17 @@ describe("adapter references", () => {
 });
 
 describe("canonical Skills across providers", () => {
-  it("installs byte-identical content for every built-in Skill, from the real registry", async () => {
+  // One write per Skill per target, across four targets.
+  it("installs byte-identical content for every built-in Skill, from the real registry", {
+    timeout: 30_000,
+  }, async () => {
     await sync({ targets: TARGETS, skills: builtInSkillNames });
 
     for (const name of builtInSkillNames) {
       const canonical = formatSkillMarkdown(builtInSkillRegistry.get(name));
       expect(await read(`.agents/skills/${name}/SKILL.md`)).toBe(canonical);
       expect(await read(`.claude/skills/${name}/SKILL.md`)).toBe(canonical);
+      expect(await read(`.qwen/skills/${name}/SKILL.md`)).toBe(canonical);
     }
   });
 });
@@ -214,13 +248,34 @@ describe("project agent formats", () => {
     }
   });
 
-  it("keeps one canonical instruction body across all three providers", async () => {
+  it("renders Qwen Code Markdown with a YAML tool allowlist in Qwen's own tool names", async () => {
+    await installAll();
+    for (const definition of definitions) {
+      const content = await read(`.qwen/agents/${definition.name}.md`);
+      const { fields, body } = frontmatter(content);
+      expect(fields.get("name")).toBe(definition.name);
+      expect(fields.get("description")).toBe(definition.description);
+      expect(body.trim()).toBe(definition.instructions);
+      // `model` is optional in Qwen Code and omitting it means inherit, so Agentyx writes none.
+      expect(fields.has("model")).toBe(false);
+      expect(fields.has("override")).toBe(false);
+
+      const expected =
+        definition.access === "read-only"
+          ? ["read_file", "grep_search", "glob"]
+          : ["read_file", "grep_search", "glob", "run_shell_command", "write_file", "edit"];
+      expect(yamlList(content, "tools")).toEqual(expected);
+    }
+  });
+
+  it("keeps one canonical instruction body across all four providers", async () => {
     await installAll();
     for (const definition of definitions) {
       const claude = frontmatter(await read(`.claude/agents/${definition.name}.md`)).body.trim();
       const kimi = frontmatter(await read(`.agents/agents/${definition.name}.md`)).body.trim();
+      const qwen = frontmatter(await read(`.qwen/agents/${definition.name}.md`)).body.trim();
       const codex = parseToml(await read(`.codex/agents/${definition.name}.toml`));
-      expect(new Set([claude, kimi, codex.developer_instructions])).toEqual(
+      expect(new Set([claude, kimi, qwen, codex.developer_instructions])).toEqual(
         new Set([definition.instructions]),
       );
     }
@@ -337,11 +392,13 @@ describe("MCP provider formats", () => {
     codex: ".codex/config.toml",
     claude: ".mcp.json",
     kimi: ".kimi-code/mcp.json",
+    qwen: ".qwen/settings.json",
   };
   const unrelated: Record<Target, string> = {
     codex: 'model = "gpt-5"\n\n[mcp_servers.mine]\ncommand = "mine"\nargs = []\n',
     claude: JSON.stringify({ custom: true, mcpServers: { mine: { command: "mine" } } }),
     kimi: JSON.stringify({ custom: true, mcpServers: { mine: { command: "mine" } } }),
+    qwen: JSON.stringify({ custom: true, mcpServers: { mine: { command: "mine" } } }),
   };
 
   function servers(target: Target): Record<string, unknown> {
@@ -392,9 +449,11 @@ describe("MCP provider formats", () => {
       expect(Object.keys(servers(target))).toEqual(["mine"]);
       // Only an empty record of the user-owned file may remain; no server is still claimed.
       const left = await loadInstallManifest(dir);
-      expect(left.entries.flatMap((entry) => (entry.kind === "mcp" ? entry.servers : []))).toEqual(
-        [],
-      );
+      expect(
+        left.entries.flatMap((entry) =>
+          entry.kind === "mcp" || entry.kind === "settings" ? entry.servers : [],
+        ),
+      ).toEqual([]);
     });
   }
 
@@ -456,6 +515,43 @@ describe("MCP provider formats", () => {
     expect(JSON.parse(render("kimi", http)).mcpServers.remote).toEqual({
       url: "https://example.test/mcp",
     });
+
+    // Qwen Code: ${VAR} expansion in env, and `httpUrl` for streamable HTTP — its `url` key is the
+    // legacy SSE transport, so Agentyx's `http` transport must never be rendered as one.
+    expect(JSON.parse(render("qwen", stdio)).mcpServers.docs).toEqual({
+      command: "npx",
+      args: ["-y", "docs-server"],
+      env: { DOCS_TOKEN: "${DOCS_TOKEN}" },
+    });
+    const headerless = mcpServerDefinitionSchema.parse({
+      name: "remote",
+      description: "Remote.",
+      transport: "http",
+      url: "https://example.test/mcp",
+    });
+    expect(JSON.parse(render("qwen", headerless)).mcpServers.remote).toEqual({
+      httpUrl: "https://example.test/mcp",
+    });
+  });
+
+  it("refuses a Qwen header reference it cannot express instead of writing a literal", async () => {
+    const authenticated = mcpServerDefinitionSchema.parse({
+      name: "remote",
+      description: "Remote.",
+      transport: "http",
+      url: "https://example.test/mcp",
+      headers: { "X-Api-Key": { fromEnv: "REMOTE_KEY" } },
+    });
+    // Qwen Code documents headers as literal values: writing `${REMOTE_KEY}` would send the
+    // variable's *name* as the credential.
+    await expect(
+      planInstall({
+        targets: ["qwen"],
+        projectDir: dir,
+        skills: [],
+        mcpServers: [authenticated],
+      }),
+    ).rejects.toBeInstanceOf(UnsupportedMcpEnvReferenceError);
   });
 
   it("refuses a Codex env reference it cannot forward under the same name", async () => {
@@ -550,6 +646,64 @@ describe("hook formats", () => {
     expect(await exists(".kimi-code/config.toml")).toBe(false);
     expect(await readdir(fakeHome)).toEqual([]);
   });
+
+  it("qwen: keeps MCP servers and hooks in one settings document under one ownership record", async () => {
+    await put(
+      ".qwen/settings.json",
+      JSON.stringify({ custom: true, hooks: { PostToolUse: [userHook] } }),
+    );
+    const { manifest } = await sync({
+      targets: ["qwen"],
+      mcp: ["context7"],
+      hooks: ["session-doctor-bootstrap", "observe-tool-use"],
+    });
+
+    const parsed = JSON.parse(await read(".qwen/settings.json"));
+    // Both halves landed in the same document, and neither merge dropped the other.
+    expect(Object.keys(parsed.mcpServers)).toEqual(["context7"]);
+    expect(JSON.stringify(parsed.hooks)).toContain("agentyx:session-doctor-bootstrap");
+    expect(JSON.stringify(parsed.hooks)).toContain("agentyx:observe-tool-use");
+    // The user's own hook and unrelated keys survive both merges.
+    expect(parsed.hooks.PostToolUse[0]).toEqual(userHook);
+    expect(parsed.custom).toBe(true);
+
+    // One file, one ownership record — two entries could not both survive the by-path index.
+    const owned = manifest.entries.filter((entry) => entry.path === ".qwen/settings.json");
+    expect(owned).toHaveLength(1);
+    expect(owned[0]).toMatchObject({
+      kind: "settings",
+      servers: ["context7"],
+      hooks: ["observe-tool-use", "session-doctor-bootstrap"],
+      targets: ["qwen"],
+      created: false,
+    });
+
+    // A second sync is a no-op, so the composed document is stable.
+    const lock = await read(".agentyx.lock.json");
+    await sync({
+      targets: ["qwen"],
+      mcp: ["context7"],
+      hooks: ["session-doctor-bootstrap", "observe-tool-use"],
+    });
+    expect(await read(".agentyx.lock.json")).toBe(lock);
+
+    // Pruning removes each half it no longer wants, and keeps the other.
+    await sync({ targets: ["qwen"], mcp: [], hooks: ["session-doctor-bootstrap"] });
+    const pruned = JSON.parse(await read(".qwen/settings.json"));
+    expect(pruned.mcpServers).toBeUndefined();
+    expect(JSON.stringify(pruned.hooks)).toContain("agentyx:session-doctor-bootstrap");
+    expect(JSON.stringify(pruned.hooks)).not.toContain("agentyx:observe-tool-use");
+    expect(pruned.hooks.PostToolUse[0]).toEqual(userHook);
+
+    // Uninstall takes back both halves and leaves the user's document behind.
+    const before = await loadInstallManifest(dir);
+    await applyInstallPlans(
+      await planUninstall({ targets: ["qwen"], projectDir: dir, manifest: before }),
+      { manifest: before },
+    );
+    const left = JSON.parse(await read(".qwen/settings.json"));
+    expect(left).toEqual({ custom: true, hooks: { PostToolUse: [userHook] } });
+  });
 });
 
 describe("observability flags match the documented hook signals", () => {
@@ -589,6 +743,20 @@ describe("observability flags match the documented hook signals", () => {
       contextTokens: false,
     });
     expect(flags.kimi?.reason).toContain("user-level");
+  });
+
+  it("Qwen Code: lifecycle, tool and MCP use — Skill use stays unobservable, not zero", () => {
+    expect(flags.qwen).toMatchObject({
+      projectHooks: true,
+      sessionLifecycle: true,
+      toolUse: true,
+      // Qwen Code documents no Skill tool, so a model-selected Skill fires no hook. Claiming
+      // `true` here would let doctor report every such use as "no observed use".
+      skillUse: false,
+      mcpUse: true,
+      contextTokens: false,
+    });
+    expect(flags.qwen?.reason).toContain("no Skill tool");
   });
 });
 
@@ -649,7 +817,9 @@ describe("manifest compatibility", () => {
     });
     const after = withAgent.manifest.entries.map((entry) => JSON.stringify(entry));
     for (const entry of before) expect(after).toContain(entry);
-    expect(withAgent.manifest.entries.filter((entry) => entry.kind === "agent")).toHaveLength(3);
+    expect(withAgent.manifest.entries.filter((entry) => entry.kind === "agent")).toHaveLength(
+      TARGETS.length,
+    );
 
     const lock = await read(".agentyx.lock.json");
     const again = await sync({

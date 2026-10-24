@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "@voltui/components/themes.css";
+@import "@doqs/analog/styles.css";
 
 @custom-variant dark (&:where(.dark, .dark *));
 
@@ -31,7 +32,14 @@
     "Helvetica Neue", Arial, sans-serif;
 }
 
-:root {
+/*
+ * Token blocks use `html:root` / `html.dark` on purpose: @voltui/components/themes.css declares its
+ * own `:root` and `.dark` blocks for the same custom properties at specificity (0,1,0). In a
+ * production bundle our definitions win by source order, but Vite's dev server injects stylesheet
+ * modules in dependency order, which can put VoltUI's blocks after ours and leave components on the
+ * wrong theme. One extra element selector makes ours win in every order.
+ */
+html:root {
   --background: #f9fafd;
   --foreground: #151822;
   --surface: #ffffff;
@@ -55,9 +63,33 @@
   --danger: #be2323;
   --danger-foreground: #ffffff;
   --ring: #4c5bc9;
+
+  /*
+   * Doqs documentation region. `muted` and `secondary` are TEXT colours here, not fills: Doqs
+   * paints sidebar labels, the table of contents and dimmed prose with them, and its fallback chain
+   * would otherwise pick up our translucent `--muted` fill, which is invisible as text. Code chips
+   * and blocks get an explicit pair per theme because Doqs' own fallbacks are hard-coded light.
+   */
+  --host-docs-background: var(--background);
+  --host-docs-foreground: var(--foreground);
+  --host-docs-surface: var(--surface);
+  --host-docs-border: var(--border);
+  --host-docs-muted: var(--muted-foreground);
+  --host-docs-secondary: var(--muted-foreground);
+  --host-docs-primary: var(--primary);
+  --host-docs-primary-text: var(--primary);
+  --host-docs-focus: var(--ring);
+  --host-docs-code-background: #eef0f5;
+  --host-docs-code-foreground: #151822;
+  --host-docs-scroll-offset: 5rem;
+  --host-docs-callout-note: var(--info);
+  --host-docs-callout-tip: var(--success);
+  --host-docs-callout-warning: var(--warning);
+  --host-docs-callout-caution: var(--danger);
+  --host-docs-callout-important: var(--secondary);
 }
 
-.dark {
+html.dark {
   --background: #0c0e14;
   --foreground: #f9fafd;
   --surface: #141821;
@@ -69,9 +101,11 @@
   --border: rgba(249, 250, 253, 0.15);
   --input: rgba(249, 250, 253, 0.15);
   --primary: #6c7eff;
-  --primary-foreground: #ffffff;
+  /* Dark ink on the light fills, like success/warning/info/danger already do: white on #6c7eff is
+     3.46:1, below WCAG AA; #0c0e14 on it is 5.2:1. */
+  --primary-foreground: #0c0e14;
   --secondary: #a87cd9;
-  --secondary-foreground: #ffffff;
+  --secondary-foreground: #0c0e14;
   --info: #5aa5fa;
   --info-foreground: #0c0e14;
   --success: #4ade80;
@@ -81,6 +115,24 @@
   --danger: #ff6b6b;
   --danger-foreground: #0c0e14;
   --ring: #6c7eff;
+
+  --host-docs-background: var(--background);
+  --host-docs-foreground: var(--foreground);
+  --host-docs-surface: var(--surface);
+  --host-docs-border: var(--border);
+  --host-docs-muted: var(--muted-foreground);
+  --host-docs-secondary: var(--muted-foreground);
+  --host-docs-primary: var(--primary);
+  --host-docs-primary-text: var(--primary);
+  --host-docs-focus: var(--ring);
+  --host-docs-code-background: #1a1f2a;
+  --host-docs-code-foreground: #e9edf5;
+  --host-docs-scroll-offset: 5rem;
+  --host-docs-callout-note: var(--info);
+  --host-docs-callout-tip: var(--success);
+  --host-docs-callout-warning: var(--warning);
+  --host-docs-callout-caution: var(--danger);
+  --host-docs-callout-important: var(--secondary);
 }
 
 html {
@@ -127,6 +179,43 @@ body {
 a {
   color: inherit;
   text-decoration: none;
+}
+
+/*
+ * Site navigation links. The active route keeps a persistent primary tint so "you are here" reads
+ * at a glance without competing with hover; routerLinkActive adds `aria-current="page"` on the same
+ * element, so assistive technology gets the fact too.
+ */
+.nav-link,
+.nav-link-block {
+  border-radius: 0.375rem;
+  color: var(--muted-foreground);
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition:
+    color 150ms ease,
+    background-color 150ms ease;
+}
+
+.nav-link {
+  padding: 0.5rem 0.75rem;
+}
+
+.nav-link-block {
+  display: block;
+  padding: 0.75rem;
+}
+
+.nav-link:hover,
+.nav-link-block:hover {
+  background-color: var(--accent);
+  color: var(--foreground);
+}
+
+.nav-link--active,
+.nav-link--active:hover {
+  background-color: color-mix(in srgb, var(--primary) 14%, transparent);
+  color: var(--foreground);
 }
 
 pre,

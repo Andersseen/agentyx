@@ -1,7 +1,6 @@
-import { bootstrapApplication } from "@angular/platform-browser";
+import "@angular/platform-server/init";
+import { render } from "@analogjs/router/server";
 import { AppComponent } from "./app/app.component";
-import { appConfig } from "./app/app.config";
+import { config } from "./app/app.config.server";
 
-const bootstrap = () => bootstrapApplication(AppComponent, appConfig);
-
-export default bootstrap;
+export default render(AppComponent, config);

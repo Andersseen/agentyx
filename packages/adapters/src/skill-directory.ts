@@ -1,6 +1,6 @@
 import { readFile, stat } from "node:fs/promises";
 import { join, resolve } from "node:path";
-import type { AgentDefinition } from "@agentyx/core";
+import type { AgentDefinition, McpServerDefinition } from "@agentyx/core";
 import { formatSkillMarkdown } from "@agentyx/core";
 import type {
   AdapterContext,
@@ -12,7 +12,8 @@ import type {
   PlannedAgentFile,
   PlannedFile,
 } from "./adapter.js";
-import { normalizeClaudeHook, normalizeCodexHook } from "./hook-observer.js";
+import type { HookPayloadNormalizer } from "./hook-observer.js";
+import { normalizeClaudeHook, normalizeCodexHook, normalizeQwenHook } from "./hook-observer.js";
 import {
   CLAUDE_HOOKS_CONFIG_SEGMENTS,
   CODEX_HOOKS_CONFIG_SEGMENTS,
@@ -20,7 +21,10 @@ import {
   codexHooksConfigPath,
   codexInlineHooksConfigPath,
   containsAgentyxHooks,
+  type HookConfigFlavor,
   hasInlineCodexHooks,
+  QWEN_HOOKS_CONFIG_SEGMENTS,
+  qwenHooksConfigPath,
   renderJsonHooksConfig,
 } from "./hook-rendering.js";
 import {
@@ -30,13 +34,134 @@ import {
   codexMcpConfigPath,
   KIMI_MCP_CONFIG_SEGMENTS,
   kimiMcpConfigPath,
+  QWEN_MCP_CONFIG_SEGMENTS,
+  qwenMcpConfigPath,
+  type RenderedMcpConfig,
   renderClaudeMcpConfig,
   renderCodexMcpConfig,
   renderKimiMcpConfig,
+  renderQwenMcpConfig,
 } from "./mcp-rendering.js";
 
 /** The file name every provider in this family expects inside a skill directory. */
 export const SKILL_FILENAME = "SKILL.md";
+
+/** The MCP document formats Agentyx can render. */
+export type McpConfigKind = "codex-toml" | "claude-json" | "kimi-json" | "qwen-json";
+
+interface McpConfigShape {
+  readonly path: (projectDir: string) => string;
+  readonly segments: readonly string[];
+  readonly render: (
+    servers: readonly McpServerDefinition[],
+    existing: ExistingMcpConfig,
+  ) => RenderedMcpConfig;
+}
+
+/** Where each provider's project MCP document lives, and how it is rendered. */
+const MCP_CONFIGS: Readonly<Record<McpConfigKind, McpConfigShape>> = {
+  "codex-toml": {
+    path: codexMcpConfigPath,
+    segments: CODEX_MCP_CONFIG_SEGMENTS,
+    render: renderCodexMcpConfig,
+  },
+  "claude-json": {
+    path: claudeMcpConfigPath,
+    segments: CLAUDE_MCP_CONFIG_SEGMENTS,
+    render: renderClaudeMcpConfig,
+  },
+  "kimi-json": {
+    path: kimiMcpConfigPath,
+    segments: KIMI_MCP_CONFIG_SEGMENTS,
+    render: renderKimiMcpConfig,
+  },
+  "qwen-json": {
+    path: qwenMcpConfigPath,
+    segments: QWEN_MCP_CONFIG_SEGMENTS,
+    render: renderQwenMcpConfig,
+  },
+};
+
+/** The hook document formats Agentyx can render. */
+export type HookConfigKind = "claude-settings-json" | "codex-hooks-json" | "qwen-settings-json";
+
+interface HookConfigShape {
+  readonly flavor: HookConfigFlavor;
+  readonly path: (projectDir: string) => string;
+  readonly segments: readonly string[];
+  readonly observe: HookPayloadNormalizer;
+  readonly trust: HookInstallStatus["trust"];
+  /** A second file the provider also reads hooks from; only Codex has one. */
+  readonly inlineSiblingPath?: (projectDir: string) => string;
+}
+
+/**
+ * Where each provider's project hook document lives, and what Agentyx can vouch for afterwards.
+ *
+ * `trust` belongs to the provider, not to the file format: Codex asks the user to review project
+ * hooks through `/hooks`, and Qwen Code loads project hooks only for a folder the user has trusted,
+ * while Claude Code has no such gate.
+ */
+const HOOK_CONFIGS: Readonly<Record<HookConfigKind, HookConfigShape>> = {
+  "claude-settings-json": {
+    flavor: "claude",
+    path: claudeHooksConfigPath,
+    segments: CLAUDE_HOOKS_CONFIG_SEGMENTS,
+    observe: normalizeClaudeHook,
+    trust: "unknown",
+  },
+  "codex-hooks-json": {
+    flavor: "codex",
+    path: codexHooksConfigPath,
+    segments: CODEX_HOOKS_CONFIG_SEGMENTS,
+    observe: normalizeCodexHook,
+    trust: "review-may-be-required",
+    inlineSiblingPath: codexInlineHooksConfigPath,
+  },
+  "qwen-settings-json": {
+    flavor: "qwen",
+    path: qwenHooksConfigPath,
+    segments: QWEN_HOOKS_CONFIG_SEGMENTS,
+    observe: normalizeQwenHook,
+    trust: "review-may-be-required",
+  },
+};
+
+/** The agent file formats Agentyx can render, named for the provider that documents them. */
+export type AgentFormat = "claude" | "kimi" | "codex" | "qwen";
+
+/**
+ * The tool allowlist an agent gets per access level, in each provider's own tool names.
+ *
+ * A read-only role receives no write, shell or delegation tool; a workspace-write role adds file
+ * and shell tools and still no delegation. The names differ because they are the provider's, not
+ * Agentyx's: Qwen Code spells them `read_file` and `run_shell_command`, the others `Read` and
+ * `Bash`. Codex expresses access as `sandbox_mode` instead of an allowlist, so it has none.
+ */
+const AGENT_TOOLS: Readonly<
+  Record<AgentFormat, Record<AgentDefinition["access"], readonly string[]>>
+> = {
+  claude: {
+    "read-only": ["Read", "Grep", "Glob"],
+    "workspace-write": ["Read", "Grep", "Glob", "Bash", "Write", "Edit"],
+  },
+  kimi: {
+    "read-only": ["Read", "Grep", "Glob"],
+    "workspace-write": ["Read", "Grep", "Glob", "Bash", "Write", "Edit"],
+  },
+  qwen: {
+    "read-only": ["read_file", "grep_search", "glob"],
+    "workspace-write": [
+      "read_file",
+      "grep_search",
+      "glob",
+      "run_shell_command",
+      "write_file",
+      "edit",
+    ],
+  },
+  codex: { "read-only": [], "workspace-write": [] },
+};
 
 /** What distinguishes one skill-directory provider from another: an id, a name, a location. */
 export interface SkillDirectoryAdapterDefinition {
@@ -61,7 +186,7 @@ export interface SkillDirectoryAdapterDefinition {
   readonly mcp?:
     | {
         readonly project: true;
-        readonly config: "codex-toml" | "claude-json" | "kimi-json";
+        readonly config: McpConfigKind;
         readonly transports: readonly string[];
         readonly reference: string;
       }
@@ -70,12 +195,12 @@ export interface SkillDirectoryAdapterDefinition {
       };
   /** Present only for providers with a documented project-local hook mechanism Agentyx can target. */
   readonly hooks?: {
-    readonly config: "claude-settings-json" | "codex-hooks-json";
+    readonly config: HookConfigKind;
     readonly reference: string;
   };
   readonly agents?: {
     readonly dir: readonly string[];
-    readonly format: "claude" | "kimi" | "codex";
+    readonly format: AgentFormat;
     readonly reference: string;
   };
   /** What the provider documents as observable through its hooks. */
@@ -175,35 +300,16 @@ export function createSkillDirectoryAdapter(
   }
 
   if (definition.mcp?.project === true) {
-    const config = definition.mcp.config;
-
-    const mcpConfigPath =
-      config === "codex-toml"
-        ? codexMcpConfigPath
-        : config === "claude-json"
-          ? claudeMcpConfigPath
-          : kimiMcpConfigPath;
-    const mcpConfigSegments =
-      config === "codex-toml"
-        ? CODEX_MCP_CONFIG_SEGMENTS
-        : config === "claude-json"
-          ? CLAUDE_MCP_CONFIG_SEGMENTS
-          : KIMI_MCP_CONFIG_SEGMENTS;
-    const renderMcpConfig =
-      config === "codex-toml"
-        ? renderCodexMcpConfig
-        : config === "claude-json"
-          ? renderClaudeMcpConfig
-          : renderKimiMcpConfig;
+    const config = MCP_CONFIGS[definition.mcp.config];
 
     adapter = {
       ...adapter,
-      mcpConfigPath,
+      mcpConfigPath: config.path,
       planMcpConfig: (context: AdapterContext, existing: ExistingMcpConfig) => {
-        const rendered = renderMcpConfig(context.mcpServers ?? [], existing);
+        const rendered = config.render(context.mcpServers ?? [], existing);
 
         return {
-          segments: mcpConfigSegments,
+          segments: config.segments,
           content: rendered.content,
           empty: rendered.empty,
           servers: (context.mcpServers ?? []).map((server) => server.name),
@@ -213,22 +319,22 @@ export function createSkillDirectoryAdapter(
   }
 
   if (definition.hooks !== undefined) {
-    const flavor = definition.hooks.config === "claude-settings-json" ? "claude" : "codex";
-    const segments =
-      flavor === "claude" ? CLAUDE_HOOKS_CONFIG_SEGMENTS : CODEX_HOOKS_CONFIG_SEGMENTS;
-    const hooksPath = flavor === "claude" ? claudeHooksConfigPath : codexHooksConfigPath;
+    const config = HOOK_CONFIGS[definition.hooks.config];
+    const { flavor, segments, path: hooksPath } = config;
+    // Only Codex reads hooks from two representations in one layer.
+    const siblingPath = config.inlineSiblingPath;
 
     adapter = {
       ...adapter,
       hooksConfigPath: hooksPath,
-      observeHook: flavor === "claude" ? normalizeClaudeHook : normalizeCodexHook,
-      ...(flavor === "codex" ? { hooksSiblingConfigPath: codexInlineHooksConfigPath } : {}),
+      observeHook: config.observe,
+      ...(siblingPath === undefined ? {} : { hooksSiblingConfigPath: siblingPath }),
       planHookConfig: (context: AdapterContext, existing: ExistingHookConfig) => {
         const hooks = context.hooks ?? [];
         // Codex warns when one layer defines hooks both in hooks.json and inline. If the project
         // already uses inline hooks and has no hooks.json, do not create a second source.
         const inline =
-          flavor === "codex" &&
+          siblingPath !== undefined &&
           existing.content === undefined &&
           hasInlineCodexHooks(existing.sibling);
         const rendered = renderJsonHooksConfig(
@@ -256,15 +362,16 @@ export function createSkillDirectoryAdapter(
         const path = hooksPath(projectDir);
         const [content, sibling] = await Promise.all([
           readOptional(path),
-          flavor === "codex" ? readOptional(codexInlineHooksConfigPath(projectDir)) : undefined,
+          siblingPath === undefined ? undefined : readOptional(siblingPath(projectDir)),
         ]);
         const configured = containsAgentyxHooks(content);
-        const inline = flavor === "codex" && content === undefined && hasInlineCodexHooks(sibling);
+        const inline =
+          siblingPath !== undefined && content === undefined && hasInlineCodexHooks(sibling);
 
         return {
           path: segments.join("/"),
           configured,
-          trust: flavor === "codex" ? "review-may-be-required" : "unknown",
+          trust: config.trust,
           ...(inline
             ? {
                 note: ".codex/config.toml defines inline hooks, so Agentyx did not add .codex/hooks.json.",
@@ -278,14 +385,19 @@ export function createSkillDirectoryAdapter(
   return adapter;
 }
 
-function renderAgent(agent: AgentDefinition, format: "claude" | "kimi" | "codex"): string {
-  const tools =
-    agent.access === "read-only"
-      ? ["Read", "Grep", "Glob"]
-      : ["Read", "Grep", "Glob", "Bash", "Write", "Edit"];
+function renderAgent(agent: AgentDefinition, format: AgentFormat): string {
   if (format === "codex")
     return `name = ${JSON.stringify(agent.name)}\ndescription = ${JSON.stringify(agent.description)}\nsandbox_mode = ${JSON.stringify(agent.access === "read-only" ? "read-only" : "workspace-write")}\ndeveloper_instructions = ${JSON.stringify(agent.instructions)}\n`;
-  return `---\nname: ${agent.name}\ndescription: ${agent.description}\ntools: ${tools.join(", ")}\n${format === "kimi" ? "override: false\n" : ""}---\n\n${agent.instructions}\n`;
+
+  const tools = AGENT_TOOLS[format][agent.access];
+  // Qwen Code documents `tools` as a YAML list of its own snake_case tool names; Claude Code and
+  // Kimi Code take a comma-separated string of PascalCase ones.
+  const toolsField =
+    format === "qwen"
+      ? `tools:\n${tools.map((tool) => `  - ${tool}`).join("\n")}\n`
+      : `tools: ${tools.join(", ")}\n`;
+
+  return `---\nname: ${agent.name}\ndescription: ${agent.description}\n${toolsField}${format === "kimi" ? "override: false\n" : ""}---\n\n${agent.instructions}\n`;
 }
 
 async function readOptional(path: string): Promise<string | undefined> {

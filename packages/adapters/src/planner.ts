@@ -124,20 +124,39 @@ export async function planTargetInstall(input: PlanTargetInstallInput): Promise<
       planAgentFile(file, projectDir, agentsPath, adapter.id, recorded, input.force),
     ),
   );
-  const mcp = await planMcp({
+  // Qwen Code reads MCP servers and hooks from one document, which can only be planned — and
+  // written, and owned — as a single merge. Every other provider keeps them apart.
+  const sharedSettings = await planSharedSettings({
     adapter,
     context,
     projectDir,
     recorded,
     prune: input.prune === true,
   });
-  const hookConfig = await planHooks({
-    adapter,
-    context,
-    projectDir,
-    recorded,
-    prune: input.prune === true,
-  });
+  const mcp =
+    sharedSettings ??
+    (await planMcp({
+      adapter,
+      context,
+      projectDir,
+      recorded,
+      prune: input.prune === true,
+    }));
+  const hookConfig =
+    sharedSettings === undefined
+      ? await planHooks({
+          adapter,
+          context,
+          projectDir,
+          recorded,
+          prune: input.prune === true,
+        })
+      : // The shared document already carries this target's hooks; a second operation would be a
+        // second write to the same path.
+        {
+          operations: [] as readonly HookInstallOperation[],
+          deletions: [] as readonly DeleteOperation[],
+        };
   const deletions = input.prune
     ? [
         ...(await planSkillDeletions({
@@ -538,6 +557,161 @@ async function planHooks(input: PlanHooksInput): Promise<{
     ],
     deletions: [],
   };
+}
+
+interface PlanSharedSettingsInput {
+  readonly adapter: AgentAdapter;
+  readonly context: {
+    readonly projectDir: string;
+    readonly skills: readonly SkillDefinition[];
+    readonly mcpServers: readonly McpServerDefinition[];
+    readonly hooks: readonly HookDefinition[];
+  };
+  readonly projectDir: string;
+  readonly recorded: ReadonlyMap<string, InstallManifestEntry>;
+  readonly prune: boolean;
+}
+
+/**
+ * Plans the single document a provider reads both MCP servers and hooks from.
+ *
+ * Two merges of one file cannot be planned independently: each would read the file from disk, so
+ * the second write would drop what the first added, and the by-path manifest index could only keep
+ * one of the two ownership records — losing the names needed to prune the other half. So the MCP
+ * merge runs first and its *output* is handed to the hook merge as the document to merge into.
+ * Both merges preserve keys they do not own, which is what makes the composition safe. The result
+ * is one operation and one `settings` manifest entry.
+ *
+ * Returns `undefined` when the adapter keeps the two in separate files, as every provider except
+ * Qwen Code does, so the caller falls back to the independent plans.
+ */
+async function planSharedSettings(input: PlanSharedSettingsInput): Promise<
+  | {
+      readonly operations: readonly McpInstallOperation[];
+      readonly deletions: readonly DeleteOperation[];
+    }
+  | undefined
+> {
+  const { adapter, context, projectDir, recorded, prune } = input;
+  const configPath = sharedSettingsPath(adapter, projectDir);
+
+  if (
+    configPath === undefined ||
+    adapter.planMcpConfig === undefined ||
+    adapter.planHookConfig === undefined
+  ) {
+    return undefined;
+  }
+
+  const supported = adapter.capabilities.mcp.transports;
+
+  if (supported !== undefined) {
+    for (const server of context.mcpServers) {
+      if (!supported.includes(server.transport)) {
+        throw new UnsupportedMcpTransportError(adapter.id, server.name, server.transport);
+      }
+    }
+  }
+
+  assertInside(configPath, projectDir);
+  await assertInsideRealPath(configPath, projectDir);
+
+  const relativePath = toDisplayPath(projectDir, configPath);
+  const entry = recorded.get(relativePath);
+  // A lock written before this provider shared one document may attribute the path to only one of
+  // the two halves. Either way, the names it recorded are the names to prune.
+  const recordedEntry =
+    entry?.kind === "settings" || entry?.kind === "mcp" || entry?.kind === "hook"
+      ? entry
+      : undefined;
+  const recordedServers =
+    recordedEntry === undefined || recordedEntry.kind === "hook" ? [] : recordedEntry.servers;
+  const recordedHooks =
+    recordedEntry === undefined || recordedEntry.kind === "mcp" ? [] : recordedEntry.hooks;
+  const desiredServers = new Set(context.mcpServers.map((server) => server.name));
+  const desiredHooks = new Set(context.hooks.map((hook) => hook.name));
+  const removeServers = prune
+    ? recordedServers.filter((name) => !desiredServers.has(name))
+    : ([] as readonly string[]);
+  const removeHooks = prune
+    ? recordedHooks.filter((name) => !desiredHooks.has(name))
+    : ([] as readonly string[]);
+
+  if (
+    context.mcpServers.length === 0 &&
+    context.hooks.length === 0 &&
+    removeServers.length === 0 &&
+    removeHooks.length === 0
+  ) {
+    return { operations: [], deletions: [] };
+  }
+
+  const existingContent = await readExistingProviderConfig(configPath);
+  const withServers = adapter.planMcpConfig(context, {
+    content: existingContent,
+    remove: removeServers,
+  });
+  const withHooks = adapter.planHookConfig(context, {
+    content: withServers.content,
+    remove: removeHooks,
+  });
+  // A provider that declines to write hooks keeps its servers; only Codex declines, and it never
+  // shares a document, so this is a guard rather than a path Qwen Code takes.
+  const declined = withHooks.skipped !== undefined;
+  const content = declined ? withServers.content : withHooks.content;
+  const path = resolve(projectDir, join(...(declined ? withServers.segments : withHooks.segments)));
+
+  assertInside(path, projectDir);
+  await assertInsideRealPath(path, projectDir);
+
+  if ((declined ? withServers.empty : withHooks.empty) && recordedEntry?.created === true) {
+    return {
+      operations: [],
+      deletions: [
+        {
+          type: "delete-file",
+          status: deletionStatus(existingContent, recordedEntry.hash),
+          kind: "settings",
+          path: configPath,
+          relativePath,
+          skill: undefined,
+          observed: observedState(existingContent),
+          usedBy: recordedEntry.targets,
+        },
+      ],
+    };
+  }
+
+  return {
+    operations: [
+      {
+        type: "configure-mcp",
+        // The merged document was built from `existingContent`, so that read is the state to guard.
+        status: classify(existingContent, content, undefined, true),
+        path,
+        relativePath: toDisplayPath(projectDir, path),
+        servers: context.mcpServers.map((server) => server.name),
+        hooks: declined ? [] : withHooks.hooks,
+        content,
+        created: existingContent === undefined,
+        observed: observedState(existingContent),
+        usedBy: [adapter.id],
+      },
+    ],
+    deletions: [],
+  };
+}
+
+/** The document a provider reads both MCP servers and hooks from, when it keeps them together. */
+function sharedSettingsPath(adapter: AgentAdapter, projectDir: string): string | undefined {
+  if (!adapter.capabilities.mcp.project || !adapter.capabilities.hooks) {
+    return undefined;
+  }
+
+  const mcp = adapter.mcpConfigPath?.(projectDir);
+  const hooks = adapter.hooksConfigPath?.(projectDir);
+
+  return mcp !== undefined && mcp === hooks ? mcp : undefined;
 }
 
 interface PlanSkillDeletionsInput {

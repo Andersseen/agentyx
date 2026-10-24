@@ -37,7 +37,10 @@ export function validateFrozenPlans(
       (operation): DesiredResource => describe("agent", operation, operation.agent),
     ),
     ...plan.mcpOperations.map(
-      (operation): DesiredResource => describe("mcp", operation, undefined),
+      (operation): DesiredResource =>
+        // An operation that also carries hooks is the one shared settings document, and the lock
+        // records it under the `settings` kind.
+        describe(operation.hooks === undefined ? "mcp" : "settings", operation, undefined),
     ),
     ...plan.hookOperations.map(
       (operation): DesiredResource => describe("hook", operation, undefined),

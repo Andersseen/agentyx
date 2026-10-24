@@ -1,4 +1,5 @@
 import { Component, signal } from "@angular/core";
+import { RouterLink, RouterLinkActive } from "@angular/router";
 import { MoveInViewDirective, MoveTapDirective } from "angular-movement";
 import { LmnBars3Icon } from "lumen-icons/bars-3";
 import { LmnCommandLineIcon } from "lumen-icons/command-line";
@@ -6,13 +7,17 @@ import { LmnXMarkIcon } from "lumen-icons/x-mark";
 import { ThemeToggleComponent } from "./theme-toggle.component.js";
 
 interface NavLink {
-  label: string;
-  href: string;
+  readonly label: string;
+  readonly route: string;
+  /** The home route must match exactly, or it would report active on every page. */
+  readonly exact: boolean;
 }
 
 @Component({
   selector: "app-navbar",
   imports: [
+    RouterLink,
+    RouterLinkActive,
     LmnBars3Icon,
     LmnCommandLineIcon,
     LmnXMarkIcon,
@@ -32,7 +37,7 @@ interface NavLink {
         aria-label="Main navigation"
       >
         <a
-          href="#hero"
+          routerLink="/"
           class="group flex items-center gap-2 text-lg font-semibold tracking-tight"
           [moveWhileTap]="{ scale: [1, 0.97, 1] }"
         >
@@ -44,11 +49,14 @@ interface NavLink {
 
         <div class="flex items-center gap-1 md:gap-4">
           <ul class="hidden items-center gap-1 md:flex">
-            @for (link of links; track link.href) {
+            @for (link of links; track link.label) {
               <li>
                 <a
-                  [href]="link.href"
-                  class="rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                  [routerLink]="link.route"
+                  routerLinkActive="nav-link--active"
+                  [routerLinkActiveOptions]="{ exact: link.exact }"
+                  ariaCurrentWhenActive="page"
+                  class="nav-link focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                 >
                   {{ link.label }}
                 </a>
@@ -82,10 +90,13 @@ interface NavLink {
           [moveDuration]="240"
         >
           <div class="mx-auto grid max-w-6xl gap-1">
-            @for (link of links; track link.href) {
+            @for (link of links; track link.label) {
               <a
-                [href]="link.href"
-                class="rounded-md px-3 py-3 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                [routerLink]="link.route"
+                routerLinkActive="nav-link--active"
+                [routerLinkActiveOptions]="{ exact: link.exact }"
+                ariaCurrentWhenActive="page"
+                class="nav-link-block"
                 (click)="closeMenu()"
               >
                 {{ link.label }}
@@ -100,9 +111,10 @@ interface NavLink {
 export class NavbarComponent {
   readonly menuOpen = signal(false);
   readonly links: NavLink[] = [
-    { label: "How it works", href: "#workflow" },
-    { label: "Doctor", href: "#doctor" },
-    { label: "Packs", href: "#packs" },
+    { label: "Overview", route: "/", exact: true },
+    { label: "Providers", route: "/providers", exact: false },
+    { label: "Packs", route: "/packs", exact: false },
+    { label: "Docs", route: "/docs", exact: false },
   ];
 
   toggleMenu(): void {
