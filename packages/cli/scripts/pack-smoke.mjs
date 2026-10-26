@@ -691,15 +691,17 @@ await run(
   creativeDir,
 );
 for (const skill of ["creative-direction", "design-critique", "visual-verification"]) {
-  const canonical = await readFile(
-    join(repoRoot, "packages/core/skills", skill, "SKILL.md"),
-    "utf8",
+  // Checkouts may use CRLF; the installed Skill is compared on normalized newlines.
+  const unix = (text) => text.replaceAll("\r\n", "\n");
+  const canonical = unix(
+    await readFile(join(repoRoot, "packages/core/skills", skill, "SKILL.md"), "utf8"),
   );
+  const canonicalBody = canonical.slice(canonical.indexOf("\n---\n", 4) + 5).trim();
   const copies = new Set();
   for (const root of [".agents/skills", ".claude/skills", ".qwen/skills"]) {
-    const installed = await readFile(join(creativeDir, root, skill, "SKILL.md"), "utf8");
+    const installed = unix(await readFile(join(creativeDir, root, skill, "SKILL.md"), "utf8"));
     copies.add(installed);
-    if (!installed.includes(canonical.split("---")[2]?.trim() ?? "missing"))
+    if (canonicalBody === "" || !installed.includes(canonicalBody))
       throw new Error(`${root}/${skill} differs from the canonical packaged Skill.`);
   }
   if (copies.size !== 1) throw new Error(`${skill} differs between provider destinations.`);
