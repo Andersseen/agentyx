@@ -20,9 +20,9 @@ export default defineConfig(() => ({
       },
       include: ["/src/**/*.ts"],
       nitro: {
-        // Static output ready for Cloudflare Pages.
-        // See https://nitro.unjs.io/deploy/providers/cloudflare-pages
-        preset: "cloudflare-pages",
+        // Fully prerendered static output; Cloudflare Pages serves it without a worker.
+        // See https://nitro.unjs.io/deploy/providers/static
+        preset: "static",
       },
     }),
     // Analog renders Markdown concurrently while heading ids come from a shared slugger, so an
