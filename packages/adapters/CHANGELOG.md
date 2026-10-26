@@ -1,5 +1,20 @@
 # @agentyx/adapters
 
+## 0.24.0
+
+### Minor Changes
+
+- 1b2e038: Add the `creative-web` design pack for expressive websites: creative direction, web composition,
+  typographic art direction, visual storytelling, motion art direction, design critique and concept-based
+  reference research. It shares `design-system-practice` and `visual-verification` with `ui-ux`, which
+  stays focused on product-interface quality, and is never recommended automatically from project
+  technology.
+
+### Patch Changes
+
+- Updated dependencies [1b2e038]
+  - @agentyx/core@0.24.0
+
 ## 0.23.0
 
 ### Minor Changes
