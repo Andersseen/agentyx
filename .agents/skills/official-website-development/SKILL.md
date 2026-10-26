@@ -33,6 +33,15 @@ Prefer one usable official site over a marketing sketch. A good first version sh
 
 Keep future roadmap items visually separate from shipped capabilities.
 
+## Creative Direction
+
+For the marketing surfaces (home, landing sections), choose a creative concept from the product's own
+model before writing components, using the `creative-web` Skills: `creative-direction`,
+`web-composition`, `visual-storytelling` and `design-critique`. Keep documentation reading surfaces
+calm. Visual elements must show real product facts, and every count must come from current data
+(`apps/web/src/app/data/site.ts`, checked by `apps/web/test/site-facts.test.ts`). The rationale and
+critique record for the current design is in `docs/research/creative-web.md`.
+
 ## Token-Frugal Workflow
 
 Before editing, identify the website app or create the smallest local site structure that matches

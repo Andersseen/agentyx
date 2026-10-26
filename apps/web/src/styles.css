@@ -30,6 +30,9 @@
   --color-ring: var(--ring);
   --font-sans: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
     "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", "Cascadia Code", "JetBrains Mono", Menlo, Consolas,
+    "Liberation Mono", monospace;
+  --color-wire: var(--wire);
 }
 
 /*
@@ -63,6 +66,9 @@ html:root {
   --danger: #be2323;
   --danger-foreground: #ffffff;
   --ring: #4c5bc9;
+  /* Drawn lines in the routing language (wires, rails, rules): stronger than `--border`, which is
+     a hairline for containers. 3:1 or better against the page for non-text graphics. */
+  --wire: #6d7387;
 
   /*
    * Doqs documentation region. `muted` and `secondary` are TEXT colours here, not fills: Doqs
@@ -115,6 +121,7 @@ html.dark {
   --danger: #ff6b6b;
   --danger-foreground: #0c0e14;
   --ring: #6c7eff;
+  --wire: #7d8498;
 
   --host-docs-background: var(--background);
   --host-docs-foreground: var(--foreground);
@@ -158,10 +165,7 @@ html {
 body {
   font-family: var(--font-sans);
   color: var(--foreground);
-  background:
-    radial-gradient(circle at 12% 8%, color-mix(in srgb, var(--primary) 12%, transparent), transparent 28rem),
-    radial-gradient(circle at 88% 12%, color-mix(in srgb, var(--warning) 10%, transparent), transparent 26rem),
-    var(--background);
+  background: var(--background);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -176,9 +180,24 @@ body {
   outline-offset: 2px;
 }
 
-a {
-  color: inherit;
-  text-decoration: none;
+/* In the base layer so utilities such as `text-primary` on a link can override it. */
+@layer base {
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
+}
+
+/* The inverted call to action on the closing band. */
+.btn-inverse {
+  display: inline-flex;
+  min-height: 2.75rem;
+  align-items: center;
+  padding: 0 1.25rem;
+  background: var(--background);
+  color: var(--foreground);
+  font-size: 0.875rem;
+  font-weight: 600;
 }
 
 /*
@@ -223,32 +242,77 @@ code {
   font-variant-ligatures: none;
 }
 
-.hero-grid {
+/*
+ * Type roles. Display carries the identity: heavy, tight and balanced, with line breaks chosen in
+ * the markup. `mono` is reserved for text that is literally a path, command, key or measured value.
+ */
+.display {
+  font-size: clamp(2.5rem, 7.6vw, 5rem);
+  font-weight: 760;
+  letter-spacing: -0.045em;
+  line-height: 0.96;
+  text-wrap: balance;
+}
+
+.display-2 {
+  font-size: clamp(2rem, 5.2vw, 3.6rem);
+  font-weight: 740;
+  letter-spacing: -0.035em;
+  line-height: 1.02;
+  text-wrap: balance;
+}
+
+.lede {
+  font-size: clamp(1.0625rem, 1.6vw, 1.25rem);
+  line-height: 1.6;
+  text-wrap: pretty;
+}
+
+/* A command caption: it names the real command the section shows the output of. */
+.caption {
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  letter-spacing: 0;
+  color: var(--muted-foreground);
+}
+
+/* A drafted sheet: hairline frame with corner ticks, the frame the routing diagrams live in. */
+.sheet {
+  position: relative;
+  border: 1px solid var(--wire);
+  background: var(--surface);
+}
+
+.sheet::before,
+.sheet::after {
+  content: "";
   position: absolute;
-  inset: 0;
-  z-index: -1;
-  background-image:
-    linear-gradient(color-mix(in srgb, var(--border) 55%, transparent) 1px, transparent 1px),
-    linear-gradient(90deg, color-mix(in srgb, var(--border) 55%, transparent) 1px, transparent 1px);
-  background-size: 48px 48px;
-  mask-image: linear-gradient(to bottom, black, transparent 78%);
-  opacity: 0.42;
+  width: 0.75rem;
+  height: 0.75rem;
+  border: 2px solid var(--primary);
+  pointer-events: none;
 }
 
-.section-band {
-  background:
-    linear-gradient(180deg, color-mix(in srgb, var(--surface) 72%, transparent), transparent),
-    color-mix(in srgb, var(--surface) 46%, var(--background));
+.sheet::before {
+  top: -2px;
+  left: -2px;
+  border-right: 0;
+  border-bottom: 0;
 }
 
-@media (max-width: 640px) {
-  .hero-grid {
-    background-size: 32px 32px;
-  }
+.sheet::after {
+  right: -2px;
+  bottom: -2px;
+  border-left: 0;
+  border-top: 0;
 }
 
-.hero-section {
-  background:
-    radial-gradient(circle at 78% 42%, color-mix(in srgb, var(--primary) 18%, transparent), transparent 29rem),
-    linear-gradient(160deg, color-mix(in srgb, var(--surface) 70%, var(--background)), var(--background));
+/* Full-bleed band that alternates the page rhythm. */
+.band {
+  background: color-mix(in srgb, var(--surface) 60%, var(--background));
+  border-block: 1px solid var(--border);
+}
+
+.mono {
+  font-family: var(--font-mono);
 }

@@ -14,6 +14,6 @@ export default defineConfig({
     coverage: {
       reportsDirectory: "coverage",
     },
-    include: ["packages/**/*.test.ts"],
+    include: ["packages/**/*.test.ts", "apps/web/test/**/*.test.ts"],
   },
 });

@@ -135,6 +135,8 @@ await run("git", ["init", "--quiet"], projectDir);
 await run(CLI, ["resolve"], projectDir);
 assertIncludes(await run(CLI, ["resolve", "ui-ux"], projectDir), "visual-verification");
 assertIncludes(await run(CLI, ["resolve", "ui-ux", "--explain"], projectDir), "ui-ux");
+assertIncludes(await run(CLI, ["pack", "show", "creative-web"], projectDir), "creative-direction");
+assertIncludes(await run(CLI, ["resolve", "creative-web"], projectDir), "design-critique");
 assertIncludes(
   await run(CLI, ["resolve", "ui-ux", "--enable", "playwright", "--json"], projectDir),
   '"playwright"',
@@ -663,6 +665,51 @@ if (await pathExists(join(lifeDir, ".claude/skills/planning")))
 await rm(lifeDir, { recursive: true, force: true });
 
 // --- Explicit migration of a historical version-1 lock. ---
+// The packaged creative-web Skills must reach every provider with identical canonical content.
+const creativeDir = await mkdtemp(join(tmpdir(), "agentyx-creative-"));
+await run("git", ["init", "--quiet"], creativeDir);
+await writeFile(join(creativeDir, "package.json"), '{"name":"creative","private":true}\n');
+await run(
+  CLI,
+  [
+    "init",
+    "--pack",
+    "ui-ux",
+    "--pack",
+    "creative-web",
+    "--target",
+    "codex",
+    "--target",
+    "claude",
+    "--target",
+    "kimi",
+    "--target",
+    "qwen",
+    "--yes",
+    "--install",
+  ],
+  creativeDir,
+);
+for (const skill of ["creative-direction", "design-critique", "visual-verification"]) {
+  // Checkouts may use CRLF; the installed Skill is compared on normalized newlines.
+  const unix = (text) => text.replaceAll("\r\n", "\n");
+  const canonical = unix(
+    await readFile(join(repoRoot, "packages/core/skills", skill, "SKILL.md"), "utf8"),
+  );
+  const canonicalBody = canonical.slice(canonical.indexOf("\n---\n", 4) + 5).trim();
+  const copies = new Set();
+  for (const root of [".agents/skills", ".claude/skills", ".qwen/skills"]) {
+    const installed = unix(await readFile(join(creativeDir, root, skill, "SKILL.md"), "utf8"));
+    copies.add(installed);
+    if (canonicalBody === "" || !installed.includes(canonicalBody))
+      throw new Error(`${root}/${skill} differs from the canonical packaged Skill.`);
+  }
+  if (copies.size !== 1) throw new Error(`${skill} differs between provider destinations.`);
+}
+const creativeExplain = await run(CLI, ["resolve", "--explain"], creativeDir);
+assertIncludes(creativeExplain, "from ui-ux, creative-web");
+await rm(creativeDir, { recursive: true, force: true });
+
 const migrateDir = await mkdtemp(join(tmpdir(), "agentyx-migrate-"));
 await cp(join(repoRoot, "packages/cli/test/fixtures/lock-v1"), migrateDir, { recursive: true });
 await run("git", ["init", "--quiet"], migrateDir);

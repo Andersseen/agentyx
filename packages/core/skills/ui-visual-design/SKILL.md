@@ -21,6 +21,9 @@ imagery. Make the choice explicit, then apply it consistently through:
 - imagery and icons that clarify content rather than fill empty space;
 - responsive composition that reorders or simplifies when the available space changes.
 
+Expressive website art direction (concept, storytelling, distinctive composition) is a separate
+concern; use the creative web skills for it and keep this skill on product-interface quality.
+
 Avoid defaulting to identical card grids, nested rounded containers, arbitrary gradients, decorative
 glass effects, repeated icon-tile sections, equal emphasis for every action, universal centering or
 one-off spacing. Avoid motion and decoration that have no relationship to a task. Distinctive means

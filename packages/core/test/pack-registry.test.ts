@@ -27,6 +27,7 @@ describe("built-in pack registry", () => {
       "data",
       "git",
       "devops",
+      "creative-web",
     ]);
   });
 
@@ -57,6 +58,31 @@ describe("built-in pack registry", () => {
       ],
       mcpServers: [{ name: "playwright", activation: "optional" }],
     });
+  });
+
+  it("defines creative-web as a distinct design pack sharing two ui-ux skills", () => {
+    const creative = builtInPackRegistry.get("creative-web");
+    const ui = builtInPackRegistry.get("ui-ux");
+
+    expect(creative).toMatchObject({
+      category: "design",
+      skills: [
+        "creative-direction",
+        "web-composition",
+        "typographic-art-direction",
+        "visual-storytelling",
+        "motion-art-direction",
+        "design-critique",
+        "design-reference-research",
+        "design-system-practice",
+        "visual-verification",
+      ],
+      mcpServers: [{ name: "playwright", activation: "optional" }],
+    });
+    expect((creative?.skills ?? []).filter((name) => ui?.skills.includes(name))).toEqual([
+      "design-system-practice",
+      "visual-verification",
+    ]);
   });
 
   /**

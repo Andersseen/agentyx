@@ -24,6 +24,7 @@ describe("agentyx pack list", () => {
         "data           engineering",
         "git            workflow",
         "devops         workflow",
+        "creative-web   design",
       ].join("\n"),
     );
   });

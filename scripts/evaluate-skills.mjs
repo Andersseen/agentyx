@@ -32,6 +32,20 @@ for (const scenario of scenarios) {
     builtInSkillRegistry,
   );
 
+  if (scenario.excludedSkills !== undefined) {
+    assertStringArray(scenario.excludedSkills, `${scenario.id} excludedSkills`);
+
+    for (const skill of scenario.excludedSkills) {
+      if (scenario.expectedSkills.includes(skill)) {
+        throw new Error(`${scenario.id} both expects and excludes ${skill}.`);
+      }
+
+      if (resolved.skills.includes(skill)) {
+        throw new Error(`${scenario.id} must not receive ${skill}, but its packs contribute it.`);
+      }
+    }
+  }
+
   for (const skill of scenario.expectedSkills) {
     if (!resolved.skills.includes(skill)) {
       throw new Error(`${scenario.id} expects ${skill}, but its packs do not contribute it.`);
