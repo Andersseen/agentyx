@@ -52,7 +52,7 @@
     "@clack/prompts": "^1.7.0",
     "@flowview/runtime": "0.2.0",
     "commander": "^14.0.0",
-    "zod": "^4.6.5"
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@flowview/compiler": "0.2.3"
