@@ -101,5 +101,86 @@
       "checks feature combinations after changing a feature",
       "reports commands run and anything not run"
     ]
+  },
+  {
+    "id": "creative-site-redesign",
+    "packs": ["creative-web"],
+    "prompt": "Redesign an open-source product landing page that is visually generic but functionally sound.",
+    "expectedSkills": [
+      "creative-direction",
+      "web-composition",
+      "typographic-art-direction",
+      "design-critique"
+    ],
+    "expectedBehaviors": [
+      "explores contrasting directions before committing",
+      "derives the visual concept from the product's own vocabulary",
+      "challenges generic defaults against the concept",
+      "reports whether rendered verification occurred"
+    ]
+  },
+  {
+    "id": "creative-visual-explanation",
+    "packs": ["creative-web"],
+    "prompt": "Explain a technical product workflow on a landing page without relying on generic feature cards.",
+    "expectedSkills": ["visual-storytelling"],
+    "expectedBehaviors": [
+      "demonstrates the mechanism with a diagram or real output",
+      "maps every visual element to a true product fact"
+    ]
+  },
+  {
+    "id": "creative-motion-concept",
+    "packs": ["creative-web"],
+    "prompt": "Add animation to a product site so it explains how the product works without relying on scroll-reveal effects on every block.",
+    "expectedSkills": ["motion-art-direction"],
+    "expectedBehaviors": [
+      "defines one product-specific motion concept",
+      "provides a reduced-motion state"
+    ]
+  },
+  {
+    "id": "creative-reference-grounding",
+    "packs": ["creative-web"],
+    "prompt": "Ground the visual direction of a routing tool's site in references without copying competitors.",
+    "expectedSkills": ["design-reference-research", "creative-direction"],
+    "expectedBehaviors": [
+      "researches by concept rather than category",
+      "extracts principles instead of layouts"
+    ]
+  },
+  {
+    "id": "admin-form-validation-control",
+    "packs": ["ui-ux"],
+    "prompt": "Improve validation and error behavior in an existing admin form.",
+    "expectedSkills": ["ux-usability", "interaction-design", "ux-writing"],
+    "excludedSkills": [
+      "creative-direction",
+      "web-composition",
+      "typographic-art-direction",
+      "visual-storytelling",
+      "motion-art-direction",
+      "design-critique",
+      "design-reference-research"
+    ],
+    "expectedBehaviors": [
+      "handles validation and recovery states",
+      "does not apply expressive art direction to a transactional form"
+    ]
+  },
+  {
+    "id": "creative-with-design-system",
+    "packs": ["ui-ux", "creative-web"],
+    "prompt": "Build a creative marketing page for a product that already has a design system and tokens.",
+    "expectedSkills": [
+      "creative-direction",
+      "web-composition",
+      "design-system-practice",
+      "visual-verification"
+    ],
+    "expectedBehaviors": [
+      "reuses existing tokens and primitives",
+      "adds expression through composition and type rather than a second color system"
+    ]
   }
 ]

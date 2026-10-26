@@ -703,3 +703,24 @@ Changeset: `.changeset/common-project-flow.md` (minor, fixed group).
 Remaining 1.0 work: the full two-provider behavior evaluation and all three real-project pilots in
 `docs/pilots/README.md` remain pending human/provider access. The partial Codex preflight is preserved
 as version-1 evidence and still shows no comparative benefit.
+
+## creative-web design guidance (minor)
+
+Delivered:
+- Added the `creative-web` design pack and seven Skills: `creative-direction`, `web-composition`,
+  `typographic-art-direction`, `visual-storytelling`, `motion-art-direction`, `design-critique` and
+  `design-reference-research`. It shares `design-system-practice` and `visual-verification` with
+  `ui-ux`, which stays focused on product-interface quality. Detection never recommends it.
+- Added six semantic scenarios, including an `excludedSkills` negative control for a product form.
+  They validate pack/Skill selection only, not design quality.
+- Rebuilt the official site's home, packs and providers presentation around a routing-board concept
+  derived from real product data; docs keep Doqs. Counts derive from `apps/web/src/app/data/site.ts`
+  and are checked by `apps/web/test/site-facts.test.ts`. See `docs/research/creative-web.md`.
+
+Verification (this branch): 70 test files, 878 tests (876 passed, 1 skipped, 1 failed — the
+`report-command` read-only-directory test fails identically on unmodified `main` when run as root);
+17 semantic scenarios; 7 behavior scenarios; Playwright 20 passed, 2 skipped; `pnpm smoke:pack`,
+`pnpm report:check`, typecheck, web production build and `git diff --check` passed.
+
+Roadmap ordering: R100 provider/behavioral validation remains on standby and is not completed by this
+minor. 1.0 RC work has not started.

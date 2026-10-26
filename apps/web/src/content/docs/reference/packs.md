@@ -1,6 +1,6 @@
 ---
 title: Packs
-description: The 17 built-in capability packs, what each contributes, and how optional capabilities are activated.
+description: The 18 built-in capability packs, what each contributes, and how optional capabilities are activated.
 group: Reference
 order: 20
 ---
@@ -38,6 +38,7 @@ lists exactly those three.
 | `data` | engineering | Model schemas, migrations and transactions. |
 | `git` | workflow | Keep commits, branches and pull requests reviewable. |
 | `devops` | workflow | Make CI, containers and deployment safer. |
+| `creative-web` | design | Give expressive websites a creative concept, composition, type and motion. |
 
 A capability two packs both contribute counts once.
 
@@ -58,6 +59,32 @@ pnpm dlx @agentyx/cli resolve efficiency --enable rtk
 Optional capabilities include local tools such as `rtk`, the MCP servers listed below, and the
 project agents from the `agentic` pack (`agentyx-planner`, `agentyx-reviewer`, `agentyx-verifier`).
 
+## ui-ux and creative-web
+
+Both packs are design packs, but they answer different questions and compose.
+
+- `ui-ux` is about **product-interface quality**: usability, states, interaction, design-system
+  consistency and product copy for apps, forms, dashboards and settings screens.
+- `creative-web` is about **expressive web direction**: what a marketing site, launch page,
+  portfolio or documentation shell should feel like. Its Skills cover creative direction,
+  composition, typography, visual storytelling, motion, critique and reference research. It does not
+  push expressive art direction into dense admin tools or transactional forms.
+
+`design-system-practice` and `visual-verification` belong to both, so selecting both resolves each
+once and `resolve --explain` lists both packs as origins. Project detection never recommends
+`creative-web` because a framework or CSS tool is present: technology does not imply expressive
+design, so select it deliberately.
+
+```json
+{
+  "packs": ["technical", "typescript", "angular", "creative-web", "ui-ux", "accessibility"],
+  "enable": ["playwright"]
+}
+```
+
+Playwright is optional. The Skills provide guidance; they do not replace a designer or guarantee
+originality.
+
 ## Built-in MCP servers
 
 Seven provider-neutral definitions ship with Agentyx. Each is rendered into the target provider's own
@@ -66,7 +93,7 @@ document format; the definition itself names no provider.
 | Server | Contributed by |
 | --- | --- |
 | `context7` | `angular` |
-| `playwright` | `testing`, `ui-ux` |
+| `playwright` | `testing`, `ui-ux`, `creative-web` |
 | `codebase-memory` | `efficiency` |
 | `github` | `git` |
 | `sentry` | `observability` |

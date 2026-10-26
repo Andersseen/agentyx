@@ -181,6 +181,24 @@ export const builtInPacks: readonly PackDefinitionInput[] = [
     description: "Continuous integration, containers, deployment safety and infrastructure.",
     skills: ["ci-pipelines", "containerization", "deployment-safety", "infrastructure-as-code"],
   },
+  {
+    name: "creative-web",
+    category: "design",
+    description:
+      "Expressive website direction: creative concept, composition, typography, visual storytelling, motion and critique.",
+    skills: [
+      "creative-direction",
+      "web-composition",
+      "typographic-art-direction",
+      "visual-storytelling",
+      "motion-art-direction",
+      "design-critique",
+      "design-reference-research",
+      "design-system-practice",
+      "visual-verification",
+    ],
+    mcpServers: [{ name: "playwright", activation: "optional" }],
+  },
 ];
 
 /** The registry used by default when no explicit registry is supplied. */

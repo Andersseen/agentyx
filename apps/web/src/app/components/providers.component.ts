@@ -1,6 +1,4 @@
 import { Component, input } from "@angular/core";
-import { VoltBadge, VoltCard, VoltCardContent } from "@voltui/components";
-import { MoveInViewDirective, MoveStaggerDirective } from "angular-movement";
 import {
   CAPABILITY_ROWS,
   OBSERVABILITY_ROWS,
@@ -16,13 +14,12 @@ import {
  */
 @Component({
   selector: "app-providers",
-  imports: [VoltBadge, VoltCard, VoltCardContent, MoveInViewDirective, MoveStaggerDirective],
   template: `
     <div class="grid min-w-0 gap-10">
       <section aria-labelledby="destinations-heading" class="min-w-0">
         <h3
           id="destinations-heading"
-          class="text-xs font-bold uppercase tracking-[0.15em] text-primary"
+          class="text-xl font-semibold tracking-tight text-foreground"
         >
           Where Agentyx installs
         </h3>
@@ -33,7 +30,7 @@ import {
         <!-- relative positions the sr-only caption's containing block here, so the scroll
              container clips it instead of letting it widen the document. -->
         <div
-          class="relative mt-5 w-full max-w-full overflow-x-auto rounded-lg border border-border"
+          class="relative mt-5 w-full max-w-full overflow-x-auto border border-wire"
         >
           <table class="w-full min-w-[46rem] border-collapse text-sm">
             <caption class="sr-only">
@@ -81,7 +78,7 @@ import {
       <section aria-labelledby="observability-heading" class="min-w-0">
         <h3
           id="observability-heading"
-          class="text-xs font-bold uppercase tracking-[0.15em] text-primary"
+          class="text-xl font-semibold tracking-tight text-foreground"
         >
           What doctor can observe
         </h3>
@@ -90,7 +87,7 @@ import {
           dormant. Absence of evidence is never reported as evidence of absence.
         </p>
         <div
-          class="relative mt-5 w-full max-w-full overflow-x-auto rounded-lg border border-border"
+          class="relative mt-5 w-full max-w-full overflow-x-auto border border-wire"
         >
           <table class="w-full min-w-[46rem] border-collapse text-sm">
             <caption class="sr-only">Runtime observation signals available per provider.</caption>
@@ -131,33 +128,31 @@ import {
       </section>
 
       @if (showNotes()) {
-        <section aria-labelledby="provider-notes-heading" class="grid gap-3" moveStagger="70ms">
+        <section aria-labelledby="provider-notes-heading" class="min-w-0">
           <h3
             id="provider-notes-heading"
-            class="text-xs font-bold uppercase tracking-[0.15em] text-primary"
+            class="text-xl font-semibold tracking-tight text-foreground"
           >
             Limits, stated plainly
           </h3>
-          @for (provider of providers; track provider.id) {
-            @if (provider.notes) {
-              <volt-card
-                class="block border-border bg-surface"
-                [moveInView]="{ y: [12, 0] }"
-                moveDuration="340ms"
-              >
-                <volt-card-content class="p-5">
-                  <div class="flex flex-wrap items-center gap-2">
-                    <p class="font-semibold text-foreground">{{ provider.name }}</p>
-                    <volt-badge variant="outline">{{ provider.id }}</volt-badge>
+          <dl class="mt-5 grid gap-x-10 gap-y-6 md:grid-cols-2">
+            @for (provider of providers; track provider.id) {
+              @if (provider.notes) {
+                <div class="border-l-2 border-wire pl-5">
+                  <dt class="flex flex-wrap items-baseline gap-x-3 font-semibold text-foreground">
+                    {{ provider.name }}
+                    <span class="mono text-xs font-normal text-muted-foreground">{{ provider.id }}</span>
                     @if (provider.sharedSettings) {
-                      <volt-badge variant="secondary">one settings document</volt-badge>
+                      <span class="mono text-xs font-normal text-muted-foreground"
+                        >one settings document</span
+                      >
                     }
-                  </div>
-                  <p class="mt-2 text-sm leading-6 text-muted-foreground">{{ provider.notes }}</p>
-                </volt-card-content>
-              </volt-card>
+                  </dt>
+                  <dd class="mt-2 text-sm leading-6 text-muted-foreground">{{ provider.notes }}</dd>
+                </div>
+              }
             }
-          }
+          </dl>
         </section>
       }
     </div>

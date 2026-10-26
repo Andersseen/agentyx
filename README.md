@@ -40,6 +40,7 @@ Packs contribute provider-neutral capabilities:
 | `data`          | engineering | Schema design, migrations, transactional consistency           |
 | `git`           | workflow    | Commit hygiene, branching, reviewable pull requests            |
 | `devops`        | workflow    | CI pipelines, containers, deployment safety, infrastructure    |
+| `creative-web`  | design      | Creative direction, composition, type, storytelling and motion for expressive sites |
 
 Packs compose without inheritance, so cross-cutting engineering packs combine with technology
 choices explicitly. If a project wants both TypeScript and Angular behavior, select both:
@@ -68,7 +69,7 @@ Current optional capabilities:
 
 - `rtk`: Rust Token Killer executable, detected as `rtk` on PATH.
 - `codebase-memory`: structural code-intelligence MCP backed by a persistent knowledge graph.
-- `playwright`: browser automation MCP, declared optionally by `testing` and `ui-ux`. Runtime: may
+- `playwright`: browser automation MCP, declared optionally by `testing`, `ui-ux` and `creative-web`. Runtime: may
   fetch a package on first launch.
 - `chrome-devtools`: performance tracing and page inspection MCP, declared by `performance` and
   `accessibility`. Runtime: may fetch a package on first launch.
@@ -94,6 +95,33 @@ and performance packs when those concerns apply:
 The `ui-ux` pack is useful without browser automation. Playwright is optional and improves rendered
 verification when available; Agentyx does not claim that visual verification happened when browser
 inspection was unavailable.
+
+### `ui-ux` and `creative-web`
+
+The two design packs answer different questions and compose:
+
+- `ui-ux` is about **product-interface quality**: usability, interaction states, design-system
+  consistency, product copy and rendered verification. Use it for apps, forms, dashboards and
+  settings screens.
+- `creative-web` is about **expressive web direction**: deciding what a marketing site, landing
+  page, launch page, portfolio or documentation shell should feel like, then composing it with
+  deliberate typography, visual storytelling, motion and a bounded self-critique. It does not push
+  expressive art direction into dense admin tools or transactional forms.
+
+Shared Skills (`design-system-practice`, `visual-verification`) resolve once and list both packs as
+origins. Project detection never recommends `creative-web` because a framework or CSS tool is
+present; technology does not imply expressive design, so select it deliberately.
+
+```json
+{
+  "packs": ["technical", "typescript", "angular", "creative-web", "ui-ux", "accessibility"],
+  "enable": ["playwright"],
+  "targets": ["codex", "claude", "kimi", "qwen"]
+}
+```
+
+Playwright is optional. These Skills provide guidance; they do not replace a designer or guarantee
+originality.
 
 Agentyx never downloads binaries, runs installers, edits PATH, or installs third-party runtime
 Skills for these capabilities. Some capabilities do launch a command that can — an MCP server

@@ -22,7 +22,7 @@ interface FooterColumn {
   imports: [RouterLink, VoltNativeButton, LmnGithubIcon, LmnArrowTopRightOnSquareIcon],
   template: `
     <footer class="border-t border-border bg-background">
-      <div class="mx-auto max-w-6xl px-4 py-14 sm:px-6">
+      <div class="mx-auto max-w-7xl px-4 py-14 sm:px-6">
         <div class="grid gap-10 sm:grid-cols-2 lg:grid-cols-[1.4fr_repeat(3,1fr)]">
           <div>
             <p class="font-semibold text-foreground">Agentyx</p>

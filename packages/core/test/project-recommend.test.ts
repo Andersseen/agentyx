@@ -119,6 +119,22 @@ describe("recommendCapabilities", () => {
       expect(result.packs[0]?.reasons[0]).toContain("package.json and Cargo.toml detected");
     });
 
+    it("never infers creative-web from front-end technology", () => {
+      const result = recommendCapabilities(
+        baseSignals({
+          typescript: {
+            dependency: { dependency: "typescript", field: "devDependencies" },
+            tsconfig: true,
+          },
+          angular: { dependency: "@angular/core", field: "dependencies" },
+          browserTesting: [{ dependency: "@playwright/test", field: "devDependencies" }],
+          accessibilityTooling: [{ dependency: "axe-core", field: "devDependencies" }],
+        }),
+      );
+
+      expect(packNames(result)).not.toContain("creative-web");
+    });
+
     it("does not recommend rust for a TypeScript-only repository", () => {
       const result = recommendCapabilities(
         baseSignals({ typescript: { dependency: undefined, tsconfig: true } }),
@@ -276,7 +292,7 @@ describe("recommendCapabilities", () => {
       const playwright = withTesting.capabilities.find(
         (capability) => capability.name === "playwright",
       );
-      expect(playwright?.contributedBy).toEqual(["testing", "ui-ux"]);
+      expect(playwright?.contributedBy).toEqual(["testing", "ui-ux", "creative-web"]);
       expect(playwright?.reasons.length).toBeGreaterThan(0);
     });
 

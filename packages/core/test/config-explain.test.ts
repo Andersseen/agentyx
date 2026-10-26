@@ -80,6 +80,42 @@ describe("explainAgentyxResolution", () => {
     });
   });
 
+  it("resolves skills shared by ui-ux and creative-web once with both origins", () => {
+    const { resolved, entries } = explain({ packs: ["ui-ux", "creative-web"] });
+
+    expect(resolved.skills).toEqual([
+      "ui-visual-design",
+      "ux-usability",
+      "interaction-design",
+      "design-system-practice",
+      "ux-writing",
+      "visual-verification",
+      "creative-direction",
+      "web-composition",
+      "typographic-art-direction",
+      "visual-storytelling",
+      "motion-art-direction",
+      "design-critique",
+      "design-reference-research",
+    ]);
+    for (const name of ["design-system-practice", "visual-verification"]) {
+      expect(entries.filter((entry) => entry.kind === "skill" && entry.name === name)).toHaveLength(
+        1,
+      );
+      expect(find(entries, "skill", name)?.origins).toEqual([
+        { kind: "pack", name: "ui-ux" },
+        { kind: "pack", name: "creative-web" },
+      ]);
+    }
+    expect(find(entries, "skill", "creative-direction")?.origins).toEqual([
+      { kind: "pack", name: "creative-web" },
+    ]);
+    expect(find(entries, "mcp", "playwright")?.origins).toEqual([
+      { kind: "pack", name: "ui-ux" },
+      { kind: "pack", name: "creative-web" },
+    ]);
+  });
+
   it("lists a shared capability once with every pack in resolution order", () => {
     const { entries } = explain({ packs: ["performance", "accessibility"] });
     const devtools = entries.filter((entry) => entry.name === "chrome-devtools");
