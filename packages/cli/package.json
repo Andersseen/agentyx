@@ -55,6 +55,6 @@
     "zod": "^4.6.5"
   },
   "devDependencies": {
-    "@flowview/compiler": "0.2.3"
+    "@flowview/compiler": "0.2.4"
   }
 }

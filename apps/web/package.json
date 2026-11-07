@@ -37,16 +37,16 @@
     "tslib": "^2.6.2"
   },
   "devDependencies": {
-    "@analogjs/platform": "2.9.2",
-    "@analogjs/vite-plugin-angular": "2.9.2",
+    "@analogjs/platform": "2.9.5",
+    "@analogjs/vite-plugin-angular": "2.9.5",
     "@angular/build": "21.2.19",
     "@angular/compiler-cli": "21.2.19",
-    "@playwright/test": "^1.64.0",
-    "@tailwindcss/vite": "4.3.3",
-    "@types/node": "^26.6.5",
+    "@playwright/test": "^1.64.1",
+    "@tailwindcss/vite": "4.3.4",
+    "@types/node": "^26.6.6",
     "marked-highlight": "^2.2.3",
-    "tailwindcss": "4.3.3",
+    "tailwindcss": "4.3.4",
     "typescript": "5.9.2",
-    "vite": "8.3.4"
+    "vite": "8.3.5"
   }
 }
