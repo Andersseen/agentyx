@@ -1,6 +1,7 @@
 import {
   applyInstallPlans,
   builtInAdapterRegistry,
+  collectConfigEntryConflicts,
   collectInstallConflicts,
   detectConfiguredTargets,
   FrozenInstallError,
@@ -252,6 +253,7 @@ export async function executeInstall(input: InstallCommandInput): Promise<Instal
     throw new InstallConflictError(
       conflicts,
       conflicts.filter((path) => recorded.has(path)),
+      collectConfigEntryConflicts(plans),
     );
   }
 

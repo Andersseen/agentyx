@@ -225,6 +225,25 @@ export function collectInstallConflicts(plans: readonly InstallPlan[]): readonly
   return [...conflicts].sort();
 }
 
+/**
+ * The provider config files among the conflicts: files Agentyx merges entries into, where the
+ * conflict is an MCP server or hook entry that differs from Agentyx's definition rather than the
+ * file as a whole.
+ */
+export function collectConfigEntryConflicts(plans: readonly InstallPlan[]): readonly string[] {
+  const conflicts = new Set<string>();
+
+  for (const plan of plans) {
+    for (const operation of [...plan.mcpOperations, ...plan.hookOperations]) {
+      if (operation.status === "conflict") {
+        conflicts.add(operation.relativePath);
+      }
+    }
+  }
+
+  return [...conflicts].sort();
+}
+
 function operationKey(path: string, content: string): string {
   return `${path}\u0000${content}`;
 }

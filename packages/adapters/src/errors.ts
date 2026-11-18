@@ -101,15 +101,23 @@ export class InstallConflictError extends AgentyxError {
    * @param edited the subset Agentyx recorded writing, so the conflict is an edit since then rather
    *   than content Agentyx never wrote. The message names which is which, because the recovery
    *   differs.
+   * @param entries the subset that are provider config files where an MCP server or hook entry
+   *   differs from Agentyx's definition — edited, or a same-named entry of the user's own.
    */
-  constructor(paths: readonly string[], edited: readonly string[] = []) {
+  constructor(
+    paths: readonly string[],
+    edited: readonly string[] = [],
+    entries: readonly string[] = [],
+  ) {
     const editedPaths = new Set(edited);
-    const list = [...paths]
-      .sort()
-      .map(
-        (path) =>
-          `  - ${path} (${editedPaths.has(path) ? "edited since Agentyx wrote it" : "not written by Agentyx"})`,
-      );
+    const entryPaths = new Set(entries);
+    const reason = (path: string): string =>
+      entryPaths.has(path)
+        ? "an MCP server or hook entry differs from Agentyx's definition"
+        : editedPaths.has(path)
+          ? "edited since Agentyx wrote it"
+          : "not written by Agentyx";
+    const list = [...paths].sort().map((path) => `  - ${path} (${reason(path)})`);
 
     super(
       "install_conflict",

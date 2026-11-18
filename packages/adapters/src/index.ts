@@ -58,7 +58,11 @@ export type {
   McpInstallOperation,
   ObservedFileState,
 } from "./plan.js";
-export { collectInstallConflicts, summarizeInstallPlans } from "./plan.js";
+export {
+  collectConfigEntryConflicts,
+  collectInstallConflicts,
+  summarizeInstallPlans,
+} from "./plan.js";
 export type { PlanInstallInput, PlanTargetInstallInput } from "./planner.js";
 export { planInstall, planTargetInstall, planUninstall } from "./planner.js";
 export type { AdapterRegistry } from "./registry.js";
