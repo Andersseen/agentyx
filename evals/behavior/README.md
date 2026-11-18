@@ -14,9 +14,21 @@ real `agentyx install` command. The provider target (`codex` or `claude`) is the
 treatment input. Do not paste Skills into prompts. Every run needs a fresh fixture and fresh provider
 session. Keep provider transcripts outside Git.
 
-Benchmark version 2 adds a project-context and verification scenario; it preserves version 1's
-fixtures and results in `evals/preflight/`. The current plan contains seven scenarios × two
-providers × two conditions × three repetitions = 84 runs. Within each scenario/provider pair, condition order alternates baseline/treatment,
+Benchmark version 3 is the current definition. Version 2 added a project-context and verification
+scenario to version 1; version 1's Codex preflight is preserved in `evals/preflight/`. A full v2
+Codex run exposed two defects recorded in
+[the v2 preflight note](../preflight/2026-11-codex-v2/summary.md): the project-context checker read
+the canonical source instead of the run copy, and every checker was copied into the run, so agents
+could read the exact expected assertions while four prompts dictated the practices under test.
+Version 3 keeps the seven scenarios, categories, packs, treatment context and repository
+instructions. Objective checkers live in [`checks/`](checks) and are never copied into a run;
+fixtures carry their own visible project tests. The bug-fix, API-change, safe-refactor and
+project-context prompts state only the user's goal, and their hidden checks cover what the scenario
+asks about: regression coverage that catches the original defect, edge cases, characterization of
+existing behavior, and the project's verification command running on the final source.
+
+The current plan contains seven scenarios × two providers × two conditions × three repetitions = 84
+runs. Within each scenario/provider pair, condition order alternates baseline/treatment,
 treatment/baseline, baseline/treatment. Prompts never vary by condition.
 
 The committed provider pair is Codex and Claude Code. If Claude Code is unavailable and Kimi is
@@ -38,15 +50,14 @@ node scripts/evaluate-behavior.mjs summarize --results evals/results/<evaluation
 refuses to reuse an existing directory. It copies the canonical fixture and installs treatment by
 writing `.agentyx.json` and invoking `agentyx install --json` in that copy. Baseline gets no
 Agentyx config, generated files, or lock. Its output includes the exact prompt and run metadata.
-`check` executes only the scenario's local Node checker in the run directory and writes
-`objective.json`; checker exit status is the objective outcome. It executes the canonical checker
-source from this repository against the run copy, so editing a copied checker cannot change the
-objective result. Validation checks the expected initial pass/fail state and confirms that checks do
+`check` executes only the scenario's hidden Node checker (`checks/<scenario>.mjs`) with the run
+directory as its working directory and writes `objective.json`; checker exit status is the objective
+outcome. The checker is never present in the run, so an agent can neither read nor edit it. Validation checks the expected initial pass/fail state and confirms that checks do
 not mutate canonical fixtures. The canonical fixtures are never used as run directories.
 
 The bug fixture's check is expected to fail before a fix; API, command-discovery, coexistence and
-project-context checks also fail initially. The safe-refactor fixture passes initially and guards
-behavior. The negative control intentionally has no unrelated technical work. Existing instructions
+project-context checks also fail initially. The safe-refactor fixture passes initially and its
+hidden characterization guards behavior. The negative control intentionally has no unrelated technical work. Existing instructions
 in the command-discovery, coexistence and project-context fixtures are copied unchanged into both
 conditions. Only the project-context treatment adds configured project facts; its baseline retains
 the same fixture, scripts and repository instructions.

@@ -724,3 +724,46 @@ Verification (this branch): 70 test files, 878 tests (876 passed, 1 skipped, 1 f
 
 Roadmap ordering: R100 provider/behavioral validation remains on standby and is not completed by this
 minor. 1.0 RC work has not started.
+
+## R100-03 / R100-04 — Validation closeout (in progress, not complete)
+
+Status: in progress on `feat/0.25-validation-closeout`. Starting `main`:
+`ac32a5f62cf10d63b0185cb3d823971c41ebb646`; packages `0.24.0`; no pending feature Changesets.
+
+Provider tooling (installed through npm without sudo, 2026-11-18):
+- Codex CLI `0.170.0` — existing ChatGPT login; fresh headless session verified.
+- Kimi Code `2.6.3` — existing OAuth login; fresh headless session verified.
+- Claude Code `2.1.327` — the subscription login had expired; re-authentication was started and waits
+  on the account owner. No Claude trial has run.
+
+Benchmark:
+- A full Codex run of benchmark v2 (42 runs) exposed a checker defect and no discriminative power; it is
+  recorded as invalid in [the v2 preflight note](../../evals/preflight/2026-11-codex-v2/summary.md).
+- Benchmark v3 (the one revision allowed) is SHA-256
+  `e40a36b310d4b0549443ad4a6bd94177b1a4561ffcbf7bd7e4b829fa95d39226`: hidden checkers, goal-only
+  prompts for four scenarios, unchanged scenarios, categories, packs and gate.
+- Codex v3, 42/42 runs (`gpt-6-luna`, effort medium, `workspace-write`, ephemeral, 0 interventions,
+  0 critical failures): baseline 18/21, Agentyx 17/21 objective passes. Every scenario tied except
+  `project-context-verification` — baseline 3/3, Agentyx 2/3. In the failing treatment run Codex ran
+  the project's verification and then deleted the verification record to honor the treatment-only
+  constraint "Only change src.mjs for this task". Codex opened the project-context Skill in all three
+  treatment runs and another Agentyx Skill in one run; neither condition added regression tests or ran
+  tests in `bug-regression` (0/3 each).
+- Because the gate fails on any per-provider category regression, R100-03 **cannot pass on benchmark
+  v3** whatever Claude Code scores. The gate and benchmark are not being changed after seeing results.
+  The 42 matched Claude runs are still required for a complete canonical `failed` result.
+
+Pilots: see [the closeout record](../pilots/2026-11-closeout.md). Three real repositories; fresh setup,
+adjustment, conflict recovery and removal pass in all three; reproduction passes in all three after a
+fix; project fit observed for Codex after a fix. Codex and Kimi Skill discovery observed; Claude
+pending. No MCP transport is runtime-verified. The independent-operator run is pending
+([package](../pilots/operator-package.md)).
+
+Fixes (one minor Changeset, `.changeset/validation-closeout-hardening.md`):
+- Release blocker: hand-edited or user-written same-named MCP/hook entries were replaced without a
+  conflict.
+- Release blocker: frozen restore and locked Doctor refused after excluding the last MCP server.
+- Minor: precise conflict messages; activation-friendly project-context Skill description.
+
+Not done, and therefore not claimed: R100-03 completion, R100-04 completion, R100 completion, the 1.0
+feature-scope freeze. R1000-01 has not started.
