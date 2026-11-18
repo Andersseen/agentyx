@@ -74,6 +74,8 @@ export function qwenHooksConfigPath(projectDir: string): string {
 export interface RenderedHookConfig {
   readonly content: string;
   readonly empty: boolean;
+  /** Desired hooks whose existing Agentyx-tagged entries differ from the regenerated ones. */
+  readonly replaced: readonly string[];
 }
 
 /** Whether `.codex/config.toml` already defines hooks inline. */
@@ -111,6 +113,7 @@ export function renderJsonHooksConfig(
   const config = parseJsonObject(existing.content, path);
   const hooksConfig = optionalRecord(config.hooks, path, "hooks");
   const events: Record<string, JsonRecord[]> = {};
+  const before = taggedEntries(hooksConfig, path);
 
   for (const [event, value] of Object.entries(hooksConfig)) {
     const groups = stripAgentyxEntries(optionalArray(value, path, `hooks.${event}`));
@@ -137,10 +140,41 @@ export function renderJsonHooksConfig(
     delete config.hooks;
   }
 
+  const after = taggedEntries(events, path);
+
   return {
     content: `${JSON.stringify(sortRecord(config), null, 2)}\n`,
     empty: Object.keys(config).length === 0,
+    replaced: hooks
+      .map((hook) => hook.name)
+      .filter((name) => {
+        const previous = before.get(name);
+        return previous !== undefined && previous !== after.get(name);
+      }),
   };
+}
+
+/**
+ * Every Agentyx-tagged entry, by hook name, as a comparable string of where it sits (event and
+ * matcher) and what it holds. Entry order within the file does not matter.
+ */
+function taggedEntries(hooksConfig: JsonRecord, path: string): Map<string, string> {
+  const found = new Map<string, string[]>();
+
+  for (const [event, value] of Object.entries(hooksConfig)) {
+    for (const group of optionalArray(value, path, `hooks.${event}`)) {
+      for (const entry of optionalArray(group.hooks, "hooks[].hooks", "hooks")) {
+        if (!isAgentyxEntry(entry)) {
+          continue;
+        }
+        const name = (entry.statusMessage as string).slice(AGENTYX_HOOK_MARKER.length);
+        const placed = JSON.stringify([event, group.matcher ?? null, sortRecord(entry)]);
+        found.set(name, [...(found.get(name) ?? []), placed]);
+      }
+    }
+  }
+
+  return new Map([...found].map(([name, placements]) => [name, placements.sort().join("\n")]));
 }
 
 /** Drops every group entry Agentyx previously added, and any group left empty. */

@@ -23,6 +23,7 @@ import {
   type InstallManifest,
   loadAgentyxProject,
   loadInstallManifestState,
+  manifestEntriesByPath,
   type PackRegistry,
   type ResolutionSnapshot,
   type ResolvedAgentyxConfig,
@@ -247,7 +248,11 @@ export async function executeInstall(input: InstallCommandInput): Promise<Instal
   const conflicts = collectInstallConflicts(plans);
 
   if (conflicts.length > 0 && !input.dryRun) {
-    throw new InstallConflictError(conflicts);
+    const recorded = manifestEntriesByPath(manifest);
+    throw new InstallConflictError(
+      conflicts,
+      conflicts.filter((path) => recorded.has(path)),
+    );
   }
 
   const snapshot = environment.project === undefined ? null : snapshotOf(environment.project);

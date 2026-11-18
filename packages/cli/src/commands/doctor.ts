@@ -423,7 +423,7 @@ export async function runDoctorCommand(input: DoctorCommandInput): Promise<Docto
     diagnostics.push({
       level: "warning",
       code: "drifted_managed_file",
-      message: `${path} has been edited since Agentyx wrote it. Agentyx will not replace or remove it.`,
+      message: `${path} has been edited since Agentyx wrote it. Agentyx will not replace it without --force; review the edit first.`,
     });
   }
 
@@ -431,7 +431,7 @@ export async function runDoctorCommand(input: DoctorCommandInput): Promise<Docto
     diagnostics.push({
       level: "error",
       code: "unmanaged_file_conflict",
-      message: `${path} is needed by this configuration but Agentyx did not write it. Move it, or install with --force.`,
+      message: `${path} holds content this configuration needs to replace, but Agentyx did not write it. Move or rename it, or install with --force after review.`,
     });
   }
 

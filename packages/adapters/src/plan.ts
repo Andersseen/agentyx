@@ -209,7 +209,13 @@ export function collectInstallConflicts(plans: readonly InstallPlan[]): readonly
   const conflicts = new Set<string>();
 
   for (const plan of plans) {
-    for (const operation of [...plan.operations, ...plan.agentOperations, ...plan.deletions]) {
+    for (const operation of [
+      ...plan.operations,
+      ...plan.agentOperations,
+      ...plan.mcpOperations,
+      ...plan.hookOperations,
+      ...plan.deletions,
+    ]) {
       if (operation.status === "conflict") {
         conflicts.add(operation.relativePath);
       }

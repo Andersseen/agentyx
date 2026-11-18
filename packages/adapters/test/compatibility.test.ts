@@ -28,6 +28,7 @@ import type { AgentAdapter } from "../src/adapter.js";
 import { builtInAdapterDefinitions, builtInAdapterRegistry } from "../src/built-in.js";
 import { UnsupportedMcpEnvReferenceError, UnsupportedMcpTransportError } from "../src/errors.js";
 import { applyInstallPlans } from "../src/executor.js";
+import { collectInstallConflicts } from "../src/plan.js";
 import { planInstall, planUninstall } from "../src/planner.js";
 import { createAdapterRegistry } from "../src/registry.js";
 
@@ -66,6 +67,7 @@ interface SyncInput {
   readonly agents?: readonly string[];
   readonly mcp?: readonly string[];
   readonly hooks?: readonly string[];
+  readonly force?: boolean;
 }
 
 /** Plans and applies the way `sync` does: against the recorded manifest, with pruning. */
@@ -80,6 +82,7 @@ async function sync(input: SyncInput) {
     hooks: (input.hooks ?? []).map((name) => builtInHookRegistry.get(name)),
     manifest,
     prune: true,
+    force: input.force === true,
   });
   await applyInstallPlans(plans, { manifest });
   return { plans, manifest: await loadInstallManifest(dir) };
@@ -422,15 +425,20 @@ describe("MCP provider formats", () => {
       expect(Object.keys(servers(target)).sort()).toEqual(["context7", "mine", "supabase"]);
       expect(servers(target).mine).toMatchObject({ command: "mine" });
 
-      // A hand-edit of an Agentyx-owned key is replaced by the declared definition on sync.
+      // A hand-edit of an Agentyx-owned key is a conflict: sync leaves it, and only an explicit
+      // --force puts the declared definition back — still without touching the user's own key.
       const edited = readSync(target).replace(
         "https://mcp.context7.com/mcp",
         "https://example.test",
       );
       await put(files[target], edited);
-      await sync({ targets: [target], mcp: ["context7", "supabase"] });
+      const { plans } = await sync({ targets: [target], mcp: ["context7", "supabase"] });
+      expect(collectInstallConflicts(plans)).toEqual([files[target]]);
+      expect(await read(files[target])).toBe(edited);
+      await sync({ targets: [target], mcp: ["context7", "supabase"], force: true });
       await load(target);
       expect(JSON.stringify(servers(target).context7)).toContain("https://mcp.context7.com/mcp");
+      expect(servers(target).mine).toMatchObject({ command: "mine" });
 
       // Prune removes only the Agentyx-owned key that no longer resolves.
       await sync({ targets: [target], mcp: ["context7"] });
