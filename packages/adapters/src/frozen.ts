@@ -54,6 +54,12 @@ export function validateFrozenPlans(
   const restorable = new Set<string>();
 
   for (const entry of manifest.entries) {
+    // Pruning a provider config file's last Agentyx entry leaves an empty record of the user's
+    // file. It owns nothing, so it cannot be ownership outside the selection.
+    if (ownsNothing(entry)) {
+      continue;
+    }
+
     const resource = resources.find((candidate) => candidate.path === entry.path);
 
     if (resource === undefined || !sameSet(entry.targets, resource.usedBy)) {
@@ -119,6 +125,19 @@ export function validateFrozenPlans(
   }
 
   return sorted(restorable);
+}
+
+function ownsNothing(entry: InstallManifestEntry): boolean {
+  switch (entry.kind) {
+    case "mcp":
+      return entry.servers.length === 0;
+    case "hook":
+      return entry.hooks.length === 0;
+    case "settings":
+      return entry.servers.length === 0 && entry.hooks.length === 0;
+    default:
+      return false;
+  }
 }
 
 function describe(

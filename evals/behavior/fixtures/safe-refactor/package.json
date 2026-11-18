@@ -1,0 +1,7 @@
+{
+  "name": "safe-refactor-fixture",
+  "private": true,
+  "scripts": {
+    "test": "node test.mjs"
+  }
+}

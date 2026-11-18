@@ -68,9 +68,8 @@ async function validateBenchmark() {
   for (const scenario of benchmark.scenarios) {
     const fixturePath = await resolveFixture(scenario);
     for (const check of scenario.checks) {
-      const [, ...argv] = check.command;
       const initialHash = await hashFixture(fixturePath);
-      const result = spawnSync(process.execPath, [join(fixturePath, ...argv)], {
+      const result = spawnSync(process.execPath, [hiddenChecker(scenario, check)], {
         cwd: fixturePath,
         encoding: "utf8",
         timeout: 30_000,
@@ -88,6 +87,17 @@ async function validateBenchmark() {
   }
 }
 
+/**
+ * The objective checker for a scenario. It lives in `evals/behavior/checks/`, outside every
+ * fixture, so it is never copied into a run directory and an agent cannot read or edit it.
+ */
+function hiddenChecker(scenario, check) {
+  const expected = `checks/${scenario.id}.mjs`;
+  if (check.command?.[0] !== "node" || check.command?.[1] !== expected)
+    throw new Error(`${scenario.id} objective checker must be ${expected}.`);
+  return join(root, "evals/behavior", expected);
+}
+
 async function resolveFixture(scenario, baseDirectory = join(root, "evals/behavior")) {
   const fixturePath = withinRoot(baseDirectory, scenario.fixture);
   const fixtureStat = await realpath(fixturePath).catch(() => null);
@@ -97,7 +107,7 @@ async function resolveFixture(scenario, baseDirectory = join(root, "evals/behavi
 }
 
 function validateBenchmarkStructure(definition) {
-  if (definition.version !== 2) throw new Error("benchmark.version must be 2");
+  if (definition.version !== 3) throw new Error("benchmark.version must be 3");
   if (!Array.isArray(definition.scenarios) || definition.scenarios.length !== 7)
     throw new Error("The measured benchmark must contain exactly seven scenarios.");
   const ids = new Set();
@@ -151,9 +161,9 @@ function validateBenchmarkStructure(definition) {
         !Array.isArray(check.command) ||
         check.command.length !== 2 ||
         check.command[0] !== "node" ||
-        check.command[1] !== "check.mjs"
+        check.command[1] !== `checks/${scenario.id}.mjs`
       )
-        throw new Error(`${scenario.id} checks must be local Node commands.`);
+        throw new Error(`${scenario.id} checks must be its hidden local Node checker.`);
     }
     if (!Array.isArray(scenario.rubric) || !scenario.rubric.length)
       throw new Error(`${scenario.id} needs a bounded human rubric.`);
@@ -394,11 +404,7 @@ async function checkRun(options) {
   );
   const results = [];
   for (const check of scenario.checks) {
-    const [, ...argv] = check.command;
-    if (argv.length !== 1 || argv[0] !== "check.mjs")
-      throw new Error("Objective checker command is not an allowed fixture checker.");
-    const canonicalChecker = join(root, "evals/behavior", scenario.fixture, ...argv);
-    const result = spawnSync(process.execPath, [canonicalChecker], {
+    const result = spawnSync(process.execPath, [hiddenChecker(scenario, check)], {
       cwd: join(output, "fixture"),
       encoding: "utf8",
       timeout: 30_000,

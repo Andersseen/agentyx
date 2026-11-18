@@ -324,6 +324,36 @@ describe("agentyx install ownership", () => {
     expect((await readdir(projectDir)).sort()).toEqual([".agents", ".agentyx.json"]);
   });
 
+  it("names an edited managed file as edited, not as unmanaged", async () => {
+    // Pilot regression: an edit to a Skill Agentyx wrote was reported as a file Agentyx "does not
+    // manage", which pointed the user at the wrong recovery.
+    await writeConfig({ packs: ["technical"], targets: ["codex"] });
+    await runInstallCommand({ ...baseInput, cwd: projectDir });
+    const path = join(projectDir, ".agents", "skills", "code-quality", "SKILL.md");
+    const edited = `${await readFile(path, "utf8")}\nTeam note.\n`;
+    await writeFile(path, edited, "utf8");
+
+    const failure = runInstallCommand({ ...baseInput, cwd: projectDir });
+    await expect(failure).rejects.toThrow(InstallConflictError);
+    await expect(failure).rejects.toThrow(
+      ".agents/skills/code-quality/SKILL.md (edited since Agentyx wrote it)",
+    );
+    expect(await readFile(path, "utf8")).toBe(edited);
+  });
+
+  it("refuses to replace a same-named MCP server the user wrote", async () => {
+    // Pilot regression: enabling a server the project already configured itself replaced it.
+    await writeConfig({ packs: ["angular"], targets: ["claude"] });
+    const mine = `${JSON.stringify({ mcpServers: { context7: { url: "https://mine.test/mcp" } } }, null, 2)}\n`;
+    await writeFile(join(projectDir, ".mcp.json"), mine, "utf8");
+
+    const failure = runInstallCommand({ ...baseInput, cwd: projectDir });
+    await expect(failure).rejects.toThrow(
+      ".mcp.json (an MCP server or hook entry differs from Agentyx's definition)",
+    );
+    expect(await readFile(join(projectDir, ".mcp.json"), "utf8")).toBe(mine);
+  });
+
   it("reports the conflict in a dry run without failing", async () => {
     await writeConfig({ packs: ["technical"], targets: ["codex"] });
     await mkdir(join(projectDir, ".agents", "skills", "code-quality"), { recursive: true });

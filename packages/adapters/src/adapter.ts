@@ -105,6 +105,12 @@ export interface PlannedHookConfig {
   readonly segments: readonly string[];
   readonly content: string;
   readonly hooks: readonly string[];
+  /**
+   * Desired hooks whose Agentyx-tagged entries are already in the document but differ from what
+   * this merge writes — the hooks it would replace. The planner decides whether that is an upgrade
+   * or an edit to keep.
+   */
+  readonly replaced?: readonly string[];
   /** Set when Agentyx deliberately plans nothing; the reason. The planner emits no operation. */
   readonly skipped?: string;
   /**

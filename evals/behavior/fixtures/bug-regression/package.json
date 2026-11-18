@@ -1,0 +1,7 @@
+{
+  "name": "bug-regression-fixture",
+  "private": true,
+  "scripts": {
+    "test": "node test.mjs"
+  }
+}

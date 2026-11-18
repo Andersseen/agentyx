@@ -7,9 +7,11 @@ out of this repository.
 
 | Pilot | Required profile | Status | Operator / date | Result record |
 | --- | --- | --- | --- | --- |
-| TypeScript project | Small app or library with existing checks | Pending | — | — |
-| Angular app | Existing Angular project with its real package scripts | Pending | — | — |
-| TypeScript monorepo | Multiple packages with different working directories | Pending | — | — |
+| TypeScript project | Small app or library with existing checks | Implementer run done; independent operator pending | coding agent / 2026-11-18 | [2026-11 closeout](2026-11-closeout.md) |
+| Angular app | Existing Angular project with its real package scripts | Implementer run done | coding agent / 2026-11-18 | [2026-11 closeout](2026-11-closeout.md) |
+| TypeScript monorepo | Multiple packages with different working directories | Implementer run done | coding agent / 2026-11-18 | [2026-11 closeout](2026-11-closeout.md) |
+
+The independent-operator run uses [operator-package.md](operator-package.md).
 
 ## Record for each pilot
 

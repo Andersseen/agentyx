@@ -103,6 +103,28 @@ describe("validateFrozenPlans", () => {
     );
   });
 
+  it("ignores an empty record of a provider config file the selection no longer uses", async () => {
+    // Pilot regression: excluding the only MCP server left `.mcp.json` recorded with no servers,
+    // and frozen restore then refused it as ownership outside the selection.
+    await rm(join(projectDir, PLANNING));
+    const withEmptyRecord: InstallManifest = {
+      ...manifest,
+      entries: [
+        ...manifest.entries,
+        {
+          kind: "mcp",
+          path: ".mcp.json",
+          servers: [],
+          targets: ["claude"],
+          hash: hashContent("{}\n"),
+          created: false,
+        },
+      ],
+    };
+
+    expect(validateFrozenPlans(await plan(withEmptyRecord), withEmptyRecord)).toEqual([PLANNING]);
+  });
+
   it("rejects deletions", async () => {
     const pruned = await planInstall({
       targets: ["codex"],

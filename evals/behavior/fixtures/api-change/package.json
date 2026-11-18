@@ -1,0 +1,7 @@
+{
+  "name": "api-change-fixture",
+  "private": true,
+  "scripts": {
+    "test": "node test.mjs"
+  }
+}

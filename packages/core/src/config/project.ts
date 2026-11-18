@@ -87,11 +87,39 @@ function createProjectContextSkill(
       const fence = "`".repeat(Math.max(3, longestFence + 1));
       return {
         name: "agentyx-project-context",
-        description: "Repository facts and direct architectural relationships.",
+        description: projectContextDescription(relations, context),
         content: template.replace("{{PROJECT_FACTS}}", `${fence}json\n${data}\n${fence}`),
       };
     },
   };
+}
+
+/**
+ * Says when to read the project context and what it holds.
+ *
+ * Providers load Skills lazily by description, so a description that only names the category of
+ * content gives an agent no reason to open it before changing or verifying code. Naming the
+ * configured command names makes the Skill discoverable for the work it supports; the values
+ * themselves stay in the body.
+ */
+function projectContextDescription(
+  relations: readonly import("./schema.js").ProjectRelation[],
+  context: import("./schema.js").ProjectContext | undefined,
+): string {
+  const commands = Object.keys(context?.commands ?? {});
+  const facts = [
+    commands.length > 0 ? `project commands (${commands.join(", ")})` : undefined,
+    (context?.constraints.length ?? 0) > 0 ? "repository constraints" : undefined,
+    (context?.areas.length ?? 0) > 0 ? "code areas" : undefined,
+    relations.length > 0 ? "related projects" : undefined,
+  ].filter((fact): fact is string => fact !== undefined);
+  const holds =
+    facts.length === 0
+      ? "this repository's configured facts"
+      : facts.length === 1
+        ? facts[0]
+        : `${facts.slice(0, -1).join(", ")} and ${facts.at(-1)}`;
+  return `Read before changing, verifying or handing off work in this repository. Holds ${holds}.`;
 }
 
 function hasContext(context: import("./schema.js").ProjectContext): boolean {

@@ -349,6 +349,7 @@ export function createSkillDirectoryAdapter(
           content: rendered.content,
           empty: rendered.empty,
           hooks: inline ? [] : hooks.map((hook) => hook.name),
+          replaced: rendered.replaced,
           ...(inline && hooks.length > 0
             ? {
                 skipped:
