@@ -1,5 +1,5 @@
 {
-  "version": 2,
+  "version": 3,
   "baseline": "Identical fixture, provider, model/settings, prompt, source, tests, tools, and existing repository instructions; omit only Agentyx-managed additions.",
   "treatment": "Start from the identical fixture and use the real Agentyx install lifecycle with only the listed packs. Provider target is the only provider-specific treatment input.",
   "criticalFailures": [
@@ -18,13 +18,16 @@
       "category": "bug-fix",
       "fixture": "fixtures/bug-regression",
       "initialCheckPasses": false,
-      "prompt": "Fix the discount calculation so it returns integer cents rounded to the nearest cent. Keep the existing function API and behavior for whole-cent results. Add or update regression checks and verify the change.",
-      "treatment": { "packs": ["agentic", "testing"], "enable": [] },
+      "prompt": "Fix the discount calculation so it returns integer cents rounded to the nearest cent. Keep the existing function API and behavior for whole-cent results.",
+      "treatment": {
+        "packs": ["agentic", "testing"],
+        "enable": []
+      },
       "checks": [
         {
           "id": "fixture-check",
-          "command": ["node", "check.mjs"],
-          "description": "Regression and existing discount behavior pass."
+          "command": ["node", "checks/bug-regression.mjs"],
+          "description": "Rounded integer-cent behavior passes hidden checks, and the project's own tests pass and fail against the original defect."
         }
       ],
       "rubric": [
@@ -45,13 +48,16 @@
       "category": "api-change",
       "fixture": "fixtures/api-change",
       "initialCheckPasses": false,
-      "prompt": "Update parsePort to accept either a digit string or an integer number. Preserve support for valid existing strings and reject invalid values and ports outside 1 through 65535. Update types or tests as appropriate and verify the change.",
-      "treatment": { "packs": ["technical"], "enable": [] },
+      "prompt": "Update parsePort to accept either a digit string or an integer number. Preserve support for valid existing strings and reject invalid values and ports outside 1 through 65535.",
+      "treatment": {
+        "packs": ["technical"],
+        "enable": []
+      },
       "checks": [
         {
           "id": "fixture-check",
-          "command": ["node", "check.mjs"],
-          "description": "New numeric input and existing string/range behavior pass."
+          "command": ["node", "checks/api-change.mjs"],
+          "description": "Numeric input, existing string behavior and invalid-value rejection pass hidden checks."
         }
       ],
       "rubric": [
@@ -72,13 +78,16 @@
       "category": "safe-refactor",
       "fixture": "fixtures/safe-refactor",
       "initialCheckPasses": true,
-      "prompt": "Improve the structure of this awkward tag module without changing observable behavior. Keep both exported functions and verify behavior for duplicates, whitespace, non-string values, empty input, and ordering.",
-      "treatment": { "packs": ["refactoring", "testing"], "enable": [] },
+      "prompt": "Improve the structure of this awkward tag module without changing observable behavior. Keep both exported functions.",
+      "treatment": {
+        "packs": ["refactoring", "testing"],
+        "enable": []
+      },
       "checks": [
         {
           "id": "fixture-check",
-          "command": ["node", "check.mjs"],
-          "description": "Characterized tag behavior remains equivalent."
+          "command": ["node", "checks/safe-refactor.mjs"],
+          "description": "Hidden characterization of duplicates, ordering, whitespace, non-string values, empty input and non-mutation still passes."
         }
       ],
       "rubric": [
@@ -99,11 +108,14 @@
       "fixture": "fixtures/command-discovery",
       "initialCheckPasses": false,
       "prompt": "Fix slugify so repeated and leading or trailing spaces do not produce extra hyphens. Follow the repository instructions and prepare the change for review.",
-      "treatment": { "packs": ["agentic"], "enable": [] },
+      "treatment": {
+        "packs": ["agentic"],
+        "enable": []
+      },
       "checks": [
         {
           "id": "fixture-check",
-          "command": ["node", "check.mjs"],
+          "command": ["node", "checks/command-discovery.mjs"],
           "description": "Slug behavior passes."
         }
       ],
@@ -126,11 +138,14 @@
       "fixture": "fixtures/irrelevant-skill",
       "initialCheckPasses": false,
       "prompt": "Change the greeting returned by greeting() to exactly `Hello, Agentyx!`. Do not change anything else.",
-      "treatment": { "packs": ["rust"], "enable": [] },
+      "treatment": {
+        "packs": ["rust"],
+        "enable": []
+      },
       "checks": [
         {
           "id": "fixture-check",
-          "command": ["node", "check.mjs"],
+          "command": ["node", "checks/irrelevant-skill.mjs"],
           "description": "Greeting matches the requested string."
         }
       ],
@@ -152,11 +167,14 @@
       "fixture": "fixtures/instruction-coexistence",
       "initialCheckPasses": false,
       "prompt": "Update formatLabel so string inputs are trimmed before returning. Preserve its exported API and its conversion behavior for non-string values. Follow all repository instructions and verify the change.",
-      "treatment": { "packs": ["technical"], "enable": [] },
+      "treatment": {
+        "packs": ["technical"],
+        "enable": []
+      },
       "checks": [
         {
           "id": "fixture-check",
-          "command": ["node", "check.mjs"],
+          "command": ["node", "checks/instruction-coexistence.mjs"],
           "description": "Trimmed strings and non-string conversion pass."
         }
       ],
@@ -178,7 +196,7 @@
       "category": "project-context-verification",
       "fixture": "fixtures/project-context-verification",
       "initialCheckPasses": false,
-      "prompt": "Fix normalizeChannel so repeated, leading, and trailing spaces produce one lowercase hyphen-separated channel. Preserve its public function and follow the repository instructions. Find and run the verification command that applies to this project, then report exactly what passed.",
+      "prompt": "Fix normalizeChannel so repeated, leading, and trailing spaces produce one lowercase hyphen-separated channel. Preserve its public function and follow the repository instructions.",
       "treatment": {
         "packs": ["technical"],
         "enable": [],
@@ -198,8 +216,8 @@
       "checks": [
         {
           "id": "fixture-check",
-          "command": ["node", "check.mjs"],
-          "description": "Repeated and surrounding spaces normalize without changing the API."
+          "command": ["node", "checks/project-context-verification.mjs"],
+          "description": "Hidden normalization checks pass, generated.mjs and dependencies are unchanged, and the project's verify command ran on the final source."
         }
       ],
       "rubric": [
