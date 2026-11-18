@@ -17,13 +17,12 @@ R100-04 waits behind it. While provider access is blocked, development was pulle
 static project report ([0.21-report](0.21-report.md)). Completing the report does not satisfy
 R100-03 or R100-04.
 
-**Current-state note (2026-11-18):** packages are at 0.24.0. The validation closeout installed and
-authenticated Codex and Kimi Code, revised the measured benchmark once to version 3 after its v2
-defects, and ran three real-project pilots that produced two release-blocker fixes. On v3, Codex
-shows a category regression in the project-context scenario, so R100-03 cannot pass on this
-benchmark; Claude Code trials, Claude discovery and the independent-operator pilot are still
-pending. R100 is not complete and the 1.0 feature scope is not frozen. See
-[progress](progress.md).
+**Current-state note (2026-11-18):** packages are at 0.24.0. The validation closeout ran the full
+benchmark v3 (84 runs, Codex and Claude Code): the canonical gate **failed** — no benefit category
+and one Codex category regression — so R100-03 is not complete and needs a new benchmark revision.
+Three real-project pilots ran all six workflows and produced two release-blocker fixes; the
+independent-operator pilot is pending, so R100-04 is not complete. The 1.0 feature scope is not
+frozen. See [progress](progress.md).
 
 The [0.22 workflow and usefulness milestone](0.22-workflow-and-usefulness.md) improves everyday
 selection and prepares the next context-aware evaluation. Its automated checks do not replace
