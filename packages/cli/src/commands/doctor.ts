@@ -2,6 +2,7 @@ import { access } from "node:fs/promises";
 import { join, relative, sep } from "node:path";
 import {
   builtInAdapterRegistry,
+  collectConfigEntryConflicts,
   collectInstallConflicts,
   type InstallPlan,
   ProviderConfigParseError,
@@ -408,6 +409,7 @@ export async function runDoctorCommand(input: DoctorCommandInput): Promise<Docto
       .filter((operation) => operation.status === "delete")
       .map((operation) => operation.relativePath) ?? [];
   const allConflicts = plans === undefined ? [] : collectInstallConflicts(plans);
+  const entryConflicts = new Set(plans === undefined ? [] : collectConfigEntryConflicts(plans));
   const drifted = allConflicts.filter((path) => recorded.has(path));
   const conflicts = allConflicts.filter((path) => !recorded.has(path));
 
@@ -419,11 +421,16 @@ export async function runDoctorCommand(input: DoctorCommandInput): Promise<Docto
     });
   }
 
+  const entryMessage = (path: string) =>
+    `${path} has an MCP server or hook entry that differs from Agentyx's definition — edited, or a same-named entry of your own. Agentyx will not replace it without --force; give your entry its own name or review it first.`;
+
   for (const path of drifted) {
     diagnostics.push({
       level: "warning",
       code: "drifted_managed_file",
-      message: `${path} has been edited since Agentyx wrote it. Agentyx will not replace or remove it.`,
+      message: entryConflicts.has(path)
+        ? entryMessage(path)
+        : `${path} has been edited since Agentyx wrote it. Agentyx will not replace it without --force; review the edit first.`,
     });
   }
 
@@ -431,7 +438,9 @@ export async function runDoctorCommand(input: DoctorCommandInput): Promise<Docto
     diagnostics.push({
       level: "error",
       code: "unmanaged_file_conflict",
-      message: `${path} is needed by this configuration but Agentyx did not write it. Move it, or install with --force.`,
+      message: entryConflicts.has(path)
+        ? entryMessage(path)
+        : `${path} holds content this configuration needs to replace, but Agentyx did not write it. Move or rename it, or install with --force after review.`,
     });
   }
 

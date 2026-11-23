@@ -84,10 +84,11 @@ export class ProviderConfigParseError extends AgentyxError {
 }
 
 /**
- * Raised when installing would touch a file Agentyx does not own.
+ * Raised when installing would replace content Agentyx does not own.
  *
- * Either the file was there before Agentyx ever ran, or a file Agentyx wrote has
- * been edited since. Both mean someone else's work is at the destination, and
+ * Either the file — or an MCP server or hook entry in a provider config — was
+ * there before Agentyx ever ran, or something Agentyx wrote has been edited
+ * since. Both mean someone else's work is at the destination, and
  * an installer that overwrites it silently is one that cannot be trusted with a
  * shared directory such as `.agents/skills`. Nothing is written when this is
  * raised.
@@ -95,15 +96,35 @@ export class ProviderConfigParseError extends AgentyxError {
 export class InstallConflictError extends AgentyxError {
   readonly paths: readonly string[];
 
-  constructor(paths: readonly string[]) {
-    const list = [...paths].sort().map((path) => `  - ${path}`);
+  /**
+   * @param paths every conflicting project-relative path.
+   * @param edited the subset Agentyx recorded writing, so the conflict is an edit since then rather
+   *   than content Agentyx never wrote. The message names which is which, because the recovery
+   *   differs.
+   * @param entries the subset that are provider config files where an MCP server or hook entry
+   *   differs from Agentyx's definition — edited, or a same-named entry of the user's own.
+   */
+  constructor(
+    paths: readonly string[],
+    edited: readonly string[] = [],
+    entries: readonly string[] = [],
+  ) {
+    const editedPaths = new Set(edited);
+    const entryPaths = new Set(entries);
+    const reason = (path: string): string =>
+      entryPaths.has(path)
+        ? "an MCP server or hook entry differs from Agentyx's definition"
+        : editedPaths.has(path)
+          ? "edited since Agentyx wrote it"
+          : "not written by Agentyx";
+    const list = [...paths].sort().map((path) => `  - ${path} (${reason(path)})`);
 
     super(
       "install_conflict",
       [
-        `Refusing to overwrite ${paths.length} file(s) Agentyx does not manage:`,
+        `Refusing to overwrite ${paths.length} file(s) holding content Agentyx did not write:`,
         ...list,
-        "Move or delete them, or re-run with --force to overwrite. Nothing was written.",
+        "Review each change first. To keep yours, move it out of Agentyx's way: copy an edited Skill to a Skill of your own name, or give an MCP server or hook entry its own name. To take Agentyx's version, undo your change and run the command again; --force replaces it without review. Nothing was written.",
       ].join("\n"),
     );
     this.name = "InstallConflictError";

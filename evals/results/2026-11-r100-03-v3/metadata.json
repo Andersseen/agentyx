@@ -1,0 +1,25 @@
+{
+  "evaluationDate": "2026-11-18",
+  "agentyxSha": "e404cf1f79b55486af791f78847c49f3ae37c14f",
+  "packageVersion": "0.24.0",
+  "benchmarkVersion": 3,
+  "benchmarkSha256": "e40a36b310d4b0549443ad4a6bd94177b1a4561ffcbf7bd7e4b829fa95d39226",
+  "providers": ["codex", "claude"],
+  "providerVersions": {
+    "codex": "codex-cli 0.170.0",
+    "claude": "2.1.327 (Claude Code)"
+  },
+  "modelSettings": {
+    "codex": {
+      "model": "gpt-6-luna",
+      "modelStatus": "known",
+      "settingsFingerprint": "codex:gpt-6-luna:effort-medium:workspace-write:ephemeral:skip-git-check"
+    },
+    "claude": {
+      "model": "claude-opus-5-5",
+      "modelStatus": "known",
+      "settingsFingerprint": "claude:opus-5-5:accept-edits:sandbox:project-settings:strict-mcp:ephemeral"
+    }
+  },
+  "repetitions": 3
+}

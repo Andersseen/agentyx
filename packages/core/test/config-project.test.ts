@@ -149,6 +149,27 @@ describe("loadAgentyxProject", () => {
     ).toContain("agentyx-project-context");
   });
 
+  it("describes the project context Skill by when to read it and what it holds", async () => {
+    // Pilot regression: a category-only description ("Repository facts…") gave a lazily loading
+    // provider no reason to open the Skill before verifying a change.
+    await writeFile(
+      join(projectDir, ".agentyx.json"),
+      JSON.stringify({
+        context: {
+          commands: { typecheck: { command: "pnpm run check-types", cwd: "." } },
+          constraints: ["Use strict equality."],
+        },
+      }),
+    );
+    const { skillRegistry } = await loadAgentyxProject(projectDir);
+    const { description } = skillRegistry.get("agentyx-project-context");
+
+    expect(description).toBe(
+      "Read before changing, verifying or handing off work in this repository. Holds project commands (typecheck) and repository constraints.",
+    );
+    expect(description).not.toContain("pnpm run check-types");
+  });
+
   it("rejects missing, escaping, and parent-traversing project context paths", async () => {
     for (const path of ["missing", "../outside"]) {
       await writeFile(

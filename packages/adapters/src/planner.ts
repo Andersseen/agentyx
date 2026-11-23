@@ -6,6 +6,7 @@ import {
   emptyInstallManifest,
   type HookDefinition,
   type HookManifestEntry,
+  hashCapabilityDefinition,
   hashContent,
   type InstallManifest,
   type InstallManifestEntry,
@@ -104,6 +105,7 @@ export async function planTargetInstall(input: PlanTargetInstallInput): Promise<
 
   const manifest = input.manifest ?? emptyInstallManifest();
   const recorded = manifestEntriesByPath(manifest);
+  const snapshot = recordedDefinitions(manifest);
   const mcpServers = input.mcpServers ?? [];
   const hooks = input.hooks ?? [];
   const agents = input.agents ?? [];
@@ -132,6 +134,8 @@ export async function planTargetInstall(input: PlanTargetInstallInput): Promise<
     projectDir,
     recorded,
     prune: input.prune === true,
+    force: input.force,
+    snapshot,
   });
   const mcp =
     sharedSettings ??
@@ -141,6 +145,8 @@ export async function planTargetInstall(input: PlanTargetInstallInput): Promise<
       projectDir,
       recorded,
       prune: input.prune === true,
+      force: input.force,
+      snapshot,
     }));
   const hookConfig =
     sharedSettings === undefined
@@ -150,6 +156,8 @@ export async function planTargetInstall(input: PlanTargetInstallInput): Promise<
           projectDir,
           recorded,
           prune: input.prune === true,
+          force: input.force,
+          snapshot,
         })
       : // The shared document already carries this target's hooks; a second operation would be a
         // second write to the same path.
@@ -354,6 +362,95 @@ interface PlanMcpInput {
   readonly projectDir: string;
   readonly recorded: ReadonlyMap<string, InstallManifestEntry>;
   readonly prune: boolean;
+  readonly force?: boolean | undefined;
+  /** Definition digests from the lock's resolution snapshot, by capability name. */
+  readonly snapshot: RecordedDefinitions;
+}
+
+interface RecordedDefinitions {
+  readonly mcpServers: ReadonlyMap<string, string>;
+  readonly hooks: ReadonlyMap<string, string>;
+}
+
+function recordedDefinitions(manifest: InstallManifest): RecordedDefinitions {
+  const resolution = manifest.version === 2 ? manifest.resolution : null;
+  return {
+    mcpServers: new Map(resolution?.mcpServers.map(({ name, hash }) => [name, hash]) ?? []),
+    hooks: new Map(resolution?.hooks.map(({ name, hash }) => [name, hash]) ?? []),
+  };
+}
+
+/** Whether the definition named `name` differs from the digest recorded for it. */
+function changedSince(
+  recorded: ReadonlyMap<string, string>,
+  definitions: readonly { readonly name: string }[],
+): (name: string) => boolean {
+  return (name) => {
+    const hash = recorded.get(name);
+    const definition = definitions.find((candidate) => candidate.name === name);
+    return (
+      hash !== undefined &&
+      definition !== undefined &&
+      hashCapabilityDefinition(definition) !== hash
+    );
+  };
+}
+
+/**
+ * Whether merging Agentyx's entries into a provider config would replace an entry that someone
+ * else wrote or edited.
+ *
+ * Provider config files belong to the user, so the whole-file ownership check that guards Skill
+ * files does not apply to them. The entries Agentyx merges in are a different matter: replacing a
+ * hand-edited server or hook, or a same-named entry the user wrote first, would discard their work
+ * without review. `differing` names the desired entries that are present but not as Agentyx would
+ * write them (see `differingEntries`). Such an entry is safe to replace only when Agentyx recorded
+ * it and either the file still holds exactly what Agentyx wrote or the definition itself changed
+ * since the lock's resolution snapshot — an upgrade, not an edit. Without a snapshot to compare
+ * against, a differing entry in an edited file is a conflict.
+ */
+function replacesForeignEntry(input: {
+  readonly existing: string | undefined;
+  readonly recordedHash: string | undefined;
+  readonly recordedNames: readonly string[];
+  readonly differing: readonly string[];
+  /** Whether this entry's definition differs from the one the lock's resolution snapshot records. */
+  readonly definitionChanged: (name: string) => boolean;
+}): boolean {
+  const { existing, recordedHash, recordedNames, differing, definitionChanged } = input;
+
+  if (existing === undefined) {
+    return false;
+  }
+
+  const unchangedSinceWritten =
+    recordedHash !== undefined && hashContent(existing) === recordedHash;
+
+  return differing.some(
+    (name) => !recordedNames.includes(name) || (!unchangedSinceWritten && !definitionChanged(name)),
+  );
+}
+
+/**
+ * The desired entries a merge would change, found through the adapter's own merge so that no
+ * provider format is parsed here: `render(name, [])` re-renders the document with only that entry
+ * applied, `render(undefined, [name])` renders it without that entry, and `render(undefined, [])`
+ * only normalizes it. An entry whose application or removal leaves the normalized document
+ * unchanged is identical or absent; any other one is present and different.
+ */
+function differingEntries(
+  names: readonly string[],
+  render: (only: string | undefined, remove: readonly string[]) => string,
+): readonly string[] {
+  if (names.length === 0) {
+    return [];
+  }
+
+  const normalized = render(undefined, []);
+
+  return names.filter(
+    (name) => render(name, []) !== normalized && render(undefined, [name]) !== normalized,
+  );
 }
 
 /**
@@ -371,8 +468,9 @@ async function planMcp(input: PlanMcpInput): Promise<{
   readonly deletions: readonly DeleteOperation[];
 }> {
   const { adapter, context, projectDir, recorded, prune } = input;
+  const planMcpConfig = adapter.planMcpConfig?.bind(adapter);
 
-  if (!adapter.capabilities.mcp.project || adapter.planMcpConfig === undefined) {
+  if (!adapter.capabilities.mcp.project || planMcpConfig === undefined) {
     return { operations: [], deletions: [] };
   }
 
@@ -408,7 +506,24 @@ async function planMcp(input: PlanMcpInput): Promise<{
   }
 
   const existingContent = await readExistingProviderConfig(configPath);
-  const planned = adapter.planMcpConfig(context, { content: existingContent, remove });
+  const planned = planMcpConfig(context, { content: existingContent, remove });
+  const replacesForeign = replacesForeignEntry({
+    existing: existingContent,
+    recordedHash: recordedEntry?.hash,
+    recordedNames: recordedEntry?.servers ?? [],
+    differing: differingEntries(
+      context.mcpServers.map((server) => server.name),
+      (only, without) =>
+        planMcpConfig(
+          {
+            ...context,
+            mcpServers: context.mcpServers.filter((server) => server.name === only),
+          },
+          { content: existingContent, remove: without },
+        ).content,
+    ),
+    definitionChanged: changedSince(input.snapshot.mcpServers, context.mcpServers),
+  });
 
   if (planned.empty && recordedEntry?.created === true) {
     return {
@@ -440,7 +555,10 @@ async function planMcp(input: PlanMcpInput): Promise<{
     operations: [
       {
         type: "configure-mcp",
-        status: classify(installed, planned.content, undefined, true),
+        status:
+          replacesForeign && input.force !== true
+            ? "conflict"
+            : classify(installed, planned.content, undefined, true),
         path,
         relativePath: toDisplayPath(projectDir, path),
         servers: planned.servers,
@@ -464,6 +582,9 @@ interface PlanHooksInput {
   readonly projectDir: string;
   readonly recorded: ReadonlyMap<string, InstallManifestEntry>;
   readonly prune: boolean;
+  readonly force?: boolean | undefined;
+  /** Definition digests from the lock's resolution snapshot, by capability name. */
+  readonly snapshot: RecordedDefinitions;
 }
 
 /**
@@ -471,7 +592,8 @@ interface PlanHooksInput {
  *
  * Mirrors `planMcp` exactly: the destination file belongs to the user, so
  * Agentyx merges its own hook entries into whatever is there and carries
- * everything else through untouched. Pruning removes only the hooks the
+ * everything else through untouched, and replacing a hook entry someone else
+ * wrote or edited is a conflict. Pruning removes only the hooks the
  * manifest says Agentyx added, and the file itself is removed only when
  * Agentyx created it and nothing is left in it.
  */
@@ -480,8 +602,9 @@ async function planHooks(input: PlanHooksInput): Promise<{
   readonly deletions: readonly DeleteOperation[];
 }> {
   const { adapter, context, projectDir, recorded, prune } = input;
+  const planHookConfig = adapter.planHookConfig?.bind(adapter);
 
-  if (!adapter.capabilities.hooks || adapter.planHookConfig === undefined) {
+  if (!adapter.capabilities.hooks || planHookConfig === undefined) {
     return { operations: [], deletions: [] };
   }
 
@@ -510,11 +633,19 @@ async function planHooks(input: PlanHooksInput): Promise<{
   const siblingPath = adapter.hooksSiblingConfigPath?.(projectDir);
   const sibling =
     siblingPath === undefined ? undefined : await readExistingProviderConfig(siblingPath);
-  const planned = adapter.planHookConfig(context, { content: existingContent, remove, sibling });
+  const planned = planHookConfig(context, { content: existingContent, remove, sibling });
 
   if (planned.skipped !== undefined) {
     return { operations: [], deletions: [] };
   }
+
+  const replacesForeign = replacesForeignEntry({
+    existing: existingContent,
+    recordedHash: recordedEntry?.hash,
+    recordedNames: recordedEntry?.hooks ?? [],
+    differing: planned.replaced ?? [],
+    definitionChanged: changedSince(input.snapshot.hooks, context.hooks),
+  });
 
   if (planned.empty && recordedEntry?.created === true) {
     return {
@@ -545,7 +676,10 @@ async function planHooks(input: PlanHooksInput): Promise<{
     operations: [
       {
         type: "configure-hooks",
-        status: classify(installed, planned.content, undefined, true),
+        status:
+          replacesForeign && input.force !== true
+            ? "conflict"
+            : classify(installed, planned.content, undefined, true),
         path,
         relativePath: toDisplayPath(projectDir, path),
         hooks: planned.hooks,
@@ -570,6 +704,9 @@ interface PlanSharedSettingsInput {
   readonly projectDir: string;
   readonly recorded: ReadonlyMap<string, InstallManifestEntry>;
   readonly prune: boolean;
+  readonly force?: boolean | undefined;
+  /** Definition digests from the lock's resolution snapshot, by capability name. */
+  readonly snapshot: RecordedDefinitions;
 }
 
 /**
@@ -594,12 +731,10 @@ async function planSharedSettings(input: PlanSharedSettingsInput): Promise<
 > {
   const { adapter, context, projectDir, recorded, prune } = input;
   const configPath = sharedSettingsPath(adapter, projectDir);
+  const planMcpConfig = adapter.planMcpConfig?.bind(adapter);
+  const planHookConfig = adapter.planHookConfig?.bind(adapter);
 
-  if (
-    configPath === undefined ||
-    adapter.planMcpConfig === undefined ||
-    adapter.planHookConfig === undefined
-  ) {
+  if (configPath === undefined || planMcpConfig === undefined || planHookConfig === undefined) {
     return undefined;
   }
 
@@ -647,14 +782,39 @@ async function planSharedSettings(input: PlanSharedSettingsInput): Promise<
   }
 
   const existingContent = await readExistingProviderConfig(configPath);
-  const withServers = adapter.planMcpConfig(context, {
+  const withServers = planMcpConfig(context, {
     content: existingContent,
     remove: removeServers,
   });
-  const withHooks = adapter.planHookConfig(context, {
+  const withHooks = planHookConfig(context, {
     content: withServers.content,
     remove: removeHooks,
   });
+  const replacesForeign =
+    replacesForeignEntry({
+      existing: existingContent,
+      recordedHash: recordedEntry?.hash,
+      recordedNames: recordedServers,
+      differing: differingEntries(
+        context.mcpServers.map((server) => server.name),
+        (only, without) =>
+          planMcpConfig(
+            {
+              ...context,
+              mcpServers: context.mcpServers.filter((server) => server.name === only),
+            },
+            { content: existingContent, remove: without },
+          ).content,
+      ),
+      definitionChanged: changedSince(input.snapshot.mcpServers, context.mcpServers),
+    }) ||
+    replacesForeignEntry({
+      existing: existingContent,
+      recordedHash: recordedEntry?.hash,
+      recordedNames: recordedHooks,
+      differing: withHooks.replaced ?? [],
+      definitionChanged: changedSince(input.snapshot.hooks, context.hooks),
+    });
   // A provider that declines to write hooks keeps its servers; only Codex declines, and it never
   // shares a document, so this is a guard rather than a path Qwen Code takes.
   const declined = withHooks.skipped !== undefined;
@@ -687,7 +847,10 @@ async function planSharedSettings(input: PlanSharedSettingsInput): Promise<
       {
         type: "configure-mcp",
         // The merged document was built from `existingContent`, so that read is the state to guard.
-        status: classify(existingContent, content, undefined, true),
+        status:
+          replacesForeign && input.force !== true
+            ? "conflict"
+            : classify(existingContent, content, undefined, true),
         path,
         relativePath: toDisplayPath(projectDir, path),
         servers: context.mcpServers.map((server) => server.name),

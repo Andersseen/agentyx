@@ -724,3 +724,61 @@ Verification (this branch): 70 test files, 878 tests (876 passed, 1 skipped, 1 f
 
 Roadmap ordering: R100 provider/behavioral validation remains on standby and is not completed by this
 minor. 1.0 RC work has not started.
+
+## R100-03 / R100-04 — Validation closeout (gate failed; not complete)
+
+Status: evidence complete for R100-03 with a **failed** canonical gate; R100-04 waits on the
+independent operator. Branch `feat/0.25-validation-closeout`. Starting `main`:
+`ac32a5f62cf10d63b0185cb3d823971c41ebb646`; packages `0.24.0`; no pending feature Changesets.
+
+Provider tooling (installed through npm without sudo, 2026-11-18), each verified with a fresh
+headless session:
+- Codex CLI `0.170.0` — existing ChatGPT login; model `gpt-6-luna`, reasoning effort medium.
+- Claude Code `2.1.327` — the expired subscription login was renewed by the account owner; model
+  `claude-opus-5-5`, no API key.
+- Kimi Code `2.6.3` — existing OAuth login.
+
+Benchmark:
+- A full Codex run of benchmark v2 (42 runs) exposed a checker defect and no discriminative power; it is
+  recorded as invalid in [the v2 preflight note](../../evals/preflight/2026-11-codex-v2/summary.md).
+- Benchmark v3 (the one revision allowed), SHA-256
+  `e40a36b310d4b0549443ad4a6bd94177b1a4561ffcbf7bd7e4b829fa95d39226`: hidden checkers, goal-only
+  prompts for four scenarios; scenarios, categories, packs and gate unchanged.
+- Final evidence: [evals/results/2026-11-r100-03-v3](../../evals/results/2026-11-r100-03-v3/summary.md),
+  84/84 valid runs, Codex + Claude Code, treatment from `e404cf1`. Later commits change only conflict
+  handling and messages; treatment output was re-prepared from the final build and is byte-identical
+  for all seven scenarios.
+- Codex: baseline 18/21, Agentyx 17/21. Claude Code: baseline 21/21, Agentyx 21/21. Interventions 0;
+  critical failures 0; documented benefit categories 0. **Gate: failed** — Codex regressed in
+  `project-context-verification` (3/3 → 2/3): it ran the project's verification, then deleted the
+  verification record to honor the treatment-only constraint "Only change src.mjs for this task".
+  Neither Codex condition added regression tests in `bug-regression` (0/3 each); Claude Code did in
+  both (3/3 each).
+- Instruction use (observed / not observed / unknown, treatment runs): Codex 4/0/17, Claude Code
+  13/0/8. Baselines have no Agentyx instructions. Rubric values were derived from each run's end state
+  and tool activity, with `null` where neither settles them.
+- Run conditions: fresh fixture and session per run, external scratch root, Codex
+  `exec --ephemeral -s workspace-write`, Claude Code `-p --no-session-persistence` with
+  `acceptEdits`, its sandbox auto-allowing bash, project/local settings only and no MCP. Claude Code's
+  sandbox leaves an empty `.claude/.cc-writes` marker when a sandboxed command writes; the runner
+  removed it after every Claude run in both conditions (42/42) before the objective check.
+- The gate and benchmark were not changed after the results. R100-03 is **not complete**; passing it
+  needs a new benchmark revision in a later development.
+
+Pilots: [closeout record](../pilots/2026-11-closeout.md). Three real repositories (small TypeScript,
+Angular, Nx monorepo); all six workflows ran in each. Reproduction passed in all three after a fix;
+conflict recovery passed after a fix. Skill discovery observed for Codex, Claude Code and Kimi Code;
+project fit observed for Codex (after the description fix) and Claude Code; Kimi followed the facts
+also present in AGENTS.md without opening the Agentyx Skill. MCP: http and stdio runtime-verified
+through Claude Code; Codex (trust gate) and Kimi (headless mode exposes no MCP tools) unverified.
+The independent-operator run is pending ([package](../pilots/operator-package.md)), so R100-04 is
+not complete.
+
+Fixes (one minor Changeset, `.changeset/validation-closeout-hardening.md`):
+- Release blocker: hand-edited or user-written same-named MCP/hook entries were replaced without a
+  conflict.
+- Release blocker: frozen restore and locked Doctor refused after excluding the last MCP server.
+- Minor: precise conflict messages; activation-friendly project-context Skill description.
+
+Not done, and therefore not claimed: R100-03, R100-04 and R100 completion, and the 1.0 feature-scope
+freeze. R1000-01 has not started and should not start until R100 passes.

@@ -3,7 +3,7 @@
   "private": true,
   "packageManager": "pnpm@10.0.0",
   "scripts": {
-    "test": "node check.mjs",
-    "verify": "node check.mjs"
+    "test": "node test.mjs",
+    "verify": "node scripts/verify.mjs"
   }
 }

@@ -184,6 +184,7 @@ export type {
 export {
   compareResolutionSnapshots,
   createResolutionSnapshot,
+  hashCapabilityDefinition,
   RESOLUTION_DIFFERENCE_KINDS,
   resolutionDifferenceSchema,
   resolutionSnapshotSchema,

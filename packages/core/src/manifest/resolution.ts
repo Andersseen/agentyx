@@ -78,22 +78,22 @@ export function createResolutionSnapshot(input: ResolutionSnapshotInput): Resolu
     ),
     mcpServers: input.resolved.mcpServers.map((name) =>
       snapshotCapability("mcp", name, provenance, () =>
-        hashDefinition(input.mcpRegistry.get(name)),
+        hashCapabilityDefinition(input.mcpRegistry.get(name)),
       ),
     ),
     tools: input.resolved.tools.map((name) =>
       snapshotCapability("tool", name, provenance, () =>
-        hashDefinition(input.toolRegistry.get(name)),
+        hashCapabilityDefinition(input.toolRegistry.get(name)),
       ),
     ),
     hooks: input.resolved.hooks.map((name) =>
       snapshotCapability("hook", name, provenance, () =>
-        hashDefinition(input.hookRegistry.get(name)),
+        hashCapabilityDefinition(input.hookRegistry.get(name)),
       ),
     ),
     agents: input.resolved.agents.map((name) =>
       snapshotCapability("agent", name, provenance, () =>
-        hashDefinition(input.agentRegistry.get(name)),
+        hashCapabilityDefinition(input.agentRegistry.get(name)),
       ),
     ),
   });
@@ -194,7 +194,12 @@ function hashSkill(skillRegistry: SkillRegistry, name: string): string {
   return hashContent(formatSkillMarkdown(skillRegistry.get(name)));
 }
 
-function hashDefinition(definition: unknown): string {
+/**
+ * The digest a resolution snapshot records for an MCP server, tool, hook or agent definition.
+ *
+ * Exported so an installer can tell whether a definition changed since the snapshot was taken.
+ */
+export function hashCapabilityDefinition(definition: unknown): string {
   return hashContent(canonicalJson(definition));
 }
 
