@@ -1,5 +1,19 @@
 # @agentyx/cli
 
+## 0.25.0
+
+### Minor Changes
+
+- d4b5ceb: Add `agentyx doctor --quiet` (`-q`): the text report shrinks to the status line plus warnings and
+  errors, so informational diagnostics such as "Runtime activity observation is not enabled" no longer
+  repeat on every run or in CI logs. `--quiet` combines with `--check` and `--locked`; it is rejected
+  with `--json` or `--hook`, which are already terse.
+
+### Patch Changes
+
+- @agentyx/adapters@0.25.0
+  - @agentyx/core@0.25.0
+
 ## 0.24.0
 
 ### Minor Changes
