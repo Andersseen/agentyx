@@ -357,6 +357,7 @@ Inspect project health:
 pnpm dlx @agentyx/cli doctor
 pnpm dlx @agentyx/cli doctor --json
 pnpm dlx @agentyx/cli doctor --check # fail on warnings or errors, useful in CI
+pnpm dlx @agentyx/cli doctor --check --quiet # same, printing only the status, warnings and errors
 ```
 
 ## Project-owned packs

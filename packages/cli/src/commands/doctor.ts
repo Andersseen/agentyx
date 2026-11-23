@@ -913,6 +913,39 @@ export function renderDoctorReport(report: DoctorReport, json: boolean): string 
   ].join("\n");
 }
 
+/**
+ * The `--quiet` text report: the status line plus warnings and errors only.
+ *
+ * Info diagnostics describe optional choices (observation, pack breadth, …) that repeat on every
+ * run, which is noise in CI logs. A locked comparison keeps its differences because they are the
+ * reason a `--locked` run fails.
+ */
+export function renderDoctorQuietReport(report: DoctorReport): string {
+  const actionable = report.diagnostics.filter((diagnostic) => diagnostic.level !== "info");
+  const locked =
+    report.reproducibility.checked && report.reproducibility.differences.length > 0
+      ? renderReproducibility(report.reproducibility)
+      : [];
+
+  return [
+    `Agentyx doctor: ${report.status}`,
+    ...(locked.length > 0 || actionable.length > 0 ? [""] : []),
+    ...locked,
+    ...(actionable.length > 0
+      ? [
+          section(
+            "Diagnostics",
+            actionable.map(
+              (diagnostic) => `${diagnostic.level.toUpperCase()}: ${diagnostic.message}`,
+            ),
+          ),
+        ]
+      : []),
+  ]
+    .join("\n")
+    .trimEnd();
+}
+
 function renderHarnessSections(report: DoctorReport): string[] {
   const { footprint } = report.harness;
   const { providers } = report.observation;
@@ -1266,36 +1299,64 @@ export function createDoctorCommand(): Command {
       "print a one-line SessionStart hook summary instead of the full report; nothing when healthy",
       false,
     )
-    .action(async (options: { json: boolean; check: boolean; hook: boolean; locked: boolean }) => {
-      if (options.hook && options.locked) {
-        await emit(() => {
-          throw new AgentyxError(
-            "doctor_hook_locked_conflict",
-            "--hook prints a one-line summary and cannot be combined with --locked.",
-          );
-        });
+    .option(
+      "-q, --quiet",
+      "print only the status line, warnings and errors; hide informational diagnostics",
+      false,
+    )
+    .action(
+      async (options: {
+        json: boolean;
+        check: boolean;
+        hook: boolean;
+        locked: boolean;
+        quiet: boolean;
+      }) => {
+        if (options.quiet && (options.json || options.hook)) {
+          await emit(() => {
+            throw new AgentyxError(
+              "doctor_quiet_conflict",
+              `--quiet shortens the text report and cannot be combined with ${options.json ? "--json" : "--hook"}.`,
+            );
+          });
 
-        return;
-      }
-
-      const report = await runDoctorCommand({
-        json: options.json,
-        cwd: process.cwd(),
-        locked: options.locked,
-      });
-
-      if (options.hook) {
-        const output = renderDoctorHookOutput(report);
-
-        if (output.length > 0) {
-          process.stdout.write(`${output}\n`);
+          return;
         }
 
-        return;
-      }
+        if (options.hook && options.locked) {
+          await emit(() => {
+            throw new AgentyxError(
+              "doctor_hook_locked_conflict",
+              "--hook prints a one-line summary and cannot be combined with --locked.",
+            );
+          });
 
-      process.stdout.write(`${renderDoctorReport(report, options.json)}\n`);
+          return;
+        }
 
-      process.exitCode = doctorExitCode(report, options.check);
-    });
+        const report = await runDoctorCommand({
+          json: options.json,
+          cwd: process.cwd(),
+          locked: options.locked,
+        });
+
+        if (options.hook) {
+          const output = renderDoctorHookOutput(report);
+
+          if (output.length > 0) {
+            process.stdout.write(`${output}\n`);
+          }
+
+          return;
+        }
+
+        const output = options.quiet
+          ? renderDoctorQuietReport(report)
+          : renderDoctorReport(report, options.json);
+
+        process.stdout.write(`${output}\n`);
+
+        process.exitCode = doctorExitCode(report, options.check);
+      },
+    );
 }
