@@ -52,7 +52,9 @@ package manager is unambiguous. Suggestions start unselected, are stored as inst
 are never run by Agentyx. Non-interactive `init` leaves context absent.
 
 `doctor --check` keeps normal human or JSON output, but exits with code 1 on warnings as well as
-errors so CI can fail before install drift turns into a broken run.
+errors so CI can fail before install drift turns into a broken run. Add `--quiet` (`-q`) to print
+only the status line plus warnings and errors, so informational notes such as "runtime activity
+observation is not enabled" stop repeating in every CI log.
 
 Project-owned packs can reference standard `SKILL.md` directories declared through
 `skillDirectories` and `localPacks` in `.agentyx.json`. Paths are project-relative and Agentyx

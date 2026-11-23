@@ -7,6 +7,7 @@ import {
   createDoctorCommand,
   doctorExitCode,
   renderDoctorHookOutput,
+  renderDoctorQuietReport,
   renderDoctorReport,
   runDoctorCommand,
 } from "../src/commands/doctor.js";
@@ -571,6 +572,44 @@ describe("renderDoctorHookOutput", () => {
   });
 });
 
+describe("renderDoctorQuietReport", () => {
+  it("hides info diagnostics and keeps warnings", async () => {
+    await writeFile(join(projectDir, "package.json"), "{}\n", "utf8");
+
+    const base = await runDoctorCommand({ json: false, cwd: projectDir });
+    const report = {
+      ...base,
+      diagnostics: [
+        ...base.diagnostics,
+        { level: "info" as const, code: "observation_not_enabled", message: "noise" },
+      ],
+    };
+    const output = renderDoctorQuietReport(report);
+    const warning = report.diagnostics.find((diagnostic) => diagnostic.level === "warning");
+
+    expect(warning).toBeDefined();
+    expect(output.startsWith("Agentyx doctor: warnings\n")).toBe(true);
+    expect(output).toContain(`WARNING: ${warning?.message}`);
+    expect(output).not.toContain("INFO:");
+    expect(output).not.toContain("Readiness");
+  });
+
+  it("is only the status line for a healthy project with observation not enabled", async () => {
+    await cp(join(fixturesPath, "typescript-project"), projectDir, { recursive: true });
+    await writeConfig({ packs: ["technical", "typescript"], targets: ["claude"] });
+    await runInstallCommand({ ...installInput, cwd: projectDir, targets: ["claude"] });
+
+    const report = await runDoctorCommand({ json: false, cwd: projectDir });
+
+    expect(report.status).toBe("healthy");
+    expect(report.diagnostics.map((diagnostic) => diagnostic.code)).toContain(
+      "observation_not_enabled",
+    );
+    expect(renderDoctorReport(report, false)).toContain("INFO: Runtime activity observation");
+    expect(renderDoctorQuietReport(report)).toBe("Agentyx doctor: healthy");
+  });
+});
+
 describe("doctor command wiring", () => {
   it("is part of the top-level program", () => {
     expect(createAgentyxProgram().commands.map((command) => command.name())).toContain("doctor");
@@ -582,6 +621,7 @@ describe("doctor command wiring", () => {
       "--check",
       "--locked",
       "--hook",
+      "--quiet",
     ]);
   });
 
