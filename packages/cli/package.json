@@ -50,7 +50,7 @@
     "@agentyx/adapters": "workspace:*",
     "@agentyx/core": "workspace:*",
     "@clack/prompts": "^1.7.0",
-    "@flowview/runtime": "0.2.0",
+    "@flowview/runtime": "0.2.1",
     "commander": "^14.0.0",
     "zod": "^4.6.7"
   },
