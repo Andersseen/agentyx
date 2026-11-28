@@ -34,7 +34,7 @@
     "marked-mangle": "^1.1.14",
     "prismjs": "^1.29.0",
     "rxjs": "^7.8.1",
-    "tslib": "^2.6.2"
+    "tslib": "^2.9.1"
   },
   "devDependencies": {
     "@analogjs/platform": "2.9.2",
